@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f2f2f2;
+        }
+        #rose {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+        }
+        #stem {
+            width: 10px;
+            height: 100px;
+            background-color: #228B22;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #petal {
+            width: 80px;
+            height: 120px;
+            background-color: #FF1493;
+            border-radius: 50% 50% 0 0;
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bloom 4s ease-in-out 1s forwards;
+        }
+        
+        @keyframes bloom {
+            from {
+                width: 0;
+                height: 0;
+            }
+            to {
+                width: 80px;
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="rose">
+        <div id="stem"></div>
+        <div id="petal"></div>
+    </div>
+</body>
+</html>
