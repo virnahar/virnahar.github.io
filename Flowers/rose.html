@@ -1,59 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #f2f2f2;
-        }
-        #rose {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 0;
-            height: 0;
-            transform: translateX(-50%);
-        }
-        #stem {
-            width: 10px;
-            height: 100px;
-            background-color: #228B22;
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        #petal {
-            width: 80px;
-            height: 120px;
-            background-color: #FF1493;
-            border-radius: 50% 50% 0 0;
-            position: absolute;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            animation: bloom 4s ease-in-out 1s forwards;
-        }
-        
-        @keyframes bloom {
-            from {
-                width: 0;
-                height: 0;
-            }
-            to {
-                width: 80px;
-                height: 120px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    #countup {
+      font-size: 24px;
+    }
+    
+    #message {
+      font-size: 18px;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-    <div id="rose">
-        <div id="stem"></div>
-        <div id="petal"></div>
-    </div>
+  <div id="countup"></div>
+  <div id="message"></div>
+
+  <script>
+    function updateCountup() {
+      const startDate = new Date("June 13, 1992 00:00:00");
+      const currentDate = new Date();
+      const timeDifference = currentDate - startDate;
+
+      let remainingTime = timeDifference;
+
+      const millisecondsPerYear = 1000 * 60 * 60 * 24 * 365.25;
+      const years = Math.floor(remainingTime / millisecondsPerYear);
+      remainingTime -= years * millisecondsPerYear;
+
+      const millisecondsPerMonth = 1000 * 60 * 60 * 24 * 30.44; // Average number of days in a month
+      const months = Math.floor(remainingTime / millisecondsPerMonth);
+      remainingTime -= months * millisecondsPerMonth;
+
+      const millisecondsPerDay = 1000 * 60 * 60 * 24;
+      const days = Math.floor(remainingTime / millisecondsPerDay);
+      remainingTime -= days * millisecondsPerDay;
+
+      const millisecondsPerHour = 1000 * 60 * 60;
+      const hours = Math.floor(remainingTime / millisecondsPerHour);
+
+      const millisecondsPerMinute = 1000 * 60;
+      const minutes = Math.floor(remainingTime / millisecondsPerMinute);
+
+      const seconds = Math.floor((remainingTime % millisecondsPerMinute) / 1000);
+      
+      const formattedTime = `${years} Years ${months} Months ${days} Days ${hours} Hours ${minutes} Minutes ${seconds} Seconds`;
+      document.getElementById("countup").innerHTML = formattedTime;
+
+      // Check if it's June 13th
+      if (currentDate.getMonth() === 5 && currentDate.getDate() === 13) {
+        document.getElementById("message").innerHTML = "Happy 13th June! Celebrating a beautiful day!";
+      } else {
+        document.getElementById("message").innerHTML = "";
+      }
+    }
+
+    updateCountup();
+    setInterval(updateCountup, 1000);
+  </script>
 </body>
 </html>
