@@ -1,5 +1,6 @@
 "use strict";
 const font = 'Small';
+const audio = new Audio('click.mp3);
 
 figlet.defaults({ fontPath: 'https://unpkg.com/figlet/fonts/' });
 figlet.preloadFonts([font], ready);
@@ -23,6 +24,8 @@ window.addEventListener('keydown', (e) => {
     const el = codeToElement[e.code] || $key(e.key.toLowerCase());
     if (el) {
         el.classList.add('pressed');
+        var clone = audio.cloneNode();
+        clone.play();
         //e.preventDefault();
     }
 });
@@ -425,6 +428,8 @@ $('kbd').on('mouseup', function (e) {
             term.insert(e.key);
         }
     }
-    
+
+    var clone = audio.cloneNode();
+    clone.play();
 });
 
