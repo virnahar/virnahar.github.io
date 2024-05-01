@@ -1,6 +1,6 @@
 "use strict";
 const font = 'Small';
-const audio = new Audio('click.mp3);
+const audio = new Audio('click.mp3');
 
 figlet.defaults({ fontPath: 'https://unpkg.com/figlet/fonts/' });
 figlet.preloadFonts([font], ready);
