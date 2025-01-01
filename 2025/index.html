@@ -7,158 +7,144 @@
     <style>
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
             overflow: hidden;
-            perspective: 1000px;
-            background: linear-gradient(135deg, #1f1c2c, #928dab);
-        }
-
-        .scene {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .cube {
-            width: 200px;
-            height: 200px;
-            position: relative;
-            transform-style: preserve-3d;
-            animation: spin 8s infinite linear;
-        }
-
-        .cube div {
-            position: absolute;
-            width: 200px;
-            height: 200px;
-            background: rgba(255, 255, 255, 0.8);
-            border: 2px solid #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 2rem;
-            font-weight: bold;
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-            color: #1f1c2c;
-        }
-
-        .cube .front { transform: rotateY(0deg) translateZ(100px); }
-        .cube .back { transform: rotateY(180deg) translateZ(100px); }
-        .cube .right { transform: rotateY(90deg) translateZ(100px); }
-        .cube .left { transform: rotateY(-90deg) translateZ(100px); }
-        .cube .top { transform: rotateX(90deg) translateZ(100px); }
-        .cube .bottom { transform: rotateX(-90deg) translateZ(100px); }
-
-        @keyframes spin {
-            from {
-                transform: rotateX(0) rotateY(0);
-            }
-            to {
-                transform: rotateX(360deg) rotateY(360deg);
-            }
-        }
-
-        .message {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            font-size: 2rem;
-            color: white;
-            font-weight: bold;
-            animation: glow 1.5s infinite alternate;
-        }
-
-        @keyframes glow {
-            from {
-                text-shadow: 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
-            }
-            to {
-                text-shadow: 0 0 20px #fff, 0 0 30px #ff00ff, 0 0 40px #ff00ff;
-            }
+            font-family: Arial, sans-serif;
         }
 
         canvas {
+            display: block;
+        }
+
+        .overlay {
             position: absolute;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px #fff, 0 0 20px #ff00ff;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
-    <div class="scene">
-        <div class="cube">
-            <div class="front">🎆</div>
-            <div class="back">2025</div>
-            <div class="right">🌟</div>
-            <div class="left">🎉</div>
-            <div class="top">✨</div>
-            <div class="bottom">🥂</div>
-        </div>
-    </div>
-    <div class="message">Happy New Year 2025!</div>
-    <script>
-        // Fireworks canvas
-        const canvas = document.createElement('canvas');
-        document.body.appendChild(canvas);
-        const ctx = canvas.getContext('2d');
+    <div class="overlay">Happy New Year 2025 🎉</div>
+    <script type="module">
+        import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.module.js";
+        import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.154.0/examples/jsm/controls/OrbitControls.js";
+        import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.154.0/examples/jsm/loaders/GLTFLoader.js";
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-        class Firework {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height / 2;
-                this.radius = Math.random() * 2 + 1;
-                this.color = `hsl(${Math.random() * 360}, 100%, 70%)`;
-                this.dx = (Math.random() - 0.5) * 10;
-                this.dy = (Math.random() - 0.5) * 10;
-                this.alpha = 1;
-            }
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
 
-            draw() {
-                ctx.save();
-                ctx.globalAlpha = this.alpha;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.restore();
-            }
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
 
-            update() {
-                this.x += this.dx;
-                this.y += this.dy;
-                this.alpha -= 0.01;
-            }
-        }
+        // Ground
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.5;
+        scene.add(ground);
 
-        let fireworks = [];
+        // Text loader
+        const fontLoader = new THREE.FontLoader();
+        const textMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700 });
 
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            fireworks = fireworks.filter(firework => firework.alpha > 0);
-            fireworks.forEach(firework => {
-                firework.update();
-                firework.draw();
+        let text2024, text2025;
+
+        fontLoader.load("https://threejs.org/examples/fonts/helvetiker_regular.typeface.json", (font) => {
+            const textGeometry2024 = new THREE.TextGeometry("2024", {
+                font: font,
+                size: 1,
+                height: 0.2,
             });
 
-            if (Math.random() < 0.05) {
-                for (let i = 0; i < 50; i++) {
-                    fireworks.push(new Firework());
+            const textGeometry2025 = new THREE.TextGeometry("2025", {
+                font: font,
+                size: 1,
+                height: 0.2,
+            });
+
+            text2024 = new THREE.Mesh(textGeometry2024, textMaterial);
+            text2024.position.set(-3, 0.5, 0);
+            scene.add(text2024);
+
+            text2025 = new THREE.Mesh(textGeometry2025, textMaterial);
+            text2025.position.set(10, 0.5, 0); // Positioned far to the right
+            scene.add(text2025);
+        });
+
+        // Car loader
+        const loader = new GLTFLoader();
+        let car;
+
+        loader.load(
+            "https://threejs.org/examples/models/gltf/Vehicle.glb",
+            (gltf) => {
+                car = gltf.scene;
+                car.scale.set(0.5, 0.5, 0.5);
+                car.position.set(-6, 0, 0);
+                scene.add(car);
+            },
+            undefined,
+            (error) => console.error(error)
+        );
+
+        // Camera position
+        camera.position.set(0, 2, 10);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Animation
+        let carPosition = -6;
+        const animate = () => {
+            requestAnimationFrame(animate);
+
+            // Move car
+            if (car) {
+                carPosition += 0.05;
+                car.position.x = carPosition;
+
+                // Transition text visibility
+                if (carPosition > -3 && text2024) {
+                    text2024.position.y -= 0.05; // Move "2024" down
+                    text2024.material.opacity = Math.max(0, text2024.material.opacity - 0.02);
+                }
+
+                if (carPosition > 0 && text2025) {
+                    text2025.position.x -= 0.05; // Move "2025" into view
                 }
             }
-            requestAnimationFrame(animate);
-        }
+
+            controls.update();
+            renderer.render(scene, camera);
+        };
 
         animate();
 
-        // Adjust canvas on resize
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        // Responsive resizing
+        window.addEventListener("resize", () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
         });
     </script>
 </body>
