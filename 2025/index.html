@@ -95,7 +95,7 @@
         let car;
 
         loader.load(
-            "https://threejs.org/examples/models/gltf/Vehicle.glb",
+            "https://threejs.org/examples/models/gltf/Flamingo.glb", // Reliable demo GLTF model
             (gltf) => {
                 car = gltf.scene;
                 car.scale.set(0.5, 0.5, 0.5);
@@ -103,7 +103,7 @@
                 scene.add(car);
             },
             undefined,
-            (error) => console.error(error)
+            (error) => console.error("Error loading the car model: ", error)
         );
 
         // Camera position
