@@ -1,0 +1,35 @@
+[
+    {
+        "name": "About Me",
+        "thumbnail": "assets/images/aboutme/aboutme.png",
+        "contents": [
+            "assets/images/aboutme/aboutme.png"
+        ]
+    },
+    {
+        "name": "Experience",
+        "thumbnail": "assets/images/experience/1.png",
+        "contents": [
+            "assets/images/experience/1.png",
+            "assets/images/experience/2.png",
+            "assets/images/experience/3.png",
+            "assets/images/experience/4.png",
+            "assets/images/experience/5.png"
+        ]
+    },
+    {
+        "name": "Certifications",
+        "thumbnail": "assets/images/certifications/certifications.png",
+        "contents": [
+            "assets/images/certifications/certifications.png"
+        ]
+    },
+    {
+        "name": "Showcases",
+        "thumbnail": "assets/images/showcase/terminal.png",
+        "contents": [
+            "assets/images/showcase/terminal.png",
+            "assets/images/showcase/github.png"
+        ]
+    }
+]
