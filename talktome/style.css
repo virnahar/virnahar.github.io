@@ -464,8 +464,8 @@ textarea {
 }
 
 .typewriter {
-  --blue: #5C86FF;
-  --blue-dark: #275EFE;
+  --blue: gray;
+  --blue-dark: black;
   --key: #fff;
   --paper: #EEF0FD;
   --text: #D3D4EC;
