@@ -2359,7 +2359,7 @@ textarea {
   width: 96px;
   height: 28px;
   margin-left: -48px;
-  background-image: url("https://github.com/virnahar/virnahar.github.io/blob/cb0a2ba54bc33fc812dc371abe7447bd2b72bcf3/talktome/avatar.gif");
+  background-image: url("./../images/logo.png");
   background-size: 96px;
 }
 #signature:not(.loading) {
