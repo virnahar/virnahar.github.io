@@ -137,7 +137,8 @@ html,
 
 body {
     margin: 0;
-    line-height: inherit
+    line-height: inherit;
+    
 }
 
 hr {
@@ -398,7 +399,7 @@ html,
 body {
     height: 100%;
     overflow: hidden;
-    background-color: #121212;
+    background: linear-gradient(135deg, #1e1e1e, #2c2c2c, #3a3a3a); /* Beautiful gradient background */
     color: #fff;
     font-family: Inter, Helvetica, Arial, sans-serif
 }
@@ -411,9 +412,10 @@ body {
 .element {
     width: 120px;
     height: 160px;
-    box-shadow: 0 0 12px #00000080;
-    border: 1px solid rgba(255, 255, 255, .1);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1); /* Semi-transparent background */
+    backdrop-filter: blur(10px) saturate(180%); /* Enhanced glassmorphism effect */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Border to enhance glass effect */
+    border-radius: 8px; /* Match the border-radius of .legend */
     text-align: center;
     cursor: pointer;
     -webkit-user-select: none;
@@ -424,13 +426,13 @@ body {
     justify-content: space-between;
     padding: 10px;
     box-sizing: border-box;
-    transition: transform .2s;
-    background-color: #141414e6
+    transition: transform .2s, box-shadow .2s;
+    box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.2), -8px -8px 16px rgba(255, 255, 255, 0.2); /* Neumorphism shadow */
 }
 
 .element:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 20px #fff3
+    box-shadow: 12px 12px 24px rgba(0, 0, 0, 0.3), -12px -12px 24px rgba(255, 255, 255, 0.3); /* Slightly larger shadow on hover */
 }
 
 .element .number {
@@ -464,32 +466,42 @@ body {
 }
 
 .menu button {
-    color: #fff;
-    background: #0009;
-    border: 1px solid rgba(255, 255, 255, .3);
+    /* color:aqua */
+    /* background: #e0e0e0;  */
+    border: none;
     padding: 8px 12px;
-    margin: 0 4px;
-    border-radius: 4px;
+    margin: 0 8px;
+    border-radius: 12px; /* Rounded corners for neumorphism */
     cursor: pointer;
-    transition: background-color .3s
+    transition: background-color .3s, box-shadow .3s, transform .2s;
+    box-shadow: 2px 2px 2px #bebebe, -2px -2px 2px #ffffff; /* Neumorphism shadow */
 }
 
 .menu button:hover {
-    background-color: #fff3
+    background-color: #d0d0d0; /* Slightly darker on hover */
+    box-shadow: 12px 12px 24px #bebebe, -12px -12px 24px #ffffff; /* Larger shadow on hover */
+}
+
+.menu button:active {
+    transform: scale(0.95); /* Slightly smaller on click */
+    box-shadow: inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff; /* Inset shadow on click */
 }
 
 .legend {
     position: absolute;
-    top: 20px;
+    top: 20px; /* Keep in the sidebar */
     left: 20px;
     z-index: 100;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    background-color: #000000b3;
+    background: rgba(255, 255, 255, 0.1); /* Semi-transparent background */
+    backdrop-filter: blur(10px); /* Glassmorphism effect */
     padding: 15px;
     border-radius: 8px;
-    max-width: 300px
+    max-width: 300px;
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Border to enhance glass effect */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
 }
 
 .legend-item {
