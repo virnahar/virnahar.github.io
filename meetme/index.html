@@ -4,9 +4,43 @@
   <meta charset="UTF-8">
   <title>Meet Virendra Kumar</title>
   <link rel="stylesheet" href="https://public.codepenassets.com/css/normalize-5.0.0.min.css">
-<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto+Slab:700'>
-<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Montserrat:400,700'><link rel="stylesheet" href="./style.css">
-
+  <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto+Slab:700'>
+  <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Montserrat:400,700'>
+  <link rel="stylesheet" href="./style.css">
+  <!-- Add Swiper CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css">
+  <style>
+    .links-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .link-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 40px;
+    }
+    .card {
+      width: 150px; /* Reduce the size of the cards */
+    }
+    .card img {
+      width: 100%;
+    }
+    @media (max-width: 768px) {
+      .links-container {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .link-card {
+        width: 100%;
+        margin: 10px 0;
+      }
+      .card {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
 <!-- partial:index.partial.html -->
@@ -19,10 +53,55 @@
         <h1><span>A 
             <mark>Few Years</mark> old</span><span> Human Being</span></h1>
         <div class="p"><span>virnahar@gmail.com</span><span>(+91) 8285 101 909 </span></div>
-        <div class="links">
-          <a class="link color-yellow" href="https://virnahar.github.io/talktome" title="View my AI" target="_blank">View My AI Chat</a>
-          <a class="link color-green" href="https://virnahar.github.io/myexperience" title="My Experience" target="_blank">My Experience Clock</a>
-          <a class="link color-red" href="https://virnahar.github.io/terminal/" title="Talk To Terminal" target="_blank">Talk to Terminal</a>
+        <div class="links-container">
+          <div class="link-card">
+            <a class="link color-yellow" href="https://virnahar.github.io/talktome" title="View my AI" target="_blank">View My AI Chat</a>
+            <div class="card" data-color="blue">
+              <img class="card-front-image card-image" src="./aichat.png" />
+              <div class="card-faders">
+                <img class="card-fader card-image" src="./aichat.png" />
+                <img class="card-fader card-image" src="./aichat.png" />
+                <img class="card-fader card-image" src="./aichat.png" />
+                <img class="card-fader card-image" src="./aichat.png" />
+                <img class="card-fader card-image" src="./aichat.png" />
+                <img class="card-fader card-image" src="./aichat.png" />
+                <img class="card-fader card-image" src="./aichat.png" />
+                <img class="card-fader card-image" src="./aichat.png" />
+              </div>
+            </div>
+          </div>
+          <div class="link-card">
+            <a class="link color-green" href="https://virnahar.github.io/myexperience" title="My Experience" target="_blank">My Experience Clock</a>
+            <div class="card" data-color="green">
+              <img class="card-front-image card-image" src="./expclock.png" />
+              <div class="card-faders">
+                <img class="card-fader card-image" src="./expclock.png" />
+                <img class="card-fader card-image" src="./expclock.png" />
+                <img class="card-fader card-image" src="./expclock.png" />
+                <img class="card-fader card-image" src="./expclock.png" />
+                <img class="card-fader card-image" src="./expclock.png" />
+                <img class="card-fader card-image" src="./expclock.png" />
+                <img class="card-fader card-image" src="./expclock.png" />
+                <img class="card-fader card-image" src="./expclock.png" />
+              </div>
+            </div>
+          </div>
+          <div class="link-card">
+            <a class="link color-red" href="https://virnahar.github.io/terminal/" title="Talk To Terminal" target="_blank">Talk to Terminal</a>
+            <div class="card" data-color="brown">
+              <img class="card-front-image card-image" src="./termtalk.png" />
+              <div class="card-faders">
+                <img class="card-fader card-image" src="./termtalk.png" />
+                <img class="card-fader card-image" src="./termtalk.png" />
+                <img class="card-fader card-image" src="./termtalk.png" />
+                <img class="card-fader card-image" src="./termtalk.png" />
+                <img class="card-fader card-image" src="./termtalk.png" />
+                <img class="card-fader card-image" src="./termtalk.png" />
+                <img class="card-fader card-image" src="./termtalk.png" />
+                <img class="card-fader card-image" src="./termtalk.png" />
+              </div>
+            </div>
+          </div>
         </div>
       </main>
       <footer>
@@ -35,14 +114,29 @@
       <div></div>
       <div></div>
     </div>
-    <a class="loading" id="signature" href="https://virnahar.github.io/meetme" title="Go to home" target="_blank"></a>
+    <a class="loading" id="signature" href="https://virnahar.github.io/me" title="Go to home" target="_blank"></a>
   </div>
 </div>
 <!-- partial -->
-  <script src='https://cdnjs.cloudflare.com/ajax/libs/mobile-detect/1.4.3/mobile-detect.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/mobile-detect/1.4.3/mobile-detect.min.js'></script>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r72/three.min.js'></script>
 <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js'></script>
-<script src='//malihu.github.io/custom-scrollbar/jquery.mCustomScrollbar.concat.min.js'></script><script  src="./script.js"></script>
-
+<script src='//malihu.github.io/custom-scrollbar/jquery.mCustomScrollbar.concat.min.js'></script>
+<!-- Add Swiper JS -->
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+<script src="./script.js"></script>
+<script>
+  // Initialize Swiper
+  var swiper = new Swiper('.swiper-container', {
+    pagination: {
+      el: '.swiper-pagination',
+      clickable: true,
+    },
+    navigation: {
+      nextEl: '.swiper-button-next',
+      prevEl: '.swiper-button-prev',
+    },
+  });
+</script>
 </body>
 </html>
