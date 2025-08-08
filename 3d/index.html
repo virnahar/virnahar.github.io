@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Virendra Kumar — Space Adventure Portfolio</title>
+<style>
+  :root{
+    --bg1:#020118; --bg2:#000814;
+    --accent:#3fe8c9; --muted:rgba(255,255,255,0.72);
+    --glass: rgba(255,255,255,0.04);
+    --card-radius:16px;
+  }
+  html,body{height:100%;margin:0;background:
+    radial-gradient(800px 600px at 12% 18%, rgba(24,6,48,0.5), transparent 10%),
+    radial-gradient(900px 700px at 90% 75%, rgba(3,12,30,0.6), transparent 12%),
+    linear-gradient(180deg,var(--bg1), var(--bg2));
+    color:#e6fbff; font-family:Inter, "Helvetica Neue", Arial; -webkit-font-smoothing:antialiased; overflow:hidden;}
+  canvas{display:block}
+  /* HUD */
+  .hud{position:fixed;left:18px;top:18px;z-index:80;display:flex;gap:12px;align-items:center}
+  .chip{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.08));
+        padding:10px 14px;border-radius:12px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.04)}
+  .chip h4{margin:0;font-size:11px;color:rgba(230,250,255,0.85)}
+  .chip p{margin:6px 0 0;font-weight:700;color:var(--accent)}
+  /* Radar */
+  .radar{position:fixed;right:18px;bottom:18px;width:180px;height:180px;border-radius:12px;z-index:80;
+         background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);
+         padding:8px;backdrop-filter:blur(8px)}
+  .radar canvas{width:100%;height:100%}
+  /* Panel (glass) */
+  .panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.98);z-index:140;
+         width:min(920px,94%); max-height:86vh; overflow:auto; display:none;
+         background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.08));
+         border-radius:var(--card-radius); padding:20px;border:1px solid rgba(255,255,255,0.04);
+         box-shadow:0 30px 90px rgba(0,0,0,0.7); color:#e8fbff; backdrop-filter: blur(12px) saturate(1.1);
+         transition: transform .36s cubic-bezier(.2,.9,.2,1), opacity .32s}
+  .panel.show{display:block; transform:translate(-50%,-50%) scale(1); opacity:1}
+  .close-x{position:absolute;right:14px;top:12px;cursor:pointer;color:rgba(230,255,255,0.8);font-weight:700}
+  .panel header{display:flex;gap:14px;align-items:center}
+  .avatar{width:84px;height:84px;border-radius:12px;background:linear-gradient(120deg,#0ff2d0,#5598ff);display:flex;align-items:center;justify-content:center;font-weight:800;color:#011}
+  .panel h2{margin:0;font-size:20px}
+  .meta{color:rgba(230,250,255,0.78);font-size:13px;margin-top:6px}
+  .content{display:flex;gap:16px;margin-top:12px}
+  .left{flex:0 0 120px}
+  .right{flex:1}
+  .skills{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .skill{background:rgba(255,255,255,0.02);padding:6px 10px;border-radius:999px;font-size:13px;border:1px solid rgba(255,255,255,0.03)}
+  .projects-list{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .repo{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+  .repo h4{margin:0;font-size:14px}
+  .repo p{margin:6px 0 0;color:rgba(255,255,255,0.78);font-size:13px}
+  .btn{padding:8px 12px;border-radius:10px;background:linear-gradient(90deg,var(--accent),#7a7bff);color:#001;font-weight:800;border:none;cursor:pointer}
+  .bottom-bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:70;background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.03);color:rgba(230,250,255,0.8);font-size:13px}
+  .vignette{position:fixed;inset:0;pointer-events:none;background:
+           radial-gradient(60% 60% at 50% 50%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.28) 100%);z-index:50}
+  .tip{position:fixed;left:18px;bottom:18px;color:rgba(230,250,255,0.7);z-index:70}
+  @media (max-width:720px){
+    .projects-list{grid-template-columns:1fr}
+    .hud{left:8px;top:8px}
+    .radar{right:8px;bottom:8px;width:140px;height:140px}
+    .panel{width:calc(100% - 20px)}
+  }
+</style>
+</head>
+<body>
+<canvas id="spaceCanvas"></canvas>
+
+<!-- HUD -->
+<div class="hud">
+  <div class="chip"><h4>SPEED</h4><p id="speed">0</p></div>
+  <div class="chip"><h4>DIST</h4><p id="distance">—</p></div>
+</div>
+
+<div class="radar" title="Radar">
+  <canvas id="radarCanvas" width="360" height="360"></canvas>
+</div>
+
+<div class="panel" id="panel">
+  <div class="close-x" id="closePanel">✕</div>
+  <header>
+    <div class="avatar" id="avatar">VK</div>
+    <div>
+      <h2 id="panelTitle">Planet</h2>
+      <div class="meta" id="panelMeta">—</div>
+    </div>
+    <div style="margin-left:auto;text-align:right;color:rgba(255,255,255,0.75)"><div id="coords">0,0</div></div>
+  </header>
+  <div class="content">
+    <div class="left"></div>
+    <div class="right">
+      <div id="panelContent">Loading…</div>
+      <div id="skillsBlock" style="display:none">
+        <div style="margin-top:10px;font-size:13px;color:rgba(230,250,255,0.75)">Skills</div>
+        <div class="skills" id="skillsList"></div>
+      </div>
+      <div id="projectsBlock" style="display:none">
+        <div style="margin-top:10px;font-size:13px;color:rgba(230,250,255,0.75)">Projects</div>
+        <div class="projects-list" id="projectsList"></div>
+      </div>
+      <div style="margin-top:12px" id="panelButtons"></div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">Controls: W/A/S/D or ↑/←/↓/→ to fly · Click planet or press <strong>L</strong> near a planet to land · Space = boost</div>
+<div class="vignette"></div>
+
+<script>
+/* ---------------------------
+   CONFIG / PROFILE (editable)
+   --------------------------- */
+const GIT_USER = 'virnahar';
+const POSSIBLE_PORTFOLIO_REPOS = ['virnahar', 'portfolio', 'virnahar.github.io'];
+const SITE_LINK = 'https://virnahar.github.io/';
+const LINKEDIN = 'https://www.linkedin.com/in/virnahar/';
+const EMAIL = 'virnahar@gmail.com';
+const PHONE = '+91-8285101909';
+const FULLNAME = 'Virendra Kumar';
+const TITLE = 'DevOps Technical Lead';
+const SHORT_BIO = `I am a dedicated industry professional with detailed technical knowledge and hands-on experience of DevOps, DevSecOps and CI/CD Automation.`;
+const SKILLS = ['Kubernetes','Docker','Terraform','Ansible','Jenkins','CI/CD','DevSecOps','AWS','Azure','Scripting'];
+
+/* Optionally, if you have a GitHub token to avoid API rate limits,
+   paste it here (or leave null). This is used client-side only.
+   Example: const GITHUB_TOKEN = 'ghp_...';
+*/
+const GITHUB_TOKEN = null; // <--- you may add a token for heavier usage
+
+/* ---------------------------
+   CANVAS + WORLD SETUP
+   --------------------------- */
+const canvas = document.getElementById('spaceCanvas');
+const ctx = canvas.getContext('2d', { alpha: true });
+let W = canvas.width = innerWidth;
+let H = canvas.height = innerHeight;
+window.addEventListener('resize', ()=>{ W = canvas.width = innerWidth; H = canvas.height = innerHeight; });
+
+/* Ship state */
+const ship = { x: -200, y: -120, angle: 0, vx:0, vy:0, radius: 16, maxSpeed: 6, thrust:0.14, turnSpeed:0.04, boosting:false };
+
+/* Camera */
+const camera = { x: ship.x, y: ship.y, lerp:0.07 };
+
+/* Input */
+const keys = {};
+addEventListener('keydown', (e)=>{ keys[e.key.toLowerCase()] = true; if(e.key===' ') e.preventDefault(); });
+addEventListener('keyup', (e)=>{ keys[e.key.toLowerCase()] = false; });
+
+/* World: stars and planets */
+let stars = [];
+let planets = [];
+
+/* Fill stars in layers */
+function initStars(){
+  stars = [];
+  const layers = [140, 90, 50];
+  for(let li=0; li<layers.length; li++){
+    for(let i=0;i<layers[li];i++){
+      stars.push({
+        x: (Math.random()-0.5)*6000,
+        y: (Math.random()-0.5)*4000,
+        z: 0.3 + li*0.35,
+        r: Math.random()*1.6 + 0.2,
+        a: 0.4 + Math.random()*0.7
+      });
+    }
+  }
+}
+initStars();
+
+/* Create planets: each a "level" */
+function initPlanets(){
+  planets = [];
+  const defs = [
+    { name:'Home Base', type:'about', color1:'#2ad7ff', color2:'#4b7bff', r:100, desc:'About Me' },
+    { name:'Cloud Prime', type:'skills', color1:'#7b61ff', color2:'#ff77b6', r:82, desc:'Skills & Tools' },
+    { name:'Repo World', type:'projects', color1:'#2ee6a6', color2:'#29a6ff', r:88, desc:'Projects & Repos' },
+    { name:'Contact Orb', type:'contact', color1:'#ffbf66', color2:'#ff6b66', r:72, desc:'Contact & Links' },
+    { name:'Portfolio Hub', type:'portfolio', color1:'#9b8bff', color2:'#6be8ff', r:64, desc:'Portfolio README / site' }
+  ];
+  const base = 900;
+  defs.forEach((d,i)=>{
+    const angle = (i/defs.length)*Math.PI*2 + (Math.random()*0.6 - 0.3);
+    const dist = base + 250*i + Math.random()*240 - 120;
+    planets.push(Object.assign({}, d, { px: Math.cos(angle)*dist + (Math.random()*200-100), py: Math.sin(angle)*dist + (Math.random()*200-100) }));
+  });
+}
+initPlanets();
+
+/* ---------------------------
+   RENDER
+   --------------------------- */
+function worldToScreen(wx,wy){
+  const sx = (wx - camera.x) + W/2;
+  const sy = (wy - camera.y) + H/2;
+  return [sx,sy];
+}
+
+function drawBg(){
+  // subtle starfield and nebula overlay
+  ctx.clearRect(0,0,W,H);
+  // nebula gradients
+  const g = ctx.createRadialGradient(W*0.18,H*0.2,20, W*0.18,H*0.2, Math.max(W,H));
+  g.addColorStop(0,'rgba(30,8,60,0.12)');
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+}
+
+function drawStars(){
+  for(const s of stars){
+    const sx = (s.x - camera.x) * (0.6 + s.z*0.8) + W/2;
+    const sy = (s.y - camera.y) * (0.6 + s.z*0.8) + H/2;
+    if(sx < -20 || sx > W+20 || sy < -20 || sy > H+20) continue;
+    ctx.globalAlpha = s.a;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(sx, sy, s.r * (1 + s.z*1.6), 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPlanets(){
+  for(const p of planets){
+    const [sx,sy] = worldToScreen(p.px, p.py);
+    const dist = Math.hypot(p.px - ship.x, p.py - ship.y);
+    const scale = 0.9 + Math.max(0, 1 - dist / 2000) * 0.35;
+    const pr = p.r * scale;
+
+    // glow
+    const glow = ctx.createRadialGradient(sx,sy,pr*0.1, sx,sy, pr*2);
+    glow.addColorStop(0, hexToRgba(p.color1, 0.9));
+    glow.addColorStop(0.6, hexToRgba(p.color2, 0.28));
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(sx,sy, pr*1.5, 0, Math.PI*2); ctx.fill();
+
+    // body
+    const body = ctx.createLinearGradient(sx-pr, sy-pr, sx+pr, sy+pr);
+    body.addColorStop(0, p.color1); body.addColorStop(1, p.color2);
+    ctx.fillStyle = body;
+    ctx.beginPath(); ctx.arc(sx,sy, pr, 0, Math.PI*2); ctx.fill();
+
+    // rim
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // label when reasonably close
+    if(dist < 1100 || pr > 30){
+      ctx.font = '600 14px Inter, Arial';
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fillText(p.name, sx - pr, sy - pr - 10);
+    }
+  }
+}
+
+function drawShip(){
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.rotate(ship.angle);
+  const speed = Math.hypot(ship.vx, ship.vy);
+  const thrust = Math.min(1, speed / ship.maxSpeed);
+  // engine flame
+  const flameLen = 24 + thrust*40;
+  const flameGrad = ctx.createLinearGradient(-14, 0, -flameLen, 0);
+  flameGrad.addColorStop(0, 'rgba(255,255,255,0.0)');
+  flameGrad.addColorStop(0.3, 'rgba(255,170,90,0.12)');
+  flameGrad.addColorStop(1, 'rgba(255,90,30,0.8)');
+  ctx.fillStyle = flameGrad;
+  ctx.beginPath();
+  ctx.moveTo(-12, -8); ctx.lineTo(-flameLen, 0); ctx.lineTo(-12, 8); ctx.closePath(); ctx.fill();
+
+  // ship body
+  ctx.fillStyle = '#e9fbff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-8,-12); ctx.lineTo(-2,0); ctx.lineTo(-8,12); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  // cockpit
+  ctx.beginPath(); ctx.fillStyle = 'rgba(0,10,30,0.9)'; ctx.arc(6,0,5,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // crosshair
+  ctx.save();
+  ctx.translate(W/2,H/2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.beginPath(); ctx.arc(0,0,4,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+function render(){
+  drawBg();
+  drawStars();
+  drawPlanets();
+  drawShip();
+}
+
+/* ---------------------------
+   PHYSICS + UPDATE
+   --------------------------- */
+function updatePhysics(){
+  const left = keys['a'] || keys['arrowleft'];
+  const right = keys['d'] || keys['arrowright'];
+  const up = keys['w'] || keys['arrowup'];
+  const down = keys['s'] || keys['arrowdown'];
+  ship.boosting = keys[' '] || false;
+
+  if(left) ship.angle -= ship.turnSpeed * (1 + (ship.boosting?0.6:0));
+  if(right) ship.angle += ship.turnSpeed * (1 + (ship.boosting?0.6:0));
+  if(up){
+    ship.vx += Math.cos(ship.angle) * ship.thrust * (ship.boosting?2.2:1);
+    ship.vy += Math.sin(ship.angle) * ship.thrust * (ship.boosting?2.2:1);
+  }
+  if(down){
+    ship.vx *= 0.96; ship.vy *= 0.96;
+  }
+
+  // clamp speed
+  let sp = Math.hypot(ship.vx, ship.vy);
+  const max = ship.maxSpeed * (ship.boosting ? 2.2 : 1);
+  if(sp > max){
+    ship.vx = ship.vx / sp * max; ship.vy = ship.vy / sp * max; sp = max;
+  }
+  // tiny drag
+  ship.vx *= 0.997; ship.vy *= 0.997;
+
+  ship.x += ship.vx; ship.y += ship.vy;
+
+  // camera follow
+  camera.x += (ship.x - camera.x) * camera.lerp;
+  camera.y += (ship.y - camera.y) * camera.lerp;
+
+  // HUD updates
+  document.getElementById('speed').textContent = Math.round(Math.hypot(ship.vx, ship.vy) * 10);
+
+  // distance to nearest planet
+  let nearest = null, nd = Infinity;
+  for(const p of planets){
+    const d = Math.hypot(p.px - ship.x, p.py - ship.y);
+    if(d < nd){ nd = d; nearest = p; }
+  }
+  document.getElementById('distance').textContent = nearest ? Math.round(nd) + 'u' : '—';
+  drawRadar(nearest);
+
+  // landing assist: slow down when very near a planet
+  if(nearest && nd < nearest.r * 1.6){
+    ship.vx *= 0.94; ship.vy *= 0.94;
+  }
+}
+
+/* ---------------------------
+   RADAR
+   --------------------------- */
+const radarCanvas = document.getElementById('radarCanvas');
+const rctx = radarCanvas.getContext('2d');
+function drawRadar(nearest){
+  const size = radarCanvas.width;
+  rctx.clearRect(0,0,size,size);
+  rctx.save();
+  // base
+  rctx.fillStyle = 'rgba(0,0,0,0.16)'; rctx.beginPath(); rctx.arc(size/2,size/2,size/2-6,0,Math.PI*2); rctx.fill();
+
+  // planets markers
+  const scale = 0.06;
+  for(const p of planets){
+    const rx = size/2 + (p.px - ship.x) * scale;
+    const ry = size/2 + (p.py - ship.y) * scale;
+    const d = Math.hypot(rx - size/2, ry - size/2);
+    if(d < size/2 - 12){
+      rctx.fillStyle = p.type === 'projects' ? 'rgba(46,230,166,0.95)' : 'rgba(190,190,255,0.95)';
+      rctx.beginPath(); rctx.arc(rx, ry, 6,0,Math.PI*2); rctx.fill();
+    }
+  }
+  // ship pointer
+  rctx.fillStyle = 'rgba(255,255,255,0.95)'; rctx.beginPath(); rctx.moveTo(size/2+6,size/2); rctx.lineTo(size/2-6,size/2-5); rctx.lineTo(size/2-6,size/2+5); rctx.closePath(); rctx.fill();
+
+  if(nearest){
+    rctx.fillStyle = 'rgba(255,255,255,0.7)'; rctx.font='10px Inter'; rctx.fillText(nearest.name, 12, size-12);
+  }
+  rctx.restore();
+}
+
+/* ---------------------------
+   LANDING / PANEL
+   --------------------------- */
+const panel = document.getElementById('panel');
+const panelTitle = document.getElementById('panelTitle');
+const panelMeta = document.getElementById('panelMeta');
+const panelContent = document.getElementById('panelContent');
+const avatar = document.getElementById('avatar');
+const skillsList = document.getElementById('skillsList');
+const skillsBlock = document.getElementById('skillsBlock');
+const projectsBlock = document.getElementById('projectsBlock');
+const projectsList = document.getElementById('projectsList');
+const panelButtons = document.getElementById('panelButtons');
+const coordsEl = document.getElementById('coords');
+
+document.getElementById('closePanel').addEventListener('click', ()=> { panel.classList.remove('show'); });
+
+function getNearbyPlanet(radius=120){
+  for(const p of planets){
+    const d = Math.hypot(p.px - ship.x, p.py - ship.y);
+    if(d <= radius + p.r) return p;
+  }
+  return null;
+}
+
+function openPanelFor(p){
+  panelTitle.textContent = p.name;
+  panelMeta.textContent = p.desc;
+  coordsEl.textContent = Math.round(p.px) + ' , ' + Math.round(p.py);
+  avatar.textContent = initials(FULLNAME);
+  panelContent.innerHTML = '';
+  skillsBlock.style.display = 'none';
+  projectsBlock.style.display = 'none';
+  panelButtons.innerHTML = '';
+
+  // common buttons
+  panelButtons.appendChild(mkBtn('Website', ()=> window.open(SITE_LINK, '_blank')));
+  panelButtons.appendChild(mkBtn('GitHub', ()=> window.open('https://github.com/' + GIT_USER, '_blank')));
+
+  if(p.type === 'about'){
+    panelContent.innerHTML = `<div style="font-weight:700">${FULLNAME} — ${TITLE}</div>
+      <div style="color:rgba(255,255,255,0.82);margin-top:8px">${SHORT_BIO}</div>
+      <div style="margin-top:12px;color:rgba(255,255,255,0.78)"><strong>Experience snapshot:</strong> Technical Lead at Mercer Consulting — CI/CD, DevSecOps, automation, cloud infra.</div>`;
+    panelButtons.appendChild(mkBtn('Email', ()=> location.href = 'mailto:' + EMAIL));
+    panelButtons.appendChild(mkBtn('LinkedIn', ()=> window.open(LINKEDIN,'_blank')));
+  } else if(p.type === 'skills'){
+    panelContent.innerHTML = `<div style="font-weight:700">Core strengths</div><div style="color:rgba(255,255,255,0.84);margin-top:8px">Cloud native engineering, automation and CI/CD</div>`;
+    skillsBlock.style.display = 'block';
+    skillsList.innerHTML = '';
+    SKILLS.forEach(s => { const el = document.createElement('div'); el.className='skill'; el.textContent = s; skillsList.appendChild(el); });
+  } else if(p.type === 'projects'){
+    panelContent.innerHTML = `<div style="font-weight:700">Fetching GitHub repositories for ${GIT_USER}…</div>`;
+    projectsBlock.style.display = 'block';
+    projectsList.innerHTML = '';
+    fetchGithubRepos();
+  } else if(p.type === 'contact'){
+    panelContent.innerHTML = `<div style="font-weight:700">Let’s connect</div><div style="color:rgba(255,255,255,0.78);margin-top:6px">Email: <a href="mailto:${EMAIL}">${EMAIL}</a><br>Phone: ${PHONE}<br><a href="${LINKEDIN}" target="_blank">LinkedIn</a></div>`;
+    panelButtons.appendChild(mkBtn('Download Resume', ()=> window.open(SITE_LINK + 'files/virendrakumar.pdf', '_blank')));
+  } else if(p.type === 'portfolio'){
+    panelContent.innerHTML = `<div style="font-weight:700">Portfolio README / pages</div><div id="portfolioReadme" style="margin-top:8px;color:rgba(255,255,255,0.84)">Trying to fetch README from common repo names…</div>`;
+    tryFetchPortfolioReadme();
+  } else {
+    panelContent.innerHTML = `<div style="font-weight:700">${p.name}</div><div style="color:rgba(255,255,255,0.82);margin-top:6px">${p.desc}</div>`;
+  }
+
+  panel.classList.add('show');
+  // playful audio beep
+  playBeep(660, 0.04, 0.04);
+}
+
+/* helper to create button */
+function mkBtn(txt, cb){
+  const b = document.createElement('button');
+  b.className='btn'; b.textContent=txt; b.onclick=cb;
+  return b;
+}
+
+/* initials */
+function initials(n){ return (n.split(' ')[0]||'')[0] + ((n.split(' ')[1]||'')[0]||''); }
+
+/* ---------------------------
+   GITHUB FETCH (repos + possible readmes)
+   --------------------------- */
+async function fetchGithubRepos(){
+  const url = `https://api.github.com/users/${GIT_USER}/repos?per_page=12&sort=updated`;
+  try {
+    const res = await fetchWithAuth(url);
+    if(!res.ok) throw new Error('GitHub API: ' + res.status);
+    const repos = await res.json();
+    projectsList.innerHTML = '';
+    repos.slice(0,8).forEach(r => {
+      const div = document.createElement('div'); div.className='repo';
+      const h = document.createElement('h4'); h.textContent = r.name;
+      const p = document.createElement('p'); p.textContent = r.description || 'No description';
+      const meta = document.createElement('div'); meta.style.marginTop='8px'; meta.style.fontSize='12px'; meta.style.color='rgba(255,255,255,0.6)';
+      meta.textContent = `${r.language || '—'} · ★ ${r.stargazers_count} · Updated ${new Date(r.updated_at).toLocaleDateString()}`;
+      div.appendChild(h); div.appendChild(p); div.appendChild(meta);
+      div.onclick = ()=> window.open(r.html_url, '_blank');
+      projectsList.appendChild(div);
+    });
+    document.getElementById('panelContent').textContent = '';
+  } catch(e){
+    projectsList.innerHTML = `<div style="color:rgba(255,255,255,0.7);padding:10px">Could not load repos: ${e.message}</div>`;
+    document.getElementById('panelContent').textContent = 'Repositories (offline or rate-limited).';
+  }
+}
+
+/* Try fetching README.md from common repo names (raw.githubusercontent URLs).
+   We attempt a few likely repo names the user mentioned. */
+async function tryFetchPortfolioReadme(){
+  const target = document.getElementById('portfolioReadme');
+  target.textContent = 'Trying: ' + POSSIBLE_PORTFOLIO_REPOS.join(', ');
+  for(const repo of POSSIBLE_PORTFOLIO_REPOS){
+    const rawUrl = `https://raw.githubusercontent.com/${GIT_USER}/${repo}/master/README.md`;
+    try {
+      const r = await fetchWithAuth(rawUrl);
+      if(!r.ok) continue;
+      const md = await r.text();
+      // show short excerpt (first 800 chars) and link to repo
+      target.innerHTML = `<div style="white-space:pre-wrap;color:rgba(255,255,255,0.88)">${escapeHtml(md.slice(0,1500))}</div>
+        <div style="margin-top:10px"><a href="https://github.com/${GIT_USER}/${repo}" target="_blank" style="color:var(--accent)">Open ${repo} on GitHub</a></div>`;
+      return;
+    } catch(err){
+      // ignore and try next
+    }
+  }
+  target.textContent = 'No README found in common repo names. Open your portfolio site to view more.';
+}
+
+/* fetch helper with optional token */
+async function fetchWithAuth(url){
+  const opts = { headers: {} };
+  if(GITHUB_TOKEN){
+    opts.headers['Authorization'] = 'token ' + GITHUB_TOKEN;
+  }
+  return fetch(url, opts);
+}
+
+/* ---------------------------
+   CLICK TO LAND
+   --------------------------- */
+canvas.addEventListener('click', (ev)=>{
+  // convert screen click to world coords
+  const rect = canvas.getBoundingClientRect();
+  const cx = ev.clientX - rect.left;
+  const cy = ev.clientY - rect.top;
+  const wx = camera.x + (cx - W/2);
+  const wy = camera.y + (cy - H/2);
+  let hit = null;
+  for(const p of planets){
+    const d = Math.hypot(wx - p.px, wy - p.py);
+    if(d <= p.r + 18){ hit = p; break; }
+  }
+  if(hit){
+    // gently teleport player near the planet (fun, quick)
+    ship.x = hit.px + (hit.r + 80) * Math.cos(Math.random()*Math.PI*2);
+    ship.y = hit.py + (hit.r + 80) * Math.sin(Math.random()*Math.PI*2);
+    ship.vx = 0; ship.vy = 0;
+    openPanelFor(hit);
+    playBeep(660, 0.04, 0.04);
+  }
+});
+
+/* Landing via L key when near planet */
+addEventListener('keydown', (e)=> {
+  if(e.key.toLowerCase() === 'l'){
+    const p = getNearbyPlanet(120);
+    if(p) openPanelFor(p);
+  }
+});
+
+/* ---------------------------
+   UTILS + AUDIO
+   --------------------------- */
+function hexToRgba(hex, a=1){
+  const c = hex.replace('#','');
+  const r = parseInt(c.substring(0,2),16), g = parseInt(c.substring(2,4),16), b = parseInt(c.substring(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g, (c)=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
+
+/* Very small beep for interactions */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep(freq=440,dur=0.05,vol=0.04){
+  try {
+    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    o.type='sine'; o.frequency.value = freq;
+    g.gain.value = vol;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch(e){}
+}
+
+/* ---------------------------
+   MAIN LOOP
+   --------------------------- */
+let last = performance.now();
+function loop(now){
+  const dt = Math.min(40, now - last);
+  last = now;
+  updatePhysics();
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------------------------
+   EXTRAS / INIT
+   --------------------------- */
+function initials(name){ const parts = name.split(' ').filter(Boolean); return (parts[0]||'')[0] + ((parts[1]||'')[0]||''); }
+document.getElementById('avatar').textContent = initials(FULLNAME);
+
+/* draw initial radar and HUD */
+drawRadar();
+
+/* small idle cinematic */
+let idle = Date.now();
+['mousemove','keydown','touchstart'].forEach(ev => addEventListener(ev, ()=> idle = Date.now()));
+setInterval(()=>{ if(Date.now() - idle > 6000){ camera.x += Math.cos(Date.now()/7000)*0.5; camera.y += Math.sin(Date.now()/8000)*0.5; } }, 1000);
+
+/* Try to fetch initial GitHub data in background (non-blocking): repositories + README attempts */
+fetchGithubRepos().catch(()=>{});
+tryFetchPortfolioReadme();
+
+/* Expose helpers for debugging (optional) */
+window.__GAME = { ship, planets, stars, openPanelFor };
+
+/* initial star / planet animation to make them float a little (visual) */
+(function floatPlanets(){
+  let t = 0;
+  function f(){
+    t += 0.012;
+    planets.forEach((p,i)=> {
+      const j = Math.sin(t*(0.6 + i*0.07))*6;
+      const xj = Math.cos(t*(0.4 + i*0.03))*3;
+      // don't mutate core positions, just visually nudge via px/py offsets while rendering
+      // Here we simply add small noise to px/py to keep them lively
+      p.px += Math.cos(t*(0.02 + i*0.01)) * 0.03;
+      p.py += Math.sin(t*(0.018 + i*0.008)) * 0.03;
+    });
+    requestAnimationFrame(f);
+  }
+  f();
+})();
+
+/* small helpful message if user wants token usage */
+console.log('If GitHub responses are rate-limited, set GITHUB_TOKEN constant at top with a personal token.');
+
+</script>
+</body>
+</html>
