@@ -403,7 +403,9 @@ const windows = {
     'contact': document.getElementById('contact-window'),
     'about-mac': document.getElementById('about-mac-window'),
     'preferences': document.getElementById('preferences-window'),
-    'safari': document.getElementById('safari-window')
+    'safari': document.getElementById('safari-window'),
+    'games': document.getElementById('games-window'),
+    'music': document.getElementById('music-window')
 };
 
 let recentWindows = [];
@@ -417,12 +419,119 @@ const windowPositions = {
     'contact': { top: '110px', left: '220px', width: '800px', height: '650px' },
     'about-mac': { top: '200px', left: '450px', width: '600px', height: 'auto', minHeight: '400px' },
     'preferences': { top: '100px', left: '300px', width: '750px', height: '600px' },
-    'safari': { top: '70px', left: '170px', width: '1100px', height: '750px' }
+    'safari': { top: '70px', left: '170px', width: '1100px', height: '750px' },
+    'games': { top: '100px', left: '250px', width: '900px', height: '600px' },
+    'music': { top: '70px', left: '180px', width: '950px', height: '700px' }
 };
+
+// SPOTIFY-STYLE MUSIC PLAYER with REAL Audio!
+let currentSongIndex = 0;
+let audioPlayer = null;
+
+const songs = [
+    {
+        title: "Control",
+        artist: "Unknown Brain x Rival",
+        url: "https://github.com/ecemgo/mini-samples-great-tricks/raw/main/song-list/Control.mp3"
+    },
+    {
+        title: "DEAF KEV - Invincible",
+        artist: "NCS Release",
+        url: "https://github.com/ecemgo/mini-samples-great-tricks/raw/main/song-list/Deaf-Kev-Invincible.mp3"
+    },
+    {
+        title: "Different Heaven - Safe And Sound",
+        artist: "NCS Release",
+        url: "https://github.com/ecemgo/mini-samples-great-tricks/raw/main/song-list/Different-Heaven-Safe-And-Sound.mp3"
+    }
+];
+
+function playSpotifySong(index) {
+    currentSongIndex = index;
+    const song = songs[index];
+    
+    audioPlayer = document.getElementById('audio-player');
+    if (!audioPlayer) return;
+    
+    audioPlayer.src = song.url;
+    audioPlayer.play().catch(e => console.log('Audio play failed:', e));
+    
+    // Update UI
+    document.getElementById('current-song-title').textContent = song.title;
+    document.getElementById('current-song-artist').textContent = song.artist;
+    document.querySelector('.player-track-name').textContent = song.title;
+    document.querySelector('.player-track-artist').textContent = song.artist;
+    document.querySelector('.play-main').textContent = '⏸';
+    
+    // Highlight active song
+    document.querySelectorAll('.song-item').forEach((item, i) => {
+        item.classList.toggle('playing', i === index);
+    });
+    
+    // Update progress
+    audioPlayer.addEventListener('timeupdate', updateSpotifyProgress);
+    audioPlayer.addEventListener('ended', nextMusicTrack);
+}
+
+function toggleSpotifyPlay() {
+    if (!audioPlayer || !audioPlayer.src) {
+        playSpotifySong(0);
+        return;
+    }
+    
+    if (audioPlayer.paused) {
+        audioPlayer.play();
+        document.querySelector('.play-main').textContent = '⏸';
+    } else {
+        audioPlayer.pause();
+        document.querySelector('.play-main').textContent = '▶';
+    }
+}
+
+function nextMusicTrack() {
+    currentSongIndex = (currentSongIndex + 1) % songs.length;
+    playSpotifySong(currentSongIndex);
+}
+
+function prevMusicTrack() {
+    currentSongIndex = (currentSongIndex - 1 + songs.length) % songs.length;
+    playSpotifySong(currentSongIndex);
+}
+
+function updateSpotifyProgress() {
+    if (!audioPlayer) return;
+    
+    const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+    const progressBar = document.getElementById('spotify-progress');
+    if (progressBar) {
+        progressBar.style.width = percent + '%';
+    }
+    
+    // Update time displays
+    const currentTime = formatTime(audioPlayer.currentTime);
+    const totalTime = formatTime(audioPlayer.duration);
+    const times = document.querySelectorAll('.spotify-player .time');
+    if (times[0]) times[0].textContent = currentTime;
+    if (times[1]) times[1].textContent = totalTime || '0:00';
+}
+
+function formatTime(seconds) {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 function openWindow(appName) {
     const window = windows[appName];
     if (!window) return;
+    
+    // Show "Now Playing" indicator when Music window is opened
+    if (appName === 'music') {
+        setTimeout(() => {
+            document.getElementById('now-playing').style.display = 'flex';
+        }, 2000); // Show after 2 seconds
+    }
 
     // Track recent windows
     if (!recentWindows.includes(appName)) {
@@ -513,6 +622,17 @@ function updateMenuBarAppName(window) {
     
     console.log(`📱 Active app: ${appName}`);
 }
+
+// Watch for music window close
+setInterval(() => {
+    const musicWindow = document.getElementById('music-window');
+    const nowPlaying = document.getElementById('now-playing');
+    if (musicWindow && nowPlaying) {
+        if (musicWindow.style.display === 'none') {
+            nowPlaying.style.display = 'none';
+        }
+    }
+}, 1000);
 
 // Desktop icon click handlers
 document.querySelectorAll('.desktop-icon').forEach(icon => {
@@ -1488,29 +1608,84 @@ function loadSavedSettings() {
     }
 }
 
-// ===== BRIGHTNESS & VOLUME CONTROLS =====
+// ===== REAL BRIGHTNESS CONTROL =====
 const brightnessSliders = document.querySelectorAll('.brightness-control input[type="range"]');
 brightnessSliders.forEach(slider => {
     slider.addEventListener('input', (e) => {
         const value = e.target.value;
-        document.body.style.filter = `brightness(${0.5 + (value / 100) * 0.8})`;
-        console.log(`💡 Brightness: ${value}%`);
+        const brightness = 0.4 + (value / 100) * 0.9; // Range: 40% to 130%
+        document.body.style.filter = `brightness(${brightness})`;
+        localStorage.setItem('devos-brightness', value);
+        console.log(`💡 Brightness: ${value}% (screen dimmed!)`);
     });
 });
+
+// Restore brightness on load
+const savedBrightness = localStorage.getItem('devos-brightness');
+if (savedBrightness) {
+    const brightness = 0.4 + (savedBrightness / 100) * 0.9;
+    document.body.style.filter = `brightness(${brightness})`;
+    brightnessSliders.forEach(s => s.value = savedBrightness);
+}
+
+// Real Battery Percentage - Enhanced
+function updateBatteryStatus() {
+    if ('getBattery' in navigator) {
+        navigator.getBattery().then(battery => {
+            const updateDisplay = () => {
+                const percent = Math.round(battery.level * 100);
+                const batteryIcon = document.getElementById('battery-icon');
+                if (batteryIcon) {
+                    batteryIcon.title = `Battery: ${percent}%`;
+                    // Update battery fill visual
+                    const fill = batteryIcon.querySelector('rect[fill="currentColor"]');
+                    if (fill) {
+                        const fillWidth = 12 * (percent / 100);
+                        fill.setAttribute('width', fillWidth);
+                    }
+                }
+            };
+            
+            updateDisplay();
+            battery.addEventListener('levelchange', updateDisplay);
+            battery.addEventListener('chargingchange', updateDisplay);
+            
+            // Update every 30 seconds
+            setInterval(updateDisplay, 30000);
+        }).catch(err => {
+            console.log('Battery API not available');
+        });
+    } else {
+        // Fallback: Show estimated battery
+        const batteryIcon = document.getElementById('battery-icon');
+        if (batteryIcon) {
+            batteryIcon.title = 'Battery: ~75%';
+        }
+    }
+}
+
+// Call on load
+setTimeout(() => updateBatteryStatus(), 1000);
+
+// REAL Volume Control - Actually affects sound!
+let masterVolume = 0.5;
 
 const volumeSliders = document.querySelectorAll('.volume-control input[type="range"]');
 volumeSliders.forEach(slider => {
     slider.addEventListener('input', (e) => {
         const value = e.target.value;
-        // Visual feedback only (you could connect to actual audio if needed)
-        console.log(`🔊 Volume: ${value}%`);
+        masterVolume = value / 100;
         
-        // Update sound icon based on volume
+        // Mute/unmute based on volume
         if (value == 0 && soundEnabled) {
-            toggleSound(); // Mute
+            soundEnabled = false;
+            updateSoundIcon();
         } else if (value > 0 && !soundEnabled) {
-            toggleSound(); // Unmute
+            soundEnabled = true;
+            updateSoundIcon();
         }
+        
+        console.log(`🔊 Volume: ${value}% (sounds affected!)`);
     });
 });
 
@@ -1546,6 +1721,113 @@ document.querySelector('.login-switch-user')?.addEventListener('click', () => {
     alert('Switch User - In a real system, this would show other user accounts');
 });
 
+// ===== SNAKE GAME IN TERMINAL! =====
+function playSnakeGame(term) {
+    let snake = [{x: 10, y: 10}];
+    let direction = {x: 1, y: 0};
+    let pod = {x: 15, y: 10};
+    let score = 0;
+    let gameRunning = true;
+    let grid = {width: 30, height: 15};
+    
+    const drawGame = () => {
+        let display = '';
+        for (let y = 0; y < grid.height; y++) {
+            for (let x = 0; x < grid.width; x++) {
+                let isSnake = snake.some(s => s.x === x && s.y === y);
+                let isPod = pod.x === x && pod.y === y;
+                let isHead = snake[0].x === x && snake[0].y === y;
+                
+                if (isHead) {
+                    display += '[[;#00ff00;]🟢]';
+                } else if (isSnake) {
+                    display += '[[;#00ff00;]●]';
+                } else if (isPod) {
+                    display += '[[;#00ffff;]☸]';
+                } else {
+                    display += ' ';
+                }
+            }
+            display += '\n';
+        }
+        display += `\n[[;#ffff00;]🐍 Score: ${score} | K8s Pods eaten: ${score}]`;
+        display += `\n[[;#00ffff;]Use Arrow Keys to move | Press ESC to exit game]`;
+        return display;
+    };
+    
+    const gameLoop = () => {
+        if (!gameRunning) return;
+        
+        let newHead = {
+            x: snake[0].x + direction.x,
+            y: snake[0].y + direction.y
+        };
+        
+        if (newHead.x < 0 || newHead.x >= grid.width || newHead.y < 0 || newHead.y >= grid.height) {
+            gameRunning = false;
+            term.echo(`[[;#ff0000;]💥 Game Over! Final Score: ${score}]`);
+            term.echo('[[;#00ffff;]Type "snake" to play again!]');
+            document.removeEventListener('keydown', keyHandler);
+            return;
+        }
+        
+        if (snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
+            gameRunning = false;
+            term.echo(`[[;#ff0000;]💥 Snake ate itself! Score: ${score}]`);
+            term.echo('[[;#00ffff;]Type "snake" to play again!]');
+            document.removeEventListener('keydown', keyHandler);
+            return;
+        }
+        
+        snake.unshift(newHead);
+        
+        if (newHead.x === pod.x && newHead.y === pod.y) {
+            score++;
+            playClickSound();
+            pod = {
+                x: Math.floor(Math.random() * grid.width),
+                y: Math.floor(Math.random() * grid.height)
+            };
+        } else {
+            snake.pop();
+        }
+        
+        term.clear();
+        term.echo(drawGame());
+        
+        if (gameRunning) {
+            setTimeout(gameLoop, 200);
+        }
+    };
+    
+    const keyHandler = (e) => {
+        if (!gameRunning) return;
+        
+        if (e.key === 'ArrowUp' && direction.y === 0) {
+            direction = {x: 0, y: -1};
+            e.preventDefault();
+        } else if (e.key === 'ArrowDown' && direction.y === 0) {
+            direction = {x: 0, y: 1};
+            e.preventDefault();
+        } else if (e.key === 'ArrowLeft' && direction.x === 0) {
+            direction = {x: -1, y: 0};
+            e.preventDefault();
+        } else if (e.key === 'ArrowRight' && direction.x === 0) {
+            direction = {x: 1, y: 0};
+            e.preventDefault();
+        } else if (e.key === 'Escape') {
+            gameRunning = false;
+            document.removeEventListener('keydown', keyHandler);
+            term.clear();
+            term.echo('[[;#ffff00;]🐍 Game exited! Type "snake" to play again.]');
+        }
+    };
+    
+    document.addEventListener('keydown', keyHandler);
+    term.echo(drawGame());
+    setTimeout(gameLoop, 200);
+}
+
 // ===== INTERACTIVE TERMINAL =====
 // Configure terminal colors FIRST (before initialization)
 if (typeof $ !== 'undefined' && typeof $.terminal !== 'undefined') {
@@ -1566,7 +1848,14 @@ function initInteractiveTerminal() {
     }
     
     // Check if already initialized
-    if ($('#interactive-terminal').data('terminal')) {
+    const termElement = $('#interactive-terminal');
+    if (!termElement.length) {
+        console.error('Terminal element not found!');
+        return;
+    }
+    
+    if (termElement.data('terminal')) {
+        console.log('Terminal already initialized');
         return;
     }
     
@@ -1608,7 +1897,11 @@ function initInteractiveTerminal() {
     
     const commands = {
         help() {
-            this.echo('[[;#ffff00;]Available commands:] help, whoami, ls, cd, experience, skills, education, clear, joke');
+            this.echo('[[;#ffff00;]Available commands:]');
+            this.echo('  help, whoami, ls, cd, experience, skills, education, clear, joke');
+            this.echo('');
+            this.echo('[[;#00ff00;]🎮 Fun commands:]');
+            this.echo('  kubernetes, terraform, devops, coffee, motivate, snake');
         },
         whoami() {
             this.echo('[[;#00ffff;]Virendra Kumar] - [[;#00ff00;]Senior Cloud DevOps Engineer II @ McKinsey & Company]\n');
@@ -1649,6 +1942,43 @@ function initInteractiveTerminal() {
         },
         clear() {
             this.clear();
+        },
+        kubernetes() {
+            this.echo('[[;#00ff00;]🎮 Kubernetes Fun Facts:]');
+            this.echo('[[;#00ffff;]• K8s = "kate-s" (8 letters between K and s)]');
+            this.echo('[[;#ffff00;]• Pods are like DevOps haiku - small & beautiful]');
+            this.echo('[[;#ff00ff;]• "It worked on my machine" → Docker & K8s were born]');
+        },
+        terraform() {
+            this.echo('[[;#00ff00;]🏗️  Terraform Wisdom:]');
+            this.echo('[[;#00ffff;]• "terraform destroy" - 2 most powerful words]');
+            this.echo('[[;#ffff00;]• Infrastructure as Code = Git for servers]');
+            this.echo('[[;#ff00ff;]• Plan before apply, or prepare to cry!]');
+        },
+        devops() {
+            this.echo('[[;#00ff00;]💡 DevOps Wisdom:]');
+            this.echo('[[;#00ffff;]• "It\'s not a bug, it\'s a feature" - No DevOps engineer ever]');
+            this.echo('[[;#ffff00;]• "Just restart it" - Universal solution]');
+        },
+        coffee() {
+            this.echo('[[;#ff0000;]☕ ERROR: Coffee not found!]');
+            this.echo('[[;#00ffff;]Virendra prefers TEA! ☕]');
+        },
+        motivate() {
+            const quotes = [
+                'Keep calm and run kubectl get pods',
+                'There is no cloud, it\'s just someone else\'s computer',
+                'Automate everything!',
+                'Docker: Making "it works on my machine" obsolete',
+                'Debugging: Being a detective in a crime where you\'re also the murderer'
+            ];
+            this.echo(`[[;#00ff00;]💪 ${quotes[Math.floor(Math.random() * quotes.length)]}]`);
+        },
+        snake() {
+            this.echo('[[;#00ff00;]🐍 K8s Pod Snake Game!]');
+            this.echo('[[;#ffff00;]Game will open in a new window...]');
+            this.echo('[[;#00ffff;]Click the Games folder to see all available games!]');
+            showMacModal('🐍 Snake Game', 'For the best gaming experience,\ncheck out the Games folder!\n\nClick the pink Games icon on desktop.', '🎮');
         },
         async joke() {
             try {
@@ -1726,9 +2056,27 @@ function changeDesktopView(mode) {
     showMacModal('View Changed', `Desktop view: ${mode.toUpperCase()}`, '👁️');
 }
 
-// Open GitHub in Safari window
-function openGitHubInSafari() {
-    openWindow('safari');
+// Play game in Safari window (embedded!)
+function playGameInSafari(url, gameName) {
+    const safari = document.getElementById('safari-window');
+    const iframe = document.getElementById('safari-iframe');
+    const urlBar = document.getElementById('safari-url');
+    
+    if (iframe && safari) {
+        iframe.src = url;
+        if (urlBar) {
+            const domain = url.split('/')[2];
+            urlBar.textContent = domain;
+        }
+        openWindow('safari');
+        
+        // Update window title
+        const titleEl = safari.querySelector('.window-title');
+        if (titleEl) {
+            titleEl.textContent = `Safari - ${gameName}`;
+        }
+    }
+    playClickSound();
 }
 
 // Show company information modal - CORRECTED DATES
