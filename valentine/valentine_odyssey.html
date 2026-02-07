@@ -3,196 +3,376 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether: The 8 Dimensions of Love</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <title>The 8 Days of Love</title>
     <style>
-        body, html { margin: 0; padding: 0; background: #030005; overflow: hidden; font-family: 'Times New Roman', serif; }
-        #canvas-container { position: fixed; inset: 0; filter: contrast(110%) brightness(110%); }
-        #ui {
-            position: fixed; inset: 0; display: flex; flex-direction: column;
-            justify-content: flex-end; align-items: center; padding-bottom: 50px;
-            pointer-events: none; z-index: 10;
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Great+Vibes&display=swap');
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #050005; 
+            font-family: 'Cinzel', serif;
         }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px);
-            border-radius: 40px; padding: 30px; width: 85%; max-width: 450px;
-            border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;
-            opacity: 0; transform: translateY(30px); transition: all 1.2s ease;
+
+        /* Ambient Background */
+        #bg-gradient {
+            position: fixed; inset: 0; 
+            background: radial-gradient(circle at center, #1a0014 0%, #000000 100%);
+            z-index: -1;
         }
-        #day-label { font-size: 0.7rem; letter-spacing: 6px; color: #ff85a2; text-transform: uppercase; margin-bottom: 10px; }
-        #title { font-size: 2.2rem; margin: 0; color: #fff; font-weight: 100; text-shadow: 0 0 15px rgba(255, 77, 109, 0.5); }
-        #msg { font-size: 1rem; color: #ffe0e6; margin-top: 15px; font-style: italic; line-height: 1.6; min-height: 3em; }
-        #start-btn {
-            position: fixed; inset: 0; z-index: 100; background: #000;
+
+        /* Glass UI */
+        #ui-container {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 35%;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            color: #ff4d6d; cursor: pointer; letter-spacing: 5px;
+            pointer-events: none; z-index: 10;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
         }
-        .active { opacity: 1 !important; transform: translateY(0) !important; }
+
+        #text-panel {
+            text-align: center; color: white; opacity: 0; transform: translateY(20px);
+            transition: all 1.5s cubic-bezier(0.19, 1, 0.22, 1);
+            padding: 20px;
+        }
+
+        #day-label {
+            font-size: 0.8rem; letter-spacing: 4px; color: #ff85a2; 
+            text-transform: uppercase; margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 77, 109, 0.4);
+        }
+
+        #main-title {
+            font-family: 'Great Vibes', cursive;
+            font-size: 3rem; margin: 0; 
+            background: -webkit-linear-gradient(#fff, #ffb7c5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 5px rgba(255,183,197,0.5));
+        }
+
+        #sub-msg {
+            font-size: 0.9rem; margin-top: 10px; opacity: 0.8; 
+            font-family: 'Cinzel', serif; line-height: 1.6; max-width: 90vw;
+        }
+
+        /* Start Screen */
+        #start-overlay {
+            position: fixed; inset: 0; z-index: 100; 
+            background: #000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #ff4d6d; cursor: pointer;
+            transition: opacity 1s ease;
+        }
+
+        .pulse-btn {
+            border: 1px solid #ff4d6d; padding: 15px 30px; border-radius: 50px;
+            font-size: 0.8rem; letter-spacing: 3px; text-transform: uppercase;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 109, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 77, 109, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 109, 0); } }
+        
+        canvas { display: block; }
     </style>
 </head>
 <body>
 
-<div id="start-btn" onclick="initialize()">
-    <div style="font-size: 3rem; margin-bottom: 20px;">✧</div>
-    <h1 style="font-weight: 100;">VALENTINE ODYSSEY</h1>
-    <p style="font-size: 0.7rem; opacity: 0.6;">TAP TO BEGIN THE JOURNEY</p>
-</div>
+    <div id="bg-gradient"></div>
 
-<div id="canvas-container"></div>
-
-<div id="ui">
-    <div id="panel" class="glass-panel">
-        <div id="day-label"></div>
-        <h1 id="title"></h1>
-        <p id="msg"></p>
+    <div id="start-overlay" onclick="startJourney()">
+        <h1 style="font-family:'Great Vibes'; font-size: 4rem; margin-bottom: 20px;">The Season of Love</h1>
+        <div class="pulse-btn">Tap to Begin Journey</div>
     </div>
-</div>
 
-<script>
-let scene, camera, renderer, particles, audioCtx, step = -1;
-const particleCount = 6000;
+    <div id="ui-container">
+        <div id="text-panel">
+            <div id="day-label"></div>
+            <h1 id="main-title"></h1>
+            <p id="sub-msg"></p>
+        </div>
+    </div>
 
-const stages = [
-    { day: "Feb 7: Rose Day", title: "Eternal Bloom", msg: "A rose crafted from starlight, blooming only for you.", color: 0xff0044, shape: "spiral" },
-    { day: "Feb 9: Chocolate Day", title: "Golden Cocoa", msg: "Sweetness that transcends the digital void.", color: 0xffaa00, shape: "coin" },
-    { day: "Feb 12: Hug Day", title: "The Embrace", msg: "Two separate paths, finally intertwined as one.", color: 0x9d4edd, shape: "helix" },
-    { day: "Feb 14: Valentine", title: "The Infinity Heart", msg: "Words are finite, but my love for you is a constant in every universe.", color: 0xff2d55, shape: "heart" }
-];
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
-function initialize() {
-    gsap.to("#start-btn", { opacity: 0, duration: 1.5, onComplete: () => document.getElementById('start-btn').remove() });
-    initAudio();
-    initThree();
-    nextStage();
-}
+    <script>
+        let scene, camera, renderer, particles, audioCtx;
+        let currentStep = -1;
+        const particleCount = 4500; // Optimal for mobile
+        
+        // --- THE 8 DAYS OF VALENTINE ---
+        const journey = [
+            { day: "Day 1: Rose Day", title: "The Blooming", msg: "Like a rose unfolding, my love for you grows with every passing moment.", color: 0xff0033, shape: "rose" },
+            { day: "Day 2: Propose Day", title: "The Question", msg: "I don't need the world, I just need you in it. Will you be mine?", color: 0x00d4ff, shape: "ring" },
+            { day: "Day 3: Chocolate Day", title: "Sweet Moments", msg: "Life is bitter sometimes, but you are my eternal sweetness.", color: 0xd2691e, shape: "box" },
+            { day: "Day 4: Teddy Day", title: "Soft Comfort", msg: "A warm hug in particle form. You are my safe place.", color: 0xffb7c5, shape: "teddy" },
+            { day: "Day 5: Promise Day", title: "Forever", msg: "I promise to be your shadow when the sun shines and your light when it's dark.", color: 0xffd700, shape: "infinity" },
+            { day: "Day 6: Hug Day", title: "The Merge", msg: "Two souls, one space. Closer than close.", color: 0x9d4edd, shape: "hug" },
+            { day: "Day 7: Kiss Day", title: "The Spark", msg: "A touch that echoes through the universe.", color: 0xff0055, shape: "kiss" },
+            { day: "Day 8: Valentine", title: "My Everything", msg: "You are the code to my heart. Happy Valentine's Day.", color: 0xff0000, shape: "heart" }
+        ];
 
-function initAudio() {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(130.81, audioCtx.currentTime); // C3 Ambient
-    gain.gain.setValueAtTime(0, audioCtx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 3);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start();
-}
+        // --- AUDIO ENGINE (Piano/Harp Synth) ---
+        function playPianoChord(step) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Romantic scale frequencies (Pentatonic/Major 7th vibes)
+            const chords = [
+                [261.6, 329.6, 392.0], // C Maj (Rose)
+                [293.7, 369.9, 440.0], // D Maj (Propose)
+                [329.6, 415.3, 493.9], // E Maj (Chocolate)
+                [349.2, 440.0, 523.3], // F Maj (Teddy)
+                [392.0, 493.9, 587.3], // G Maj (Promise)
+                [440.0, 554.4, 659.3], // A Maj (Hug)
+                [493.9, 622.3, 739.9], // B Maj (Kiss)
+                [523.3, 659.3, 784.0, 1046.5] // C Maj 7 (Valentine)
+            ];
 
-function playBell() {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.frequency.setValueAtTime(523.25 + (step * 50), audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 2);
-}
+            const notes = chords[step % chords.length];
+            const now = audioCtx.currentTime;
 
-function initThree() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-    camera.position.z = 120;
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                // Mix Sine and Triangle for "Piano-like" tone
+                osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+                
+                // Envelope
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.15, now + 0.1); // Attack
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 3); // Long Release
 
-    const geo = new THREE.BufferGeometry();
-    const pos = new Float32Array(particleCount * 3);
-    for(let i=0; i<particleCount*3; i++) pos[i] = (Math.random()-0.5) * 400;
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-
-    // Custom Glowing Particle
-    const canvas = document.createElement('canvas');
-    canvas.width = 32; canvas.height = 32;
-    const ctx = canvas.getContext('2d');
-    const grad = ctx.createRadialGradient(16,16,0,16,16,16);
-    grad.addColorStop(0, 'white'); grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad; ctx.fillRect(0,0,32,32);
-    
-    const mat = new THREE.PointsMaterial({ 
-        size: 1.2, map: new THREE.CanvasTexture(canvas), 
-        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false 
-    });
-
-    particles = new THREE.Points(geo, mat);
-    scene.add(particles);
-
-    window.addEventListener('click', nextStage);
-    window.addEventListener('touchstart', (e) => { e.preventDefault(); nextStage(); });
-    animate();
-}
-
-function morph(shape) {
-    const posArr = particles.geometry.attributes.position.array;
-    for (let i = 0; i < particleCount; i++) {
-        let x, y, z;
-        if (shape === 'spiral') { // Rose
-            const t = i * 0.1;
-            const r = (i / particleCount) * 40;
-            x = r * Math.cos(t); y = r * Math.sin(t); z = (i / particleCount) * 50 - 25;
-        } else if (shape === 'coin') { // Chocolate
-            const r = Math.sqrt(Math.random()) * 30;
-            const t = Math.random() * Math.PI * 2;
-            x = r * Math.cos(t); y = r * Math.sin(t); z = (Math.random()-0.5) * 5;
-        } else if (shape === 'helix') { // Hug
-            const t = (i / particleCount) * Math.PI * 4;
-            const r = 15;
-            const side = i % 2 === 0 ? 1 : -1;
-            x = r * Math.cos(t) * side; y = (i / particleCount) * 60 - 30; z = r * Math.sin(t) * side;
-        } else if (shape === 'heart') {
-            const t = Math.random() * Math.PI * 2;
-            x = 16 * Math.pow(Math.sin(t), 3);
-            y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-            z = (Math.random()-0.5) * 10;
-            x *= 2.5; y *= 2.5;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(now + 3);
+            });
         }
 
-        gsap.to(posArr, {
-            duration: 2.5, ease: "expo.out",
-            [i*3]: x, [i*3+1]: y, [i*3+2]: z
-        });
-    }
-}
+        // --- 3D ENGINE ---
+        function startJourney() {
+            document.getElementById('start-overlay').style.opacity = 0;
+            setTimeout(() => document.getElementById('start-overlay').remove(), 1000);
+            initThree();
+            nextStep();
+        }
 
-function nextStage() {
-    step++;
-    if (step >= stages.length) {
-        showFinal(); return;
-    }
-    const data = stages[step];
-    playBell();
+        function initThree() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 120;
 
-    const panel = document.getElementById('panel');
-    panel.classList.remove('active');
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimize for mobile
+            document.body.appendChild(renderer.domElement);
 
-    setTimeout(() => {
-        document.getElementById('day-label').innerText = data.day;
-        document.getElementById('title').innerText = data.title;
-        document.getElementById('msg').innerText = data.msg;
-        panel.classList.add('active');
-    }, 600);
+            // Create Heart Texture Programmatically
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#fff";
+            ctx.beginPath();
+            ctx.moveTo(32, 58);
+            ctx.bezierCurveTo(32, 58, 6, 40, 6, 22);
+            ctx.bezierCurveTo(6, 10, 18, 10, 32, 22);
+            ctx.bezierCurveTo(46, 10, 58, 10, 58, 22);
+            ctx.bezierCurveTo(58, 40, 32, 58, 32, 58);
+            ctx.fill();
+            const heartTex = new THREE.CanvasTexture(canvas);
 
-    gsap.to(particles.material.color, { r: new THREE.Color(data.color).r, g: new THREE.Color(data.color).g, b: new THREE.Color(data.color).b, duration: 2 });
-    morph(data.shape);
-}
+            // Create Particles
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(particleCount * 3);
+            for(let i=0; i<particleCount*3; i++) pos[i] = (Math.random()-0.5) * 300;
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
 
-function showFinal() {
-    document.getElementById('panel').classList.remove('active');
-    setTimeout(() => {
-        document.getElementById('day-label').style.display = 'none';
-        document.getElementById('title').innerText = "Infinity";
-        document.getElementById('msg').innerHTML = "No 3D sculpture, no matter how precise, can capture what you mean to me.<br><br><b>You are my home. Happy Valentine's Day.</b>";
-        document.getElementById('panel').classList.add('active');
-    }, 1000);
-}
+            const mat = new THREE.PointsMaterial({
+                size: 2.5, // Visible size on mobile
+                map: heartTex,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                color: 0xffffff
+            });
 
-function animate() {
-    requestAnimationFrame(animate);
-    particles.geometry.attributes.position.needsUpdate = true;
-    particles.rotation.y += 0.003;
-    renderer.render(scene, camera);
-}
-</script>
+            particles = new THREE.Points(geo, mat);
+            scene.add(particles);
+
+            // Interaction
+            window.addEventListener('click', nextStep);
+            window.addEventListener('touchstart', (e) => { e.preventDefault(); nextStep(); }, {passive: false});
+            window.addEventListener('resize', onResize);
+            
+            animate();
+        }
+
+        // --- SHAPE FORMULAS ---
+        function getShapePosition(type, i) {
+            const ratio = i / particleCount;
+            let x, y, z;
+
+            switch(type) {
+                case 'rose': // Spiral Rose
+                    const theta = ratio * Math.PI * 14; 
+                    const r = (ratio) * 35;
+                    x = r * Math.cos(theta);
+                    y = r * Math.sin(theta);
+                    z = (ratio * 40) - 20; // Depth
+                    // Tilt it slightly
+                    let ty = y * Math.cos(0.5) - z * Math.sin(0.5);
+                    let tz = y * Math.sin(0.5) + z * Math.cos(0.5);
+                    y = ty; z = tz;
+                    break;
+
+                case 'ring': // Diamond Ring
+                    if (i < particleCount * 0.8) { // The band
+                        const t = (i / (particleCount * 0.8)) * Math.PI * 2;
+                        x = 30 * Math.cos(t);
+                        y = 30 * Math.sin(t);
+                        z = (Math.random()-0.5) * 2;
+                    } else { // The Diamond
+                        x = (Math.random()-0.5) * 10;
+                        y = 30 + Math.random() * 10;
+                        z = (Math.random()-0.5) * 10;
+                    }
+                    break;
+                
+                case 'box': // Chocolate Box
+                    x = (Math.random()-0.5) * 40;
+                    y = (Math.random()-0.5) * 40;
+                    z = (Math.random()-0.5) * 40;
+                    // Clamp to make hollow box effect looks nicer
+                    if(Math.random()>0.5) x = Math.sign(x)*20;
+                    break;
+
+                case 'teddy': // Teddy Bear (3 spheres)
+                    const part = Math.random();
+                    if(part < 0.5) { // Body
+                        const t = Math.random() * Math.PI * 2, p = Math.random() * Math.PI;
+                        const rad = 25;
+                        x = rad * Math.sin(p) * Math.cos(t);
+                        y = rad * Math.sin(p) * Math.sin(t) - 15;
+                        z = rad * Math.cos(p);
+                    } else if (part < 0.85) { // Head
+                        const t = Math.random() * Math.PI * 2, p = Math.random() * Math.PI;
+                        const rad = 18;
+                        x = rad * Math.sin(p) * Math.cos(t);
+                        y = rad * Math.sin(p) * Math.sin(t) + 20;
+                        z = rad * Math.cos(p);
+                    } else { // Ears
+                        const side = Math.random() > 0.5 ? 1 : -1;
+                        x = side * 15 + (Math.random()-0.5)*5;
+                        y = 35 + (Math.random()-0.5)*5;
+                        z = (Math.random()-0.5)*5;
+                    }
+                    break;
+
+                case 'infinity': // Promise Day
+                    const tInf = ratio * Math.PI * 2;
+                    const scale = 30;
+                    x = (scale * Math.sqrt(2) * Math.cos(tInf)) / (Math.sin(tInf)*Math.sin(tInf) + 1);
+                    y = (scale * Math.sqrt(2) * Math.cos(tInf) * Math.sin(tInf)) / (Math.sin(tInf)*Math.sin(tInf) + 1);
+                    z = (Math.random()-0.5) * 5;
+                    break;
+
+                case 'hug': // Two Spheres Merging
+                    const tHug = Math.random() * Math.PI * 2, pHug = Math.random() * Math.PI;
+                    const rHug = 18;
+                    const shift = (i % 2 === 0) ? 12 : -12; // Shift left and right
+                    x = rHug * Math.sin(pHug) * Math.cos(tHug) + shift;
+                    y = rHug * Math.sin(pHug) * Math.sin(tHug);
+                    z = rHug * Math.cos(pHug);
+                    break;
+
+                case 'kiss': // Lips Shape
+                    const tKiss = ratio * Math.PI * 2;
+                    // Parametric lips approximation
+                    x = 30 * Math.cos(tKiss);
+                    y = 10 * Math.sin(tKiss) - 5 * Math.abs(Math.cos(tKiss)) * Math.sin(tKiss); // Dip in middle
+                    z = (Math.random()-0.5) * 5;
+                    break;
+
+                case 'heart': // Valentine Heart
+                    const tHeart = Math.random() * Math.PI * 2;
+                    // Standard heart formula
+                    let hx = 16 * Math.pow(Math.sin(tHeart), 3);
+                    let hy = 13 * Math.cos(tHeart) - 5 * Math.cos(2*tHeart) - 2 * Math.cos(3*tHeart) - Math.cos(4*tHeart);
+                    x = hx * 2.5; 
+                    y = hy * 2.5;
+                    z = (Math.random()-0.5) * 15; // Volume
+                    break;
+            }
+            return {x, y, z};
+        }
+
+        // --- TRANSITION LOGIC ---
+        function nextStep() {
+            currentStep = (currentStep + 1) % journey.length;
+            const data = journey[currentStep];
+
+            playPianoChord(currentStep);
+
+            // 1. Update Text
+            const panel = document.getElementById('text-panel');
+            panel.style.opacity = 0;
+            panel.style.transform = "translateY(20px)";
+            
+            setTimeout(() => {
+                document.getElementById('day-label').innerText = data.day;
+                document.getElementById('main-title').innerText = data.title;
+                document.getElementById('sub-msg').innerText = data.msg;
+                // Text Gradient matches color
+                document.getElementById('day-label').style.color = '#' + new THREE.Color(data.color).getHexString();
+                
+                panel.style.opacity = 1;
+                panel.style.transform = "translateY(0)";
+            }, 600);
+
+            // 2. Morph Particles
+            const posAttr = particles.geometry.attributes.position;
+            const targetColor = new THREE.Color(data.color);
+
+            gsap.to(particles.material.color, {
+                r: targetColor.r, g: targetColor.g, b: targetColor.b,
+                duration: 2
+            });
+
+            // Calculate new positions
+            for(let i=0; i<particleCount; i++) {
+                const target = getShapePosition(data.shape, i);
+                
+                // Animate x, y, z individually using GSAP for smoothness
+                gsap.to(posAttr.array, {
+                    [i*3]: target.x,
+                    [i*3+1]: target.y,
+                    [i*3+2]: target.z,
+                    duration: 2.5,
+                    ease: "power3.inOut",
+                    onUpdate: () => posAttr.needsUpdate = true
+                });
+            }
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            // Gentle rotation
+            if (particles) {
+                particles.rotation.y += 0.002;
+                particles.rotation.x = Math.sin(Date.now()*0.001) * 0.1;
+            }
+            renderer.render(scene, camera);
+        }
+
+    </script>
 </body>
 </html>
