@@ -3,193 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Valentine's Odyssey: Final Edition</title>
+    <title>The Eternal Valentine</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #050005; font-family: 'Courier New', monospace; cursor: pointer; }
+        body { margin: 0; overflow: hidden; background: #06000a; font-family: 'Georgia', serif; cursor: pointer; }
         #ui {
             position: absolute; width: 100%; height: 100%;
-            display: flex; flex-direction: column; justify-content: space-between;
-            align-items: center; padding: 40px 20px; box-sizing: border-box;
-            pointer-events: none; z-index: 10; color: #fff;
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; pointer-events: none; z-index: 10;
         }
-        .glass {
-            background: rgba(255, 20, 147, 0.1); backdrop-filter: blur(20px);
-            padding: 25px; border-radius: 30px; border: 1px solid rgba(255, 255, 255, 0.2);
-            text-align: center; width: 100%; max-width: 350px;
-            box-shadow: 0 0 40px rgba(255, 20, 147, 0.3);
-            transition: all 0.5s ease;
+        .content { text-align: center; color: white; padding: 20px; }
+        #day-label { font-size: 0.8rem; letter-spacing: 5px; color: #ff85a2; text-transform: uppercase; margin-bottom: 10px; }
+        #title { font-size: 2.8rem; margin: 5px 0; font-weight: 100; text-shadow: 0 0 20px #ff4d6d; }
+        #msg { font-size: 1.2rem; font-style: italic; opacity: 0.9; min-height: 4em; max-width: 350px; color: #ffe0e6; line-height: 1.6; }
+        .hint { position: absolute; bottom: 40px; font-size: 0.6rem; letter-spacing: 4px; color: #ff4d6d; opacity: 0.5; text-transform: uppercase; }
+        #final-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(255,77,109,0.2) 0%, rgba(0,0,0,1) 80%);
+            display: none; justify-content: center; align-items: center;
+            z-index: 20; color: white; text-align: center; padding: 30px;
         }
-        #day-label { color: #ff85a2; font-weight: bold; font-size: 0.7rem; letter-spacing: 5px; text-transform: uppercase; }
-        #title { font-size: 1.6rem; margin: 10px 0; font-weight: 900; }
-        #msg { font-size: 0.85rem; line-height: 1.5; min-height: 3em; color: #ffd1dc; }
-        .hint { font-size: 0.6rem; letter-spacing: 4px; opacity: 0.6; }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <div class="glass" id="main-card">
-            <div id="day-label">LOADING...</div>
-            <h1 id="title">INITIATING...</h1>
-            <p id="msg">Prepare for the journey of a lifetime.</p>
+        <div class="content">
+            <div id="day-label">Initiating...</div>
+            <h1 id="title">Odyssey</h1>
+            <p id="msg"></p>
         </div>
-        <p class="hint">TAP TO ADVANCE</p>
+        <div class="hint">Tap to feel the love</div>
+    </div>
+
+    <div id="final-overlay">
+        <h2 id="final-msg" style="font-weight: 100; line-height: 1.8; font-style: italic;"></h2>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        let scene, camera, renderer, mainObject, stars, petals, audioCtx;
-        let currentStep = 0;
-        let isFinalStage = false;
+        let scene, camera, renderer, core, stardust, audioCtx;
+        let step = -1;
+        let isTyping = false;
+        const scaleNotes = [261, 293, 329, 349, 392, 440, 493, 523];
 
-        const journey = [
-            { day: "Day 1: Rose", title: "The Bud", msg: "A single seed of affection planted in the void.", color: 0xff0044, geo: 'torus' },
-            { day: "Day 2: Propose", title: "The Link", msg: "Asking the universe for a chance to connect.", color: 0x00f2ff, geo: 'knot' },
-            { day: "Day 3: Chocolate", title: "The Sweetness", msg: "A rush of endorphins through the neural paths.", color: 0xd2691e, geo: 'box' },
-            { day: "Day 4: Teddy", title: "The Comfort", msg: "Softness discovered in a world of hard angles.", color: 0xffb7c5, geo: 'sphere' },
-            { day: "Day 5: Promise", title: "The Oath", msg: "A recursive loop of trust that never breaks.", color: 0xffd700, geo: 'octa' },
-            { day: "Day 6: Hug", title: "The Merge", msg: "Closing the gap between two separate points.", color: 0x7b2cbf, geo: 'torus' },
-            { day: "Day 7: Kiss", title: "The Spark", msg: "A short circuit of pure, unadulterated joy.", color: 0xff4500, geo: 'knot' },
-            { day: "Day 8: Valentine", title: "ETERNITY", msg: "The core shatters into infinite love.", color: 0xff2d55, geo: 'heart' }
+        const chapters = [
+            { day: "Rose Day", title: "The Blossom", msg: "A rose to mirror the beauty you bring into my life.", color: 0xff0044, geo: "flower" },
+            { day: "Propose Day", title: "The Question", msg: "If life is a journey, I want every mile to be with you.", color: 0x00d4ff, geo: "propose" },
+            { day: "Chocolate Day", title: "Pure Sweetness", msg: "Strong, sweet, and absolutely irresistible.", color: 0x4e2c1c, geo: "chocolate" },
+            { day: "Teddy Day", title: "The Warmth", msg: "Something soft to hold onto when I'm not there.", color: 0xffb7c5, geo: "teddy" },
+            { day: "Promise Day", title: "The Vow", msg: "I promise to be the source code of your happiness.", color: 0xffd700, geo: "ring" },
+            { day: "Hug Day", title: "The Embrace", msg: "Two hearts finding the perfect fit.", color: 0x9d4edd, geo: "hug" },
+            { day: "Kiss Day", title: "The Spark", msg: "One touch that sets the universe on fire.", color: 0xff4d00, geo: "spark" },
+            { day: "Valentine", title: "The One", msg: "My world begins and ends with you.", color: 0xff0044, geo: "heart" }
         ];
 
-        function playSound(freq, type = 'triangle', duration = 1) {
+        function typeWriter(id, text, i, speed = 50, fnCallback) {
+            if (i < text.length) {
+                document.getElementById(id).innerHTML = text.substring(0, i+1);
+                setTimeout(() => typeWriter(id, text, i + 1, speed, fnCallback), speed);
+            } else if (typeof fnCallback == 'function') { fnCallback(); }
+        }
+
+        function playSound(freq) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.type = type;
+            osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + duration);
+            osc.start(); osc.stop(audioCtx.currentTime + 1.5);
         }
 
         function init() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 50;
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 1000);
+            camera.position.z = 100;
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // Stars Background
-            const sGeo = new THREE.BufferGeometry();
-            const sPos = [];
-            for(let i=0; i<3000; i++) sPos.push((Math.random()-0.5)*300, (Math.random()-0.5)*300, (Math.random()-0.5)*300);
-            sGeo.setAttribute('position', new THREE.Float32BufferAttribute(sPos, 3));
-            stars = new THREE.Points(sGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.4}));
-            scene.add(stars);
+            const starGeo = new THREE.BufferGeometry();
+            const starPos = [];
+            for(let i=0; i<2000; i++) starPos.push((Math.random()-0.5)*600, (Math.random()-0.5)*600, (Math.random()-0.5)*600);
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+            stardust = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.6}));
+            scene.add(stardust);
 
-            updateStep();
-
-            const light = new THREE.PointLight(0xffffff, 1.5, 100);
-            light.position.set(20, 20, 20);
-            scene.add(light);
-            scene.add(new THREE.AmbientLight(0x222222));
+            nextStep();
+            scene.add(new THREE.AmbientLight(0x404040));
+            const pLight = new THREE.PointLight(0xffffff, 2);
+            pLight.position.set(50, 50, 50);
+            scene.add(pLight);
         }
 
-        function updateStep() {
-            const data = journey[currentStep];
-            if (mainObject) scene.remove(mainObject);
-            
-            let geo;
-            if (data.geo === 'torus') geo = new THREE.TorusGeometry(10, 3, 16, 100);
-            else if (data.geo === 'knot') geo = new THREE.TorusKnotGeometry(8, 2, 100, 16);
-            else if (data.geo === 'box') geo = new THREE.BoxGeometry(12, 12, 12);
-            else if (data.geo === 'sphere') geo = new THREE.SphereGeometry(10, 32, 32);
-            else if (data.geo === 'octa') geo = new THREE.OctahedronGeometry(12, 0);
-            else if (data.geo === 'heart') {
-                const s = new THREE.Shape();
-                s.moveTo(0,0); s.bezierCurveTo(0,-3,-5,-15,-20,-15); s.bezierCurveTo(-35,-15,-35,7,-35,7);
-                s.bezierCurveTo(-35,11,-30,24,0,40); s.bezierCurveTo(30,24,35,11,35,7);
-                s.bezierCurveTo(35,7,35,-15,20,-15); s.bezierCurveTo(5,-15,0,-3,0,0);
-                geo = new THREE.ExtrudeGeometry(s, {depth: 4, bevelEnabled: true});
-                geo.center();
+        function getGeometry(type) {
+            switch(type) {
+                case 'flower': return new THREE.TorusKnotGeometry(12, 4, 100, 8, 3, 7); 
+                case 'propose': return new THREE.TorusGeometry(12, 1.5, 16, 100);
+                case 'chocolate': return new THREE.BoxGeometry(20, 15, 6);
+                case 'teddy': return new THREE.CapsuleGeometry(10, 10, 10, 20);
+                case 'ring': return new THREE.TorusGeometry(14, 0.5, 16, 100);
+                case 'hug': return new THREE.TorusKnotGeometry(10, 3, 100, 16, 2, 3);
+                case 'spark': return new THREE.IcosahedronGeometry(15, 0);
+                case 'heart': 
+                    const s = new THREE.Shape();
+                    s.moveTo(0,0); s.bezierCurveTo(0,-3,-5,-15,-20,-15); s.bezierCurveTo(-35,-15,-35,7,-35,7);
+                    s.bezierCurveTo(-35,11,-30,24,0,40); s.bezierCurveTo(30,24,35,11,35,7);
+                    s.bezierCurveTo(35,7,35,-15,20,-15); s.bezierCurveTo(5,-15,0,-3,0,0);
+                    const g = new THREE.ExtrudeGeometry(s, {depth: 5, bevelEnabled: true});
+                    g.center(); return g;
             }
+        }
 
-            const mat = new THREE.MeshStandardMaterial({ 
-                color: data.color, 
-                wireframe: true,
-                emissive: data.color,
-                emissiveIntensity: 1
-            });
-            mainObject = new THREE.Mesh(geo, mat);
-            if(data.geo === 'heart') mainObject.rotation.x = Math.PI;
-            scene.add(mainObject);
-
+        function nextStep() {
+            if(isTyping) return;
+            step++;
+            if(step >= chapters.length) {
+                showFinal(); return;
+            }
+            const data = chapters[step];
+            isTyping = true;
             document.getElementById('day-label').innerText = data.day;
             document.getElementById('title').innerText = data.title;
-            document.getElementById('msg').innerText = data.msg;
-            document.getElementById('main-card').style.boxShadow = `0 0 40px ${new THREE.Color(data.color).getStyle()}`;
+            document.getElementById('title').style.color = new THREE.Color(data.color).getStyle();
+            typeWriter('msg', data.msg, 0, 40, () => isTyping = false);
+
+            if(core) scene.remove(core);
+            const mat = new THREE.MeshPhongMaterial({ color: data.color, wireframe: true, emissive: data.color, emissiveIntensity: 0.3 });
+            core = new THREE.Mesh(getGeometry(data.geo), mat);
+            if(data.geo === 'heart') core.rotation.x = Math.PI;
+            scene.add(core);
+            playSound(scaleNotes[step]);
         }
 
-        function triggerFinale() {
-            isFinalStage = true;
-            mainObject.visible = false;
-            playSound(523.25, 'sine', 3); // High C
-
-            const pCount = 1000;
-            const pGeo = new THREE.BufferGeometry();
-            const pPos = [];
-            const pVel = [];
-            for(let i=0; i<pCount; i++) {
-                pPos.push(0,0,0);
-                pVel.push((Math.random()-0.5)*2, (Math.random()-0.5)*2, (Math.random()-0.5)*2);
-            }
-            pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
-            const pMat = new THREE.PointsMaterial({ color: 0xff2d55, size: 0.8, transparent: true });
-            petals = new THREE.Points(pGeo, pMat);
-            petals.userData.velocities = pVel;
-            scene.add(petals);
-        }
-
-        function handleInteraction() {
-            if (isFinalStage) {
-                location.reload(); // Restart
-                return;
-            }
-            if (currentStep < journey.length - 1) {
-                currentStep++;
-                playSound(220 + (currentStep * 40));
-                updateStep();
-            } else {
-                triggerFinale();
-            }
+        function showFinal() {
+            document.getElementById('ui').style.display = 'none';
+            document.getElementById('final-overlay').style.display = 'flex';
+            typeWriter('final-msg', "No words, no 3D shapes, and no code could ever truly show what you mean to me... <br><br> You are my forever. <br> Happy Valentine's Day.", 0, 70);
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            if (mainObject && !isFinalStage) {
-                mainObject.rotation.y += 0.02;
-                mainObject.rotation.x += 0.01;
-                const s = 1 + Math.sin(Date.now()*0.005)*0.1;
-                mainObject.scale.set(s,s,s);
+            if(core) {
+                core.rotation.y += 0.01;
+                core.scale.setScalar(1 + Math.sin(Date.now()*0.003)*0.1);
             }
-            if (isFinalStage && petals) {
-                const positions = petals.geometry.attributes.position.array;
-                const vels = petals.userData.velocities;
-                for(let i=0; i<positions.length; i++) {
-                    positions[i] += vels[i];
-                }
-                petals.geometry.attributes.position.needsUpdate = true;
-                petals.material.opacity -= 0.002;
-            }
-            stars.rotation.z += 0.0003;
+            stardust.rotation.y += 0.0002;
             renderer.render(scene, camera);
         }
 
-        window.addEventListener('mousedown', handleInteraction);
-        window.addEventListener('touchstart', (e) => { e.preventDefault(); handleInteraction(); }, {passive: false});
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
+        window.addEventListener('mousedown', nextStep);
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); nextStep(); }, {passive: false});
         init(); animate();
     </script>
 </body>
