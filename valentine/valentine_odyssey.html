@@ -3,242 +3,264 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Symphony of Love</title>
+    <title>The Valentine Journey</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Parisienne&family=Quicksand:wght@300;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=Lato:wght@300&display=swap');
 
         body { 
-            margin: 0; overflow: hidden; 
-            font-family: 'Quicksand', sans-serif;
-            background: #1a0b0b; /* Fallback */
-            transition: background 2s ease;
+            margin: 0; overflow: hidden; background-color: #050005; 
+            font-family: 'Lato', sans-serif;
+            user-select: none;
         }
 
-        /* Dynamic Background Layer */
-        #atmosphere {
-            position: fixed; inset: 0; z-index: -1;
-            background: radial-gradient(circle at center, #2e1015 0%, #000000 100%);
-            transition: opacity 2s ease;
-        }
-
-        /* Floating Vignette */
-        #vignette {
-            position: fixed; inset: 0; pointer-events: none;
-            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.6) 100%);
+        /* Cinematic Grain Overlay */
+        #noise {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 5; opacity: 0.05;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
         /* UI Layer */
         #ui-layer {
-            position: fixed; bottom: 10%; width: 100%;
+            position: fixed; bottom: 12%; left: 0; width: 100%;
             display: flex; flex-direction: column; align-items: center;
             pointer-events: none; z-index: 10; text-align: center;
         }
 
-        .romance-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 30px; border-radius: 30px;
-            width: 85%; max-width: 450px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            opacity: 0; transform: translateY(30px);
-            transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+        .glass-panel {
+            background: rgba(20, 10, 10, 0.4);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px 20px;
+            width: 100%;
+            transform: translateY(100px); opacity: 0;
+            transition: all 1.5s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
         #day-label {
-            font-size: 0.75rem; letter-spacing: 4px; text-transform: uppercase;
-            color: #ffb7c5; margin-bottom: 10px; font-weight: 500;
+            font-size: 0.7rem; letter-spacing: 4px; text-transform: uppercase;
+            color: #ff99ac; margin-bottom: 15px; font-weight: 700;
         }
 
         #main-title {
-            font-family: 'Parisienne', cursive; font-size: 2.8rem; margin: 0;
-            color: #fff; text-shadow: 0 0 20px rgba(255,183,197,0.4);
-            line-height: 1.2;
+            font-family: 'Playfair Display', serif; font-size: 2.2rem; margin: 0;
+            color: #fff; line-height: 1.1; font-style: italic;
+            text-shadow: 0 0 30px rgba(255, 100, 100, 0.3);
         }
 
         #sub-msg {
-            font-size: 1rem; margin-top: 15px; color: #eee; 
-            line-height: 1.6; font-weight: 300;
+            font-size: 0.95rem; margin-top: 15px; color: rgba(255,255,255,0.7); 
+            line-height: 1.6; max-width: 600px; margin-left: auto; margin-right: auto;
         }
 
-        /* Start Screen */
+        /* Start Button */
         #start-screen {
-            position: fixed; inset: 0; z-index: 100; 
-            background: radial-gradient(circle, #2a0808 0%, #000 100%);
+            position: fixed; inset: 0; z-index: 100; background: #000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            cursor: pointer; transition: opacity 1.5s ease;
+            cursor: pointer; transition: opacity 1.2s ease;
         }
 
-        .piano-key {
-            width: 60px; height: 60px; border-radius: 50%;
-            background: white; box-shadow: 0 0 20px rgba(255,255,255,0.5);
-            margin-bottom: 20px; animation: breathe 3s infinite ease-in-out;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 1.5rem; color: #ff4d6d;
+        .btn-enter {
+            border: 1px solid rgba(255,255,255,0.3); padding: 15px 40px;
+            border-radius: 50px; color: white; text-transform: uppercase;
+            letter-spacing: 3px; font-size: 0.8rem;
+            transition: all 0.3s ease;
+            animation: glow 3s infinite;
         }
 
-        @keyframes breathe { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(255,255,255,0.5); } 50% { transform: scale(1.1); box-shadow: 0 0 40px rgba(255,255,255,0.8); } }
+        @keyframes glow { 0%,100%{box-shadow:0 0 10px rgba(255,77,109,0.2);} 50%{box-shadow:0 0 30px rgba(255,77,109,0.6);} }
 
-        .active { opacity: 1 !important; transform: translateY(0) !important; }
+        .visible { transform: translateY(0) !important; opacity: 1 !important; }
+        
+        #progress-bar {
+            position: fixed; top: 0; left: 0; height: 3px; background: #ff4d6d;
+            width: 0%; transition: width 1s linear; z-index: 20;
+        }
     </style>
 </head>
 <body>
 
-    <div id="atmosphere"></div>
-    <div id="vignette"></div>
+    <div id="noise"></div>
+    <div id="progress-bar"></div>
 
-    <div id="start-screen" onclick="startRomance()">
-        <div class="piano-key">❤</div>
-        <div style="letter-spacing: 4px; font-size: 0.8rem; color: #ffb7c5; opacity: 0.8;">TAP TO PLAY THE MELODY</div>
+    <div id="start-screen" onclick="initExperience()">
+        <h1 style="font-family:'Playfair Display'; font-style:italic; font-size:2rem; margin-bottom:30px; color:#ff4d6d;">Our Story</h1>
+        <div class="btn-enter">Begin the Journey</div>
     </div>
 
     <div id="ui-layer">
-        <div id="card" class="romance-card">
+        <div id="panel" class="glass-panel">
             <div id="day-label"></div>
             <h1 id="main-title"></h1>
             <p id="sub-msg"></p>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        let scene, camera, renderer, particles;
+        let scene, camera, renderer, particles, galaxy;
         let audioCtx, masterGain;
         let currentStep = -1;
-        const particleCount = 3500; // Optimized for smoothness
-
-        // --- THE 8 DAYS OF LOVE ---
+        const particleCount = 3500; // High enough for detail, low enough for mobile
+        
+        // --- THE NARRATIVE ---
         const journey = [
-            { day: "Feb 7 · Rose Day", title: "Soft Bloom", msg: "Like a rose unfolding, my love grows gently for you.", color: 0xff3366, bg: "#2e0505", shape: "rose" },
-            { day: "Feb 8 · Propose Day", title: "Be Mine", msg: "I don't need the world, I just need you in it.", color: 0x00e5ff, bg: "#05182e", shape: "ring" },
-            { day: "Feb 9 · Chocolate Day", title: "Sweetness", msg: "You are the sugar that makes life taste better.", color: 0xffaa00, bg: "#2e1c05", shape: "box" },
-            { day: "Feb 10 · Teddy Day", title: "Warmth", msg: "A soft embrace to hold you when the world feels cold.", color: 0xffb7c5, bg: "#2e0515", shape: "teddy" },
-            { day: "Feb 11 · Promise Day", title: "Forever", msg: "I promise to walk beside you, every step of the way.", color: 0xffd700, bg: "#2e2505", shape: "infinity" },
-            { day: "Feb 12 · Hug Day", title: "Closer", msg: "Where you end and I begin, I can no longer tell.", color: 0xaa55ff, bg: "#1a052e", shape: "hug" },
-            { day: "Feb 13 · Kiss Day", title: "The Spark", msg: "One touch, and my whole soul lights up.", color: 0xff0055, bg: "#2e0505", shape: "kiss" },
-            { day: "Feb 14 · Valentine", title: "My Heart", msg: "You are the music in my silence. I love you.", color: 0xff0000, bg: "#3d0000", shape: "heart" }
+            { day: "Day 1 · Rose Day", title: "The Blooming", msg: "Like a rose in a winter garden, you brought color to my world.", color: "#ff0044", shape: "rose" },
+            { day: "Day 2 · Propose Day", title: "The Question", msg: "I don't need the whole universe. I just need your orbit.", color: "#00d0ff", shape: "ring" },
+            { day: "Day 3 · Chocolate Day", title: "Sweetness", msg: "Life was bitter until I tasted the sweetness of your presence.", color: "#d2691e", shape: "box" },
+            { day: "Day 4 · Teddy Day", title: "Comfort", msg: "A soft place to land. You are my safety.", color: "#ff99ac", shape: "teddy" },
+            { day: "Day 5 · Promise Day", title: "The Vow", msg: "I promise to stand by you, even when the stars go out.", color: "#ffd700", shape: "infinity" },
+            { day: "Day 6 · Hug Day", title: "Collision", msg: "Two souls merging. Where you end, I begin.", color: "#a142f5", shape: "hug" },
+            { day: "Day 7 · Kiss Day", title: "The Spark", msg: "One touch is all it takes to ignite the galaxy.", color: "#ff0055", shape: "kiss" },
+            { day: "Day 8 · Valentine", title: "My Everything", msg: "You are my heart, my soul, and my forever.", color: "#ff0000", shape: "heart" }
         ];
 
-        // --- PIANO ENGINE (Web Audio API) ---
-        const Piano = {
+        // --- AUDIO ENGINE (Cinematic Piano) ---
+        const Audio = {
+            ctx: null,
+            gain: null,
+            reverb: null,
+            
             init: function() {
-                const AC = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AC();
-                masterGain = audioCtx.createGain();
-                masterGain.gain.value = 0.5;
-                masterGain.connect(audioCtx.destination);
-                this.playAmbientPad();
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.gain = this.ctx.createGain();
+                this.gain.gain.value = 0.4;
+                this.gain.connect(this.ctx.destination);
+                this.createReverb();
             },
 
-            playAmbientPad: function() {
-                // Creates a warm background hum
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.value = 110; // Low A
-                gain.gain.value = 0.05;
-                
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.value = 400;
+            createReverb: function() {
+                // Synthetic Reverb Impulse
+                const duration = 2;
+                const decay = 2.0;
+                const rate = this.ctx.sampleRate;
+                const length = rate * duration;
+                const impulse = this.ctx.createBuffer(2, length, rate);
+                const left = impulse.getChannelData(0);
+                const right = impulse.getChannelData(1);
 
-                osc.connect(filter);
-                filter.connect(gain);
-                gain.connect(masterGain);
-                osc.start();
+                for (let i = 0; i < length; i++) {
+                    const n = i;
+                    left[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay);
+                    right[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay);
+                }
+
+                this.reverb = this.ctx.createConvolver();
+                this.reverb.buffer = impulse;
+                this.reverb.connect(this.gain);
+            },
+
+            playNote: function(freq, delay) {
+                const osc = this.ctx.createOscillator();
+                const noteGain = this.ctx.createGain();
+                
+                osc.type = 'triangle'; // Softer than sine, richer
+                osc.frequency.value = freq;
+                
+                noteGain.gain.setValueAtTime(0, this.ctx.currentTime + delay);
+                noteGain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + delay + 0.1);
+                noteGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + 2.5);
+
+                osc.connect(noteGain);
+                noteGain.connect(this.gain);
+                noteGain.connect(this.reverb); // Add reverb
+
+                osc.start(this.ctx.currentTime + delay);
+                osc.stop(this.ctx.currentTime + delay + 3);
             },
 
             playChord: function(step) {
-                if(audioCtx.state === 'suspended') audioCtx.resume();
+                if(this.ctx.state === 'suspended') this.ctx.resume();
                 
-                // Romantic Chord Progressions (Major 7ths, Add9s)
+                // Arpeggio patterns (Cinematic)
                 const chords = [
-                    [261.6, 329.6, 392.0, 493.9], // C Maj7 (Rose)
-                    [293.7, 370.0, 440.0, 554.4], // D Maj7 (Propose)
-                    [329.6, 415.3, 493.9, 622.3], // E Maj7 (Chocolate)
-                    [349.2, 440.0, 523.3, 659.3], // F Maj7 (Teddy)
-                    [392.0, 493.9, 587.3, 740.0], // G Maj7 (Promise)
-                    [440.0, 523.3, 659.3, 880.0], // A Min9 (Hug)
-                    [493.9, 622.3, 740.0, 987.8], // B Min7 (Kiss)
-                    [523.3, 659.3, 784.0, 1046.5] // C Maj9 (Valentine)
+                    [261.6, 329.6, 392.0, 523.2], // C Maj
+                    [293.7, 370.0, 440.0, 587.3], // D Maj
+                    [329.6, 415.3, 493.9, 659.2], // E Maj
+                    [349.2, 440.0, 523.2, 698.4], // F Maj
+                    [392.0, 493.9, 587.3, 783.9], // G Maj
+                    [440.0, 523.2, 659.2, 880.0], // A Min
+                    [493.9, 622.2, 739.9, 987.7], // B Min
+                    [523.2, 659.2, 783.9, 1046.5] // C Maj High
                 ];
 
                 const notes = chords[step % chords.length];
-                const now = audioCtx.currentTime;
-
-                notes.forEach((freq, i) => {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    
-                    // Mix Sine (Smooth) and Triangle (Body)
-                    osc.type = i % 2 === 0 ? 'sine' : 'triangle';
-                    osc.frequency.setValueAtTime(freq, now);
-
-                    // Piano Envelope (Fast attack, slow decay)
-                    gain.gain.setValueAtTime(0, now);
-                    gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
-
-                    osc.connect(gain);
-                    gain.connect(masterGain);
-                    osc.start();
-                    osc.stop(now + 3);
+                
+                // Play as arpeggio (ripple)
+                notes.forEach((note, i) => {
+                    this.playNote(note, i * 0.15);
                 });
+                
+                // Play bass note
+                this.playNote(notes[0]/2, 0);
             }
         };
 
-        // --- 3D VISUALS ---
-        function startRomance() {
+        // --- 3D ENGINE ---
+        function initExperience() {
             gsap.to("#start-screen", { opacity: 0, duration: 1.5, onComplete: () => document.getElementById("start-screen").remove() });
-            Piano.init();
+            Audio.init();
             initThree();
             nextStep();
         }
 
         function initThree() {
             scene = new THREE.Scene();
-            // No fog - we want clarity and brightness
+            // Fog for depth (The "Dreamy" look)
+            scene.fog = new THREE.FogExp2(0x050005, 0.002);
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.z = 100;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.setClearColor(0x000000, 0); // Transparent to see CSS background
+            renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            // Soft Glow Particle Texture
+            // 1. Particle Texture (Glow)
             const canvas = document.createElement('canvas');
             canvas.width = 32; canvas.height = 32;
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(16,16,0, 16,16,16);
-            grad.addColorStop(0, 'rgba(255,255,255,1)');
-            grad.addColorStop(0.4, 'rgba(255,255,255,0.3)');
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0,0,32,32);
+            grad.addColorStop(0, "rgba(255,255,255,1)");
+            grad.addColorStop(0.4, "rgba(255,255,255,0.2)");
+            grad.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = grad; ctx.fillRect(0,0,32,32);
             const tex = new THREE.CanvasTexture(canvas);
 
-            // Particle System
+            // 2. Geometry
             const geo = new THREE.BufferGeometry();
             const pos = new Float32Array(particleCount * 3);
-            for(let i=0; i<particleCount*3; i++) pos[i] = (Math.random()-0.5) * 200;
+            for(let i=0; i<particleCount*3; i++) pos[i] = (Math.random()-0.5)*300;
             geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
 
             const mat = new THREE.PointsMaterial({
-                size: 2.0, map: tex, transparent: true, opacity: 0.8,
-                blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffffff
+                size: 1.5, map: tex, transparent: true, opacity: 0.9,
+                color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false
             });
 
             particles = new THREE.Points(geo, mat);
             scene.add(particles);
 
-            // Interaction
+            // 3. Background Stars
+            const starGeo = new THREE.BufferGeometry();
+            const starPos = [];
+            for(let i=0; i<2000; i++) {
+                const r = 200 + Math.random()*400;
+                const theta = Math.random()*Math.PI*2;
+                const phi = Math.acos(2*Math.random()-1);
+                starPos.push(r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta), r*Math.cos(phi));
+            }
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+            const starMat = new THREE.PointsMaterial({ size: 1, color: 0x555555, transparent: true, opacity: 0.5 });
+            galaxy = new THREE.Points(starGeo, starMat);
+            scene.add(galaxy);
+
             window.addEventListener('click', nextStep);
-            window.addEventListener('touchstart', (e) => { e.preventDefault(); nextStep(); }, {passive: false});
+            window.addEventListener('touchstart', (e) => { if(e.target.id !== 'start-screen') { e.preventDefault(); nextStep(); }}, {passive: false});
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -248,108 +270,123 @@
             animate();
         }
 
-        // --- ORGANIC SHAPES ---
-        function getShape(type, i) {
-            const rBase = i / particleCount;
+        // --- GEOMETRY FUNCTIONS ---
+        function getTargetPosition(shape, i) {
+            const ratio = i / particleCount;
             let x, y, z;
 
-            switch(type) {
-                case 'rose': // Spiral Rose
-                    const theta = rBase * Math.PI * 12; 
-                    const r = rBase * 30;
-                    x = r * Math.cos(theta); 
-                    y = r * Math.sin(theta); 
-                    z = (rBase * 20) - 10;
+            switch(shape) {
+                case 'rose': // Spiral
+                    const theta = ratio * Math.PI * 16;
+                    const r = ratio * 30;
+                    x = r * Math.cos(theta);
+                    y = r * Math.sin(theta);
+                    z = (ratio * 40) - 20;
                     break;
-                case 'ring': // Diamond Ring
-                    const tr = 25, tt = rBase * Math.PI * 2;
-                    if(i < particleCount * 0.9) {
-                        x = tr * Math.cos(tt); y = tr * Math.sin(tt); z = (Math.random()-0.5)*2;
-                    } else {
-                        x = (Math.random()-0.5)*8; y = 25 + Math.random()*8; z = (Math.random()-0.5)*8;
+                case 'ring': // Torus
+                    const tr = 25, tt = ratio * Math.PI * 2;
+                    x = tr * Math.cos(tt); 
+                    y = tr * Math.sin(tt);
+                    z = (Math.random()-0.5) * 4;
+                    // Diamond
+                    if(i > particleCount * 0.9) {
+                        x = (Math.random()-0.5)*8; y = 25+(Math.random()-0.5)*8; z = (Math.random()-0.5)*8;
                     }
                     break;
-                case 'box': // Gift Box
-                    x=(Math.random()-0.5)*35; y=(Math.random()-0.5)*35; z=(Math.random()-0.5)*35;
-                    if(Math.random()>0.4) { 
+                case 'box': // Cube
+                    const s = 30;
+                    x = (Math.random()-0.5)*s; y = (Math.random()-0.5)*s; z = (Math.random()-0.5)*s;
+                    // Snap to edges for cleaner look
+                    if(Math.random()>0.3) {
                         const ax = Math.floor(Math.random()*3);
-                        if(ax==0) x=Math.sign(x)*18; else if(ax==1) y=Math.sign(y)*18; else z=Math.sign(z)*18;
+                        if(ax==0) x=Math.sign(x)*s/2; else if(ax==1) y=Math.sign(y)*s/2; else z=Math.sign(z)*s/2;
                     }
                     break;
-                case 'teddy': // Soft Bear
+                case 'teddy': // Metaballs
                     const p = Math.random();
-                    if(p<0.45){ // Head
+                    if(p<0.4) { // Head
                         const t=Math.random()*Math.PI*2, ph=Math.random()*Math.PI;
-                        x=18*Math.sin(ph)*Math.cos(t); y=18*Math.sin(ph)*Math.sin(t)+15; z=18*Math.cos(ph);
-                    } else if(p<0.85) { // Body
+                        x=16*Math.sin(ph)*Math.cos(t); y=16*Math.sin(ph)*Math.sin(t)+16; z=16*Math.cos(ph);
+                    } else if (p<0.8) { // Body
                         const t=Math.random()*Math.PI*2, ph=Math.random()*Math.PI;
-                        x=22*Math.sin(ph)*Math.cos(t); y=22*Math.sin(ph)*Math.sin(t)-20; z=22*Math.cos(ph);
+                        x=22*Math.sin(ph)*Math.cos(t); y=22*Math.sin(ph)*Math.sin(t)-18; z=22*Math.cos(ph);
                     } else { // Ears
-                        x=(Math.random()>0.5?1:-1)*16 + (Math.random()-0.5)*5; y=28+(Math.random()-0.5)*5; z=(Math.random()-0.5)*5;
+                        x=(Math.random()>0.5?1:-1)*14 + (Math.random()-0.5)*5; y=28+(Math.random()-0.5)*5; z=(Math.random()-0.5)*5;
                     }
                     break;
-                case 'infinity': // Loop
-                    const ti = rBase * 2 * Math.PI;
-                    const scale = 35;
+                case 'infinity': // Lemniscate
+                    const ti = ratio * 2 * Math.PI;
                     const den = 1 + Math.sin(ti)**2;
-                    x = scale * Math.cos(ti) / den; 
-                    y = scale * Math.sin(ti) * Math.cos(ti) / den; 
-                    z = (Math.random()-0.5)*5;
+                    const scale = 35;
+                    x = scale * Math.cos(ti) / den;
+                    y = scale * Math.sin(ti) * Math.cos(ti) / den;
+                    z = (Math.random()-0.5) * 5;
                     break;
                 case 'hug': // Two Spheres
-                    const th = Math.random()*Math.PI*2, ph=Math.random()*Math.PI;
-                    const shift = (i%2==0)?10:-10;
-                    x=16*Math.sin(ph)*Math.cos(th)+shift; y=16*Math.sin(ph)*Math.sin(th); z=16*Math.cos(ph);
+                    const th = Math.random()*Math.PI*2, ph = Math.random()*Math.PI;
+                    const shift = (i%2==0)?12:-12;
+                    x = 16*Math.sin(ph)*Math.cos(th)+shift; y = 16*Math.sin(ph)*Math.sin(th); z = 16*Math.cos(ph);
                     break;
                 case 'kiss': // Lips
-                    const tk = rBase * Math.PI * 2;
+                    const tk = ratio * Math.PI * 2;
                     x = 30 * Math.cos(tk); y = 12 * Math.sin(tk) - 4 * Math.abs(Math.cos(tk)) * Math.sin(tk); z = (Math.random()-0.5)*5;
                     break;
                 case 'heart': // Heart
                     const tht = Math.random()*Math.PI*2;
                     x=16*Math.pow(Math.sin(tht),3); y=13*Math.cos(tht)-5*Math.cos(2*tht)-2*Math.cos(3*tht)-Math.cos(4*tht); z=(Math.random()-0.5)*10;
-                    x*=2.0; y*=2.0;
+                    x*=2; y*=2;
                     break;
             }
             return {x,y,z};
         }
 
+        // --- TRANSITIONS (The Smoothness Magic) ---
         function nextStep() {
-            currentStep = (currentStep + 1) % journey.length;
+            currentStep++;
+            if(currentStep >= journey.length) currentStep = 0; // Loop
             const data = journey[currentStep];
 
-            Piano.playChord(currentStep);
+            // 1. Audio
+            Audio.playChord(currentStep);
 
-            // Change Background Atmosphere (CSS)
-            document.getElementById('atmosphere').style.background = `radial-gradient(circle at center, ${data.bg} 0%, #000000 100%)`;
+            // 2. UI
+            const panel = document.getElementById('panel');
+            panel.classList.remove('visible');
+            document.getElementById('progress-bar').style.width = ((currentStep+1)/journey.length * 100) + "%";
 
-            // UI Transitions
-            const card = document.getElementById('card');
-            card.classList.remove('active');
-            
             setTimeout(() => {
                 document.getElementById('day-label').innerText = data.day;
                 document.getElementById('main-title').innerText = data.title;
                 document.getElementById('sub-msg').innerText = data.msg;
-                document.getElementById('day-label').style.color = '#' + new THREE.Color(data.color).getHexString();
-                card.classList.add('active');
-            }, 500);
+                document.getElementById('day-label').style.color = data.color;
+                panel.classList.add('visible');
+            }, 600);
 
-            // Particle Transitions (GSAP)
+            // 3. Particles
             const posAttr = particles.geometry.attributes.position;
             const targetColor = new THREE.Color(data.color);
 
-            gsap.to(particles.material.color, { r: targetColor.r, g: targetColor.g, b: targetColor.b, duration: 1.5 });
+            // Animate Color
+            gsap.to(particles.material.color, {
+                r: targetColor.r, g: targetColor.g, b: targetColor.b,
+                duration: 2, ease: "power2.inOut"
+            });
 
+            // Animate Positions (Physics feel)
             for(let i=0; i<particleCount; i++) {
-                const t = getShape(data.shape, i);
+                const target = getTargetPosition(data.shape, i);
                 
-                // Elastic easing for "Live/Bouncy" feel
+                // We use GSAP to tween the array values directly
+                // Stagger adds the "flow" effect
+                const delay = Math.random() * 0.5;
+                
                 gsap.to(posAttr.array, {
-                    [i*3]: t.x, [i*3+1]: t.y, [i*3+2]: t.z,
+                    [i*3]: target.x,
+                    [i*3+1]: target.y,
+                    [i*3+2]: target.z,
                     duration: 2.5,
-                    ease: "elastic.out(1, 0.5)", 
-                    delay: Math.random() * 0.2, // Slight delay for organic morph
+                    delay: delay,
+                    ease: "elastic.out(1, 0.75)", // The secret to the "Real" feel
                     onUpdate: () => posAttr.needsUpdate = true
                 });
             }
@@ -359,10 +396,13 @@
             requestAnimationFrame(animate);
             const time = Date.now() * 0.001;
             
-            // Gentle breathing rotation
-            particles.rotation.y = Math.sin(time * 0.1) * 0.2;
+            // Slow, floaty rotation
+            particles.rotation.y = Math.sin(time * 0.1) * 0.1;
             particles.rotation.x = Math.cos(time * 0.1) * 0.1;
-            
+
+            // Galaxy rotates independently
+            galaxy.rotation.y += 0.0005;
+
             renderer.render(scene, camera);
         }
     </script>
