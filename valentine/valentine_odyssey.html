@@ -3,172 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stellar Valentine</title>
+    <title>Aether: The 8 Dimensions of Love</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Times New Roman', serif; color: #fff; }
-        #start-overlay {
-            position: fixed; inset: 0; z-index: 100; background: radial-gradient(circle, #1a001a 0%, #000 100%);
-            display: flex; justify-content: center; align-items: center; cursor: pointer;
-        }
+        body, html { margin: 0; padding: 0; background: #030005; overflow: hidden; font-family: 'Times New Roman', serif; }
+        #canvas-container { position: fixed; inset: 0; filter: contrast(110%) brightness(110%); }
         #ui {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; inset: 0; display: flex; flex-direction: column;
+            justify-content: flex-end; align-items: center; padding-bottom: 50px;
+            pointer-events: none; z-index: 10;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px);
+            border-radius: 40px; padding: 30px; width: 85%; max-width: 450px;
+            border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;
+            opacity: 0; transform: translateY(30px); transition: all 1.2s ease;
+        }
+        #day-label { font-size: 0.7rem; letter-spacing: 6px; color: #ff85a2; text-transform: uppercase; margin-bottom: 10px; }
+        #title { font-size: 2.2rem; margin: 0; color: #fff; font-weight: 100; text-shadow: 0 0 15px rgba(255, 77, 109, 0.5); }
+        #msg { font-size: 1rem; color: #ffe0e6; margin-top: 15px; font-style: italic; line-height: 1.6; min-height: 3em; }
+        #start-btn {
+            position: fixed; inset: 0; z-index: 100; background: #000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            pointer-events: none; z-index: 10; text-align: center;
+            color: #ff4d6d; cursor: pointer; letter-spacing: 5px;
         }
-        .glass-box {
-            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
-            padding: 40px; border-radius: 50px; border: 1px solid rgba(255, 255, 255, 0.1);
-            opacity: 0; transform: translateY(30px); transition: all 1.5s ease;
-        }
-        #title { font-size: 2.5rem; font-weight: 100; margin: 0; color: #ff85a2; }
-        #msg { font-size: 1.1rem; font-style: italic; margin-top: 20px; max-width: 300px; line-height: 1.6; opacity: 0.8; }
         .active { opacity: 1 !important; transform: translateY(0) !important; }
     </style>
 </head>
 <body>
 
-<div id="start-overlay" onclick="begin()">
-    <div style="text-align:center;">
-        <h1 style="letter-spacing:15px; font-weight:100;">ETERNAL</h1>
-        <p style="letter-spacing:3px; opacity:0.5; font-size:0.7rem;">TAP TO ENTER THE GALAXY</p>
-    </div>
+<div id="start-btn" onclick="initialize()">
+    <div style="font-size: 3rem; margin-bottom: 20px;">✧</div>
+    <h1 style="font-weight: 100;">VALENTINE ODYSSEY</h1>
+    <p style="font-size: 0.7rem; opacity: 0.6;">TAP TO BEGIN THE JOURNEY</p>
 </div>
 
+<div id="canvas-container"></div>
+
 <div id="ui">
-    <div id="glass" class="glass-box">
+    <div id="panel" class="glass-panel">
+        <div id="day-label"></div>
         <h1 id="title"></h1>
         <p id="msg"></p>
     </div>
 </div>
 
 <script>
-let scene, camera, renderer, particles, starPoints, audioCtx, current = -1;
-let mouse = new THREE.Vector2(), targetMouse = new THREE.Vector2();
+let scene, camera, renderer, particles, audioCtx, step = -1;
+const particleCount = 6000;
 
-const content = [
-    { title: "Day 1", msg: "A soft bloom in the silence of space.", color: 0xff1e56 },
-    { title: "The Promise", msg: "Where every star is a word I haven't said yet.", color: 0x00d4ff },
-    { title: "The Sweetness", msg: "Melting the coldness of a million miles.", color: 0xffaa00 },
-    { title: "One Heart", msg: "I can't show what you mean to me in pixels... but I can give you my universe.", color: 0xff4d6d }
+const stages = [
+    { day: "Feb 7: Rose Day", title: "Eternal Bloom", msg: "A rose crafted from starlight, blooming only for you.", color: 0xff0044, shape: "spiral" },
+    { day: "Feb 9: Chocolate Day", title: "Golden Cocoa", msg: "Sweetness that transcends the digital void.", color: 0xffaa00, shape: "coin" },
+    { day: "Feb 12: Hug Day", title: "The Embrace", msg: "Two separate paths, finally intertwined as one.", color: 0x9d4edd, shape: "helix" },
+    { day: "Feb 14: Valentine", title: "The Infinity Heart", msg: "Words are finite, but my love for you is a constant in every universe.", color: 0xff2d55, shape: "heart" }
 ];
 
-function begin() {
-    document.getElementById('start-overlay').style.display = 'none';
-    document.getElementById('glass').classList.add('active');
+function initialize() {
+    gsap.to("#start-btn", { opacity: 0, duration: 1.5, onComplete: () => document.getElementById('start-btn').remove() });
     initAudio();
     initThree();
-    next();
+    nextStage();
 }
 
 function initAudio() {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    // Background Pad
     const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
+    const gain = audioCtx.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(164.81, audioCtx.currentTime); // E3
-    g.gain.setValueAtTime(0, audioCtx.currentTime);
-    g.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 4);
-    osc.connect(g); g.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(130.81, audioCtx.currentTime); // C3 Ambient
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 3);
+    osc.connect(gain); gain.connect(audioCtx.destination);
     osc.start();
 }
 
-function playSparkle() {
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.frequency.setValueAtTime(880 + (current * 100), audioCtx.currentTime);
-    g.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(); o.stop(audioCtx.currentTime + 1);
+function playBell() {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(523.25 + (step * 50), audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 2);
 }
 
 function initThree() {
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 1000);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
     camera.position.z = 120;
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
 
     const geo = new THREE.BufferGeometry();
-    const pos = [];
-    for(let i=0; i<6000; i++) pos.push((Math.random()-0.5)*300, (Math.random()-0.5)*300, (Math.random()-0.5)*300);
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    const pos = new Float32Array(particleCount * 3);
+    for(let i=0; i<particleCount*3; i++) pos[i] = (Math.random()-0.5) * 400;
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+
+    // Custom Glowing Particle
+    const canvas = document.createElement('canvas');
+    canvas.width = 32; canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(16,16,0,16,16,16);
+    grad.addColorStop(0, 'white'); grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,32,32);
     
-    const mat = new THREE.PointsMaterial({ size: 0.8, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.7 });
+    const mat = new THREE.PointsMaterial({ 
+        size: 1.2, map: new THREE.CanvasTexture(canvas), 
+        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false 
+    });
+
     particles = new THREE.Points(geo, mat);
     scene.add(particles);
 
-    window.addEventListener('mousemove', (e) => {
-        targetMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        targetMouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-    });
-
-    window.addEventListener('click', next);
+    window.addEventListener('click', nextStage);
+    window.addEventListener('touchstart', (e) => { e.preventDefault(); nextStage(); });
     animate();
 }
 
-function morph(isHeart) {
-    const arr = particles.geometry.attributes.position.array;
-    for (let i = 0; i < 6000; i++) {
-        let tx, ty, tz;
-        if (isHeart) {
+function morph(shape) {
+    const posArr = particles.geometry.attributes.position.array;
+    for (let i = 0; i < particleCount; i++) {
+        let x, y, z;
+        if (shape === 'spiral') { // Rose
+            const t = i * 0.1;
+            const r = (i / particleCount) * 40;
+            x = r * Math.cos(t); y = r * Math.sin(t); z = (i / particleCount) * 50 - 25;
+        } else if (shape === 'coin') { // Chocolate
+            const r = Math.sqrt(Math.random()) * 30;
             const t = Math.random() * Math.PI * 2;
-            tx = 16 * Math.pow(Math.sin(t), 3);
-            ty = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-            tz = (Math.random() - 0.5) * 10;
-            tx *= 2.5; ty *= 2.5;
-        } else {
-            const r = 40 + Math.random() * 20;
-            const phi = Math.acos(2 * Math.random() - 1);
-            const theta = Math.random() * Math.PI * 2;
-            tx = r * Math.sin(phi) * Math.cos(theta);
-            ty = r * Math.sin(phi) * Math.sin(theta);
-            tz = r * Math.cos(phi);
+            x = r * Math.cos(t); y = r * Math.sin(t); z = (Math.random()-0.5) * 5;
+        } else if (shape === 'helix') { // Hug
+            const t = (i / particleCount) * Math.PI * 4;
+            const r = 15;
+            const side = i % 2 === 0 ? 1 : -1;
+            x = r * Math.cos(t) * side; y = (i / particleCount) * 60 - 30; z = r * Math.sin(t) * side;
+        } else if (shape === 'heart') {
+            const t = Math.random() * Math.PI * 2;
+            x = 16 * Math.pow(Math.sin(t), 3);
+            y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+            z = (Math.random()-0.5) * 10;
+            x *= 2.5; y *= 2.5;
         }
 
-        new TWEEN.Tween(arr)
-            .to({ [i*3]: tx, [i*3+1]: ty, [i*3+2]: tz }, 3000)
-            .easing(TWEEN.Easing.Quadratic.InOut)
-            .start();
+        gsap.to(posArr, {
+            duration: 2.5, ease: "expo.out",
+            [i*3]: x, [i*3+1]: y, [i*3+2]: z
+        });
     }
 }
 
-function next() {
-    current = (current + 1) % content.length;
-    const data = content[current];
-    playSparkle();
+function nextStage() {
+    step++;
+    if (step >= stages.length) {
+        showFinal(); return;
+    }
+    const data = stages[step];
+    playBell();
 
-    const box = document.getElementById('glass');
-    box.classList.remove('active');
-    
+    const panel = document.getElementById('panel');
+    panel.classList.remove('active');
+
     setTimeout(() => {
+        document.getElementById('day-label').innerText = data.day;
         document.getElementById('title').innerText = data.title;
         document.getElementById('msg').innerText = data.msg;
-        box.classList.add('active');
-    }, 800);
+        panel.classList.add('active');
+    }, 600);
 
-    new TWEEN.Tween(particles.material.color)
-        .to(new THREE.Color(data.color), 2000)
-        .start();
-
-    morph(current === 3);
+    gsap.to(particles.material.color, { r: new THREE.Color(data.color).r, g: new THREE.Color(data.color).g, b: new THREE.Color(data.color).b, duration: 2 });
+    morph(data.shape);
 }
 
-function animate(time) {
+function showFinal() {
+    document.getElementById('panel').classList.remove('active');
+    setTimeout(() => {
+        document.getElementById('day-label').style.display = 'none';
+        document.getElementById('title').innerText = "Infinity";
+        document.getElementById('msg').innerHTML = "No 3D sculpture, no matter how precise, can capture what you mean to me.<br><br><b>You are my home. Happy Valentine's Day.</b>";
+        document.getElementById('panel').classList.add('active');
+    }, 1000);
+}
+
+function animate() {
     requestAnimationFrame(animate);
-    TWEEN.update(time);
-    
-    // Smooth mouse follow
-    mouse.x += (targetMouse.x - mouse.x) * 0.05;
-    mouse.y += (targetMouse.y - mouse.y) * 0.05;
-    
-    particles.rotation.y += 0.002 + (mouse.x * 0.01);
-    particles.rotation.x += (mouse.y * 0.01);
-    
+    particles.geometry.attributes.position.needsUpdate = true;
+    particles.rotation.y += 0.003;
     renderer.render(scene, camera);
 }
 </script>
