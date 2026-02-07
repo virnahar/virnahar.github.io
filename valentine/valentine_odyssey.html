@@ -3,87 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Cosmic Valentine</title>
+    <title>Symphony of Love</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Alex+Brush&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Parisienne&family=Quicksand:wght@300;500&display=swap');
 
         body { 
-            margin: 0; 
-            overflow: hidden; 
-            background-color: #020003; 
-            font-family: 'Cinzel', serif;
+            margin: 0; overflow: hidden; 
+            font-family: 'Quicksand', sans-serif;
+            background: #1a0b0b; /* Fallback */
+            transition: background 2s ease;
         }
 
-        /* Glass UI */
+        /* Dynamic Background Layer */
+        #atmosphere {
+            position: fixed; inset: 0; z-index: -1;
+            background: radial-gradient(circle at center, #2e1015 0%, #000000 100%);
+            transition: opacity 2s ease;
+        }
+
+        /* Floating Vignette */
+        #vignette {
+            position: fixed; inset: 0; pointer-events: none;
+            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.6) 100%);
+        }
+
+        /* UI Layer */
         #ui-layer {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 40%;
-            display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
-            pointer-events: none; z-index: 10;
-            background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
-            padding-bottom: 40px;
+            position: fixed; bottom: 10%; width: 100%;
+            display: flex; flex-direction: column; align-items: center;
+            pointer-events: none; z-index: 10; text-align: center;
         }
 
-        #text-card {
-            text-align: center; color: white; opacity: 0; transform: translateY(30px);
-            transition: all 1.2s cubic-bezier(0.2, 1, 0.3, 1);
-            max-width: 85%;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        .romance-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px; border-radius: 30px;
+            width: 85%; max-width: 450px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            opacity: 0; transform: translateY(30px);
+            transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        #day-tag {
-            font-size: 0.7rem; letter-spacing: 6px; color: #ff85a2; 
-            text-transform: uppercase; margin-bottom: 5px;
-            display: inline-block; border-bottom: 1px solid rgba(255,133,162,0.3); padding-bottom: 3px;
+        #day-label {
+            font-size: 0.75rem; letter-spacing: 4px; text-transform: uppercase;
+            color: #ffb7c5; margin-bottom: 10px; font-weight: 500;
         }
 
-        #headline {
-            font-family: 'Alex Brush', cursive;
-            font-size: 3.5rem; margin: 5px 0; 
-            background: -webkit-linear-gradient(#fff, #ffc3d0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 8px rgba(255,100,150,0.6));
-            line-height: 1;
+        #main-title {
+            font-family: 'Parisienne', cursive; font-size: 2.8rem; margin: 0;
+            color: #fff; text-shadow: 0 0 20px rgba(255,183,197,0.4);
+            line-height: 1.2;
         }
 
-        #sub-text {
-            font-size: 0.9rem; margin-top: 10px; color: #ddd;
-            font-weight: 100; line-height: 1.5; letter-spacing: 1px;
+        #sub-msg {
+            font-size: 1rem; margin-top: 15px; color: #eee; 
+            line-height: 1.6; font-weight: 300;
         }
 
         /* Start Screen */
-        #gate {
+        #start-screen {
             position: fixed; inset: 0; z-index: 100; 
-            background: radial-gradient(circle, #1a0510 0%, #000 100%);
+            background: radial-gradient(circle, #2a0808 0%, #000 100%);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             cursor: pointer; transition: opacity 1.5s ease;
         }
 
-        .star-loader {
-            width: 2px; height: 2px; background: white; border-radius: 50%;
-            box-shadow: 0 0 10px 2px white;
-            animation: twinkle 1s infinite alternate;
-            margin-bottom: 20px; transform: scale(3);
+        .piano-key {
+            width: 60px; height: 60px; border-radius: 50%;
+            background: white; box-shadow: 0 0 20px rgba(255,255,255,0.5);
+            margin-bottom: 20px; animation: breathe 3s infinite ease-in-out;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; color: #ff4d6d;
         }
 
-        @keyframes twinkle { from { opacity: 0.3; transform: scale(1); } to { opacity: 1; transform: scale(4); } }
+        @keyframes breathe { 0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(255,255,255,0.5); } 50% { transform: scale(1.1); box-shadow: 0 0 40px rgba(255,255,255,0.8); } }
 
-        canvas { display: block; }
+        .active { opacity: 1 !important; transform: translateY(0) !important; }
     </style>
 </head>
 <body>
 
-    <div id="gate" onclick="enterCosmos()">
-        <div class="star-loader"></div>
-        <h1 style="font-family:'Cinzel'; font-size: 1.5rem; letter-spacing: 8px; color: #ff85a2;">UNIVERSE</h1>
-        <p style="font-size: 0.6rem; letter-spacing: 4px; color: #666; margin-top: 10px;">TAP TO ENTER</p>
+    <div id="atmosphere"></div>
+    <div id="vignette"></div>
+
+    <div id="start-screen" onclick="startRomance()">
+        <div class="piano-key">❤</div>
+        <div style="letter-spacing: 4px; font-size: 0.8rem; color: #ffb7c5; opacity: 0.8;">TAP TO PLAY THE MELODY</div>
     </div>
 
     <div id="ui-layer">
-        <div id="text-card">
-            <div id="day-tag"></div>
-            <h1 id="headline"></h1>
-            <p id="sub-text"></p>
+        <div id="card" class="romance-card">
+            <div id="day-label"></div>
+            <h1 id="main-title"></h1>
+            <p id="sub-msg"></p>
         </div>
     </div>
 
@@ -91,87 +104,141 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <script>
-        let scene, camera, renderer;
-        let mainObject, starField, audioCtx;
-        let currentStage = -1;
-        
-        // Configuration
-        const heartCount = 4500;  // The morphing object
-        const starCount = 3000;   // The background galaxy
-        
-        const timeline = [
-            { day: "Feb 7: Rose Day", title: "Cosmic Bloom", msg: "A rose forged from stardust, unfolding just for you.", color: 0xff0044, type: 'rose' },
-            { day: "Feb 8: Propose Day", title: "The Question", msg: "Across every galaxy, I only choose you.", color: 0x00d4ff, type: 'ring' },
-            { day: "Feb 9: Chocolate Day", title: "Sweet Gravity", msg: "You pull me in with a sweetness I can't escape.", color: 0xd2691e, type: 'box' },
-            { day: "Feb 10: Teddy Day", title: "Soft Nebula", msg: "A gentle embrace in the cold vastness of space.", color: 0xffb7c5, type: 'teddy' },
-            { day: "Feb 11: Promise Day", title: "Event Horizon", msg: "A promise that bends time: I will always be yours.", color: 0xffd700, type: 'infinity' },
-            { day: "Feb 12: Hug Day", title: "Collision", msg: "Two worlds colliding, merging into one soul.", color: 0x9d4edd, type: 'hug' },
-            { day: "Feb 13: Kiss Day", title: "The Spark", msg: "Igniting a supernova in my heart.", color: 0xff0055, type: 'kiss' },
-            { day: "Feb 14: Valentine", title: "My Universe", msg: "You are my sun, my moon, and all my stars.", color: 0xff0000, type: 'heart' }
+        let scene, camera, renderer, particles;
+        let audioCtx, masterGain;
+        let currentStep = -1;
+        const particleCount = 3500; // Optimized for smoothness
+
+        // --- THE 8 DAYS OF LOVE ---
+        const journey = [
+            { day: "Feb 7 · Rose Day", title: "Soft Bloom", msg: "Like a rose unfolding, my love grows gently for you.", color: 0xff3366, bg: "#2e0505", shape: "rose" },
+            { day: "Feb 8 · Propose Day", title: "Be Mine", msg: "I don't need the world, I just need you in it.", color: 0x00e5ff, bg: "#05182e", shape: "ring" },
+            { day: "Feb 9 · Chocolate Day", title: "Sweetness", msg: "You are the sugar that makes life taste better.", color: 0xffaa00, bg: "#2e1c05", shape: "box" },
+            { day: "Feb 10 · Teddy Day", title: "Warmth", msg: "A soft embrace to hold you when the world feels cold.", color: 0xffb7c5, bg: "#2e0515", shape: "teddy" },
+            { day: "Feb 11 · Promise Day", title: "Forever", msg: "I promise to walk beside you, every step of the way.", color: 0xffd700, bg: "#2e2505", shape: "infinity" },
+            { day: "Feb 12 · Hug Day", title: "Closer", msg: "Where you end and I begin, I can no longer tell.", color: 0xaa55ff, bg: "#1a052e", shape: "hug" },
+            { day: "Feb 13 · Kiss Day", title: "The Spark", msg: "One touch, and my whole soul lights up.", color: 0xff0055, bg: "#2e0505", shape: "kiss" },
+            { day: "Feb 14 · Valentine", title: "My Heart", msg: "You are the music in my silence. I love you.", color: 0xff0000, bg: "#3d0000", shape: "heart" }
         ];
 
-        // --- AUDIO SYSTEM (Ethereal Synth) ---
-        function playSound(index) {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            const filter = audioCtx.createBiquadFilter();
+        // --- PIANO ENGINE (Web Audio API) ---
+        const Piano = {
+            init: function() {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AC();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 0.5;
+                masterGain.connect(audioCtx.destination);
+                this.playAmbientPad();
+            },
 
-            // Pentatonic Scale frequencies
-            const notes = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
-            const freq = notes[index % notes.length];
+            playAmbientPad: function() {
+                // Creates a warm background hum
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.value = 110; // Low A
+                gain.gain.value = 0.05;
+                
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 400;
 
-            osc.type = 'triangle'; 
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            
-            // Lowpass filter for "underwater/space" sound
-            filter.type = "lowpass";
-            filter.frequency.value = 800;
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(masterGain);
+                osc.start();
+            },
 
-            gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
+            playChord: function(step) {
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                
+                // Romantic Chord Progressions (Major 7ths, Add9s)
+                const chords = [
+                    [261.6, 329.6, 392.0, 493.9], // C Maj7 (Rose)
+                    [293.7, 370.0, 440.0, 554.4], // D Maj7 (Propose)
+                    [329.6, 415.3, 493.9, 622.3], // E Maj7 (Chocolate)
+                    [349.2, 440.0, 523.3, 659.3], // F Maj7 (Teddy)
+                    [392.0, 493.9, 587.3, 740.0], // G Maj7 (Promise)
+                    [440.0, 523.3, 659.3, 880.0], // A Min9 (Hug)
+                    [493.9, 622.3, 740.0, 987.8], // B Min7 (Kiss)
+                    [523.3, 659.3, 784.0, 1046.5] // C Maj9 (Valentine)
+                ];
 
-            osc.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 3);
-        }
+                const notes = chords[step % chords.length];
+                const now = audioCtx.currentTime;
 
-        // --- 3D SCENE SETUP ---
-        function enterCosmos() {
-            const gate = document.getElementById('gate');
-            gate.style.opacity = 0;
-            setTimeout(() => gate.remove(), 1500);
-            
+                notes.forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    
+                    // Mix Sine (Smooth) and Triangle (Body)
+                    osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    // Piano Envelope (Fast attack, slow decay)
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+
+                    osc.connect(gain);
+                    gain.connect(masterGain);
+                    osc.start();
+                    osc.stop(now + 3);
+                });
+            }
+        };
+
+        // --- 3D VISUALS ---
+        function startRomance() {
+            gsap.to("#start-screen", { opacity: 0, duration: 1.5, onComplete: () => document.getElementById("start-screen").remove() });
+            Piano.init();
             initThree();
-            nextPhase();
+            nextStep();
         }
 
         function initThree() {
             scene = new THREE.Scene();
-            // Deep fog for depth
-            scene.fog = new THREE.FogExp2(0x050005, 0.002);
+            // No fog - we want clarity and brightness
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 2000);
-            camera.position.z = 120;
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.z = 100;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000, 0); // Transparent to see CSS background
             document.body.appendChild(renderer.domElement);
 
-            createGalaxy();
-            createMorphingObject();
+            // Soft Glow Particle Texture
+            const canvas = document.createElement('canvas');
+            canvas.width = 32; canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(16,16,0, 16,16,16);
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.4, 'rgba(255,255,255,0.3)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,32,32);
+            const tex = new THREE.CanvasTexture(canvas);
 
-            // Ambient Light
-            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambient);
+            // Particle System
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(particleCount * 3);
+            for(let i=0; i<particleCount*3; i++) pos[i] = (Math.random()-0.5) * 200;
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+
+            const mat = new THREE.PointsMaterial({
+                size: 2.0, map: tex, transparent: true, opacity: 0.8,
+                blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffffff
+            });
+
+            particles = new THREE.Points(geo, mat);
+            scene.add(particles);
 
             // Interaction
-            window.addEventListener('click', nextPhase);
-            window.addEventListener('touchstart', (e) => { e.preventDefault(); nextPhase(); }, {passive:false});
+            window.addEventListener('click', nextStep);
+            window.addEventListener('touchstart', (e) => { e.preventDefault(); nextStep(); }, {passive: false});
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -181,223 +248,121 @@
             animate();
         }
 
-        // --- BACKGROUND GALAXY ---
-        function createGalaxy() {
-            const geo = new THREE.BufferGeometry();
-            const pos = new Float32Array(starCount * 3);
-            const sizes = new Float32Array(starCount);
-
-            for (let i = 0; i < starCount; i++) {
-                // Spherical distribution
-                const r = 200 + Math.random() * 800; // Far away
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                
-                pos[i*3] = r * Math.sin(phi) * Math.cos(theta);
-                pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-                pos[i*3+2] = r * Math.cos(phi);
-                
-                sizes[i] = Math.random() * 2;
-            }
-
-            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-            const mat = new THREE.PointsMaterial({
-                color: 0xffffff,
-                size: 1.5,
-                transparent: true,
-                opacity: 0.8,
-                sizeAttenuation: true
-            });
-
-            starField = new THREE.Points(geo, mat);
-            scene.add(starField);
-        }
-
-        // --- FOREGROUND MORPHING OBJECT ---
-        function createMorphingObject() {
-            // Texture for the heart particle
-            const canvas = document.createElement('canvas');
-            canvas.width = 32; canvas.height = 32;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = "#fff";
-            ctx.beginPath();
-            ctx.moveTo(16, 28); 
-            ctx.bezierCurveTo(16, 28, 4, 20, 4, 11);
-            ctx.bezierCurveTo(4, 5, 10, 5, 16, 11);
-            ctx.bezierCurveTo(22, 5, 28, 5, 28, 11);
-            ctx.bezierCurveTo(28, 20, 16, 28, 16, 28);
-            ctx.fill();
-            const tex = new THREE.CanvasTexture(canvas);
-
-            const geo = new THREE.BufferGeometry();
-            const pos = new Float32Array(heartCount * 3);
-            
-            // Initialize randomness
-            for(let i=0; i<heartCount*3; i++) pos[i] = (Math.random()-0.5)*50;
-            
-            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-
-            const mat = new THREE.PointsMaterial({
-                size: 2.5,
-                map: tex,
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.9,
-                depthWrite: false,
-                blending: THREE.AdditiveBlending
-            });
-
-            mainObject = new THREE.Points(geo, mat);
-            scene.add(mainObject);
-        }
-
-        // --- MATH SHAPES ---
-        function calculateShape(type, i) {
-            const rBase = i / heartCount; 
+        // --- ORGANIC SHAPES ---
+        function getShape(type, i) {
+            const rBase = i / particleCount;
             let x, y, z;
 
-            if (type === 'rose') {
-                const theta = rBase * Math.PI * 16;
-                const r = rBase * 30;
-                x = r * Math.cos(theta);
-                y = r * Math.sin(theta);
-                z = rBase * 50 - 25;
-            } 
-            else if (type === 'ring') {
-                if (i < heartCount * 0.9) {
-                    const t = (i / (heartCount * 0.9)) * Math.PI * 2;
-                    x = 30 * Math.cos(t);
-                    y = 30 * Math.sin(t);
-                    z = (Math.random()-0.5) * 2;
-                } else {
-                    x = (Math.random()-0.5) * 8;
-                    y = 30 + Math.random() * 8;
-                    z = (Math.random()-0.5) * 8;
-                }
+            switch(type) {
+                case 'rose': // Spiral Rose
+                    const theta = rBase * Math.PI * 12; 
+                    const r = rBase * 30;
+                    x = r * Math.cos(theta); 
+                    y = r * Math.sin(theta); 
+                    z = (rBase * 20) - 10;
+                    break;
+                case 'ring': // Diamond Ring
+                    const tr = 25, tt = rBase * Math.PI * 2;
+                    if(i < particleCount * 0.9) {
+                        x = tr * Math.cos(tt); y = tr * Math.sin(tt); z = (Math.random()-0.5)*2;
+                    } else {
+                        x = (Math.random()-0.5)*8; y = 25 + Math.random()*8; z = (Math.random()-0.5)*8;
+                    }
+                    break;
+                case 'box': // Gift Box
+                    x=(Math.random()-0.5)*35; y=(Math.random()-0.5)*35; z=(Math.random()-0.5)*35;
+                    if(Math.random()>0.4) { 
+                        const ax = Math.floor(Math.random()*3);
+                        if(ax==0) x=Math.sign(x)*18; else if(ax==1) y=Math.sign(y)*18; else z=Math.sign(z)*18;
+                    }
+                    break;
+                case 'teddy': // Soft Bear
+                    const p = Math.random();
+                    if(p<0.45){ // Head
+                        const t=Math.random()*Math.PI*2, ph=Math.random()*Math.PI;
+                        x=18*Math.sin(ph)*Math.cos(t); y=18*Math.sin(ph)*Math.sin(t)+15; z=18*Math.cos(ph);
+                    } else if(p<0.85) { // Body
+                        const t=Math.random()*Math.PI*2, ph=Math.random()*Math.PI;
+                        x=22*Math.sin(ph)*Math.cos(t); y=22*Math.sin(ph)*Math.sin(t)-20; z=22*Math.cos(ph);
+                    } else { // Ears
+                        x=(Math.random()>0.5?1:-1)*16 + (Math.random()-0.5)*5; y=28+(Math.random()-0.5)*5; z=(Math.random()-0.5)*5;
+                    }
+                    break;
+                case 'infinity': // Loop
+                    const ti = rBase * 2 * Math.PI;
+                    const scale = 35;
+                    const den = 1 + Math.sin(ti)**2;
+                    x = scale * Math.cos(ti) / den; 
+                    y = scale * Math.sin(ti) * Math.cos(ti) / den; 
+                    z = (Math.random()-0.5)*5;
+                    break;
+                case 'hug': // Two Spheres
+                    const th = Math.random()*Math.PI*2, ph=Math.random()*Math.PI;
+                    const shift = (i%2==0)?10:-10;
+                    x=16*Math.sin(ph)*Math.cos(th)+shift; y=16*Math.sin(ph)*Math.sin(th); z=16*Math.cos(ph);
+                    break;
+                case 'kiss': // Lips
+                    const tk = rBase * Math.PI * 2;
+                    x = 30 * Math.cos(tk); y = 12 * Math.sin(tk) - 4 * Math.abs(Math.cos(tk)) * Math.sin(tk); z = (Math.random()-0.5)*5;
+                    break;
+                case 'heart': // Heart
+                    const tht = Math.random()*Math.PI*2;
+                    x=16*Math.pow(Math.sin(tht),3); y=13*Math.cos(tht)-5*Math.cos(2*tht)-2*Math.cos(3*tht)-Math.cos(4*tht); z=(Math.random()-0.5)*10;
+                    x*=2.0; y*=2.0;
+                    break;
             }
-            else if (type === 'box') {
-                x = (Math.random()-0.5) * 35;
-                y = (Math.random()-0.5) * 35;
-                z = (Math.random()-0.5) * 35;
-                // Hollow out center roughly
-                if (Math.abs(x) < 10 && Math.abs(y) < 10 && Math.abs(z) < 10) x *= 2.5;
-            }
-            else if (type === 'teddy') {
-               const p = Math.random();
-               if(p < 0.5) { // Head
-                   const t = Math.random()*Math.PI*2, phi = Math.random()*Math.PI;
-                   const r = 20;
-                   x = r*Math.sin(phi)*Math.cos(t); y = r*Math.sin(phi)*Math.sin(t) + 15; z = r*Math.cos(phi);
-               } else if (p < 0.8) { // Body
-                   const t = Math.random()*Math.PI*2, phi = Math.random()*Math.PI;
-                   const r = 25;
-                   x = r*Math.sin(phi)*Math.cos(t); y = r*Math.sin(phi)*Math.sin(t) - 20; z = r*Math.cos(phi);
-               } else { // Ears
-                   x = (Math.random() > 0.5 ? 18 : -18) + (Math.random()-0.5)*5;
-                   y = 30 + (Math.random()-0.5)*5;
-                   z = (Math.random()-0.5)*5;
-               }
-            }
-            else if (type === 'infinity') {
-                const t = rBase * Math.PI * 2;
-                const scale = 2 / (3 - Math.cos(2*t));
-                x = scale * Math.cos(t) * 40;
-                y = scale * Math.sin(2*t) / 2 * 40;
-                z = (Math.random()-0.5) * 5;
-            }
-            else if (type === 'hug') {
-                const t = Math.random() * Math.PI * 2, phi = Math.random() * Math.PI;
-                const r = 18;
-                // Two spheres offset
-                const shift = (i % 2 === 0) ? 12 : -12;
-                x = r*Math.sin(phi)*Math.cos(t) + shift;
-                y = r*Math.sin(phi)*Math.sin(t);
-                z = r*Math.cos(phi);
-            }
-            else if (type === 'kiss') {
-                const t = rBase * Math.PI * 2;
-                x = 35 * Math.cos(t);
-                y = 15 * Math.sin(t) - 5 * Math.abs(Math.cos(t)) * Math.sin(t); // Lip curve
-                z = (Math.random()-0.5) * 5;
-            }
-            else { // HEART
-                const t = Math.random() * Math.PI * 2;
-                const phi = Math.random() * Math.PI; 
-                // Parametric 3D Heart
-                x = 16 * Math.pow(Math.sin(t), 3);
-                y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                z = (Math.random()-0.5) * 5; 
-                // Scale up
-                x *= 2; y *= 2;
-            }
-
-            return {x, y, z};
+            return {x,y,z};
         }
 
-        function nextPhase() {
-            currentStage = (currentStage + 1) % timeline.length;
-            const data = timeline[currentStage];
+        function nextStep() {
+            currentStep = (currentStep + 1) % journey.length;
+            const data = journey[currentStep];
+
+            Piano.playChord(currentStep);
+
+            // Change Background Atmosphere (CSS)
+            document.getElementById('atmosphere').style.background = `radial-gradient(circle at center, ${data.bg} 0%, #000000 100%)`;
+
+            // UI Transitions
+            const card = document.getElementById('card');
+            card.classList.remove('active');
             
-            playSound(currentStage);
-
-            // UI Update
-            const card = document.getElementById('text-card');
-            card.style.opacity = 0;
-            card.style.transform = "translateY(30px)";
-
             setTimeout(() => {
-                document.getElementById('day-tag').innerText = data.day;
-                document.getElementById('headline').innerText = data.title;
-                document.getElementById('sub-text').innerText = data.msg;
-                document.getElementById('day-tag').style.color = '#' + new THREE.Color(data.color).getHexString();
-                
-                card.style.opacity = 1;
-                card.style.transform = "translateY(0)";
-            }, 600);
+                document.getElementById('day-label').innerText = data.day;
+                document.getElementById('main-title').innerText = data.title;
+                document.getElementById('sub-msg').innerText = data.msg;
+                document.getElementById('day-label').style.color = '#' + new THREE.Color(data.color).getHexString();
+                card.classList.add('active');
+            }, 500);
 
-            // Color Tween
-            gsap.to(mainObject.material.color, {
-                r: new THREE.Color(data.color).r,
-                g: new THREE.Color(data.color).g,
-                b: new THREE.Color(data.color).b,
-                duration: 2
-            });
+            // Particle Transitions (GSAP)
+            const posAttr = particles.geometry.attributes.position;
+            const targetColor = new THREE.Color(data.color);
 
-            // Position Morphing
-            const pos = mainObject.geometry.attributes.position.array;
-            
-            for(let i=0; i<heartCount; i++) {
-                const target = calculateShape(data.type, i);
+            gsap.to(particles.material.color, { r: targetColor.r, g: targetColor.g, b: targetColor.b, duration: 1.5 });
+
+            for(let i=0; i<particleCount; i++) {
+                const t = getShape(data.shape, i);
                 
-                gsap.to(pos, {
-                    [i*3]: target.x,
-                    [i*3+1]: target.y,
-                    [i*3+2]: target.z,
-                    duration: 3,
-                    ease: "power2.inOut",
-                    onUpdate: () => mainObject.geometry.attributes.position.needsUpdate = true
+                // Elastic easing for "Live/Bouncy" feel
+                gsap.to(posAttr.array, {
+                    [i*3]: t.x, [i*3+1]: t.y, [i*3+2]: t.z,
+                    duration: 2.5,
+                    ease: "elastic.out(1, 0.5)", 
+                    delay: Math.random() * 0.2, // Slight delay for organic morph
+                    onUpdate: () => posAttr.needsUpdate = true
                 });
             }
         }
 
         function animate() {
             requestAnimationFrame(animate);
+            const time = Date.now() * 0.001;
             
-            // Rotate Galaxy Background
-            if (starField) {
-                starField.rotation.y += 0.0005;
-                starField.rotation.z += 0.0002;
-            }
-
-            // Rotate Morphing Object
-            if (mainObject) {
-                mainObject.rotation.y += 0.005;
-                // Add a gentle "floating" sine wave
-                mainObject.position.y = Math.sin(Date.now() * 0.001) * 2;
-            }
-
+            // Gentle breathing rotation
+            particles.rotation.y = Math.sin(time * 0.1) * 0.2;
+            particles.rotation.x = Math.cos(time * 0.1) * 0.1;
+            
             renderer.render(scene, camera);
         }
     </script>
