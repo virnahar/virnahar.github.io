@@ -3,204 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether: The Journey of Love</title>
+    <title>Aether: Eternal Love</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
-        :root { --pink: #ff4d6d; --gold: #ffd700; --bg: #0a000d; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: 'Georgia', serif; }
+        body, html { margin: 0; padding: 0; background: #050005; overflow: hidden; font-family: 'Times New Roman', serif; }
+        #canvas-container { position: fixed; inset: 0; }
         
-        /* Background Glow */
-        #aura {
-            position: absolute; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, rgba(255, 77, 109, 0.15) 0%, rgba(0,0,0,0) 70%);
-            pointer-events: none; transition: background 1.5s ease;
+        #overlay {
+            position: fixed; inset: 0; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 10;
+            background: radial-gradient(circle, rgba(10,0,15,0) 0%, rgba(5,0,5,1) 100%);
+            pointer-events: none; text-align: center; color: white;
         }
 
-        /* Start Screen */
-        #start-screen {
-            position: fixed; inset: 0; z-index: 100; background: var(--bg);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            color: white; text-align: center; cursor: pointer;
+        #text-box { opacity: 0; transform: translateY(20px); transition: all 1.5s ease; max-width: 85%; }
+        #day { font-size: 0.7rem; letter-spacing: 8px; color: #ff85a2; text-transform: uppercase; margin-bottom: 15px; }
+        #quote { font-size: 1.4rem; font-style: italic; line-height: 1.8; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+
+        #start-gate {
+            position: fixed; inset: 0; z-index: 100; background: #000;
+            display: flex; justify-content: center; align-items: center;
+            color: #ff4d6d; cursor: pointer; letter-spacing: 5px; font-size: 0.8rem;
         }
-
-        /* Glass Text Panel - Moved to bottom to avoid covering shapes */
-        #ui-panel {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 85%; max-width: 400px; padding: 25px;
-            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px);
-            border-radius: 25px; border: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center; color: white; z-index: 50; pointer-events: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: opacity 1s;
-        }
-
-        #title { font-size: 1.8rem; margin: 0; font-weight: 100; color: var(--pink); letter-spacing: 2px; }
-        #msg { font-size: 0.95rem; margin-top: 10px; line-height: 1.6; font-style: italic; color: #eee; min-height: 60px; }
-
-        canvas { display: block; position: absolute; top: 0; left: 0; }
     </style>
 </head>
 <body>
 
-    <div id="start-screen" onclick="startExperience()">
-        <h1 style="font-weight: 100; letter-spacing: 10px;">AETHER</h1>
-        <p style="opacity: 0.5; font-size: 0.7rem; letter-spacing: 3px;">TAP TO BEGIN THE ODYSSEY</p>
+<div id="start-gate" onclick="initExperience()">CLICK TO OPEN YOUR HEART</div>
+
+<div id="canvas-container"></div>
+<div id="overlay">
+    <div id="text-box">
+        <div id="day">Prologue</div>
+        <div id="quote">In the quiet of the cosmos...</div>
     </div>
+</div>
 
-    <div id="aura"></div>
-    <div id="ui-panel">
-        <div id="day-label" style="font-size: 0.6rem; letter-spacing: 4px; opacity: 0.6; text-transform: uppercase;"></div>
-        <h1 id="title"></h1>
-        <p id="msg"></p>
-    </div>
+<script>
+let scene, camera, renderer, particles, audioCtx, currentDay = -1;
+const totalParticles = 4000;
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+const story = [
+    { day: "Feb 7: Rose", msg: "A bloom not of earth, but of light.", color: "#ff1e56", size: 15 },
+    { day: "Feb 9: Sweetness", msg: "Sweet moments captured in time.", color: "#ffaa00", size: 20 },
+    { day: "Feb 12: The Hug", msg: "Two souls, dancing in perfect sync.", color: "#9d4edd", size: 18 },
+    { day: "Feb 14: Eternal", msg: "I found home within your heart.", color: "#ff4d6d", size: 25, isHeart: true }
+];
 
-    <script>
-        let scene, camera, renderer, mainShape, stars, audioCtx;
-        let step = -1;
-        let isMoving = false;
+function initExperience() {
+    gsap.to("#start-gate", { opacity: 0, duration: 2, onComplete: () => document.getElementById('start-screen').remove });
+    document.getElementById('start-gate').style.pointerEvents = 'none';
+    
+    initAudio();
+    initThree();
+    nextDay();
+}
 
-        const journey = [
-            { day: "Feb 7", title: "The Rose", msg: "A single bloom in a digital garden, scented with forever.", color: 0xff1e56, type: "rose" },
-            { day: "Feb 8", title: "The Promise", msg: "A vow written in the stars, etched into our source code.", color: 0x00d4ff, type: "knot" },
-            { day: "Feb 9", title: "Chocolate", msg: "Sweeter than the richest cocoa, warmer than the sun.", color: 0xffaa00, type: "box" },
-            { day: "Feb 10", title: "The Embrace", msg: "Holding you in the quiet space between heartbeats.", color: 0xff85a2, type: "sphere" },
-            { day: "Feb 14", title: "Infinity", msg: "No matter where we are, my heart beats only for you.", color: 0xff4d6d, type: "heart" }
-        ];
+function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Ambient Pad (Background)
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(110, audioCtx.currentTime); // A2 low drone
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 3);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.start();
+}
 
-        function startExperience() {
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('ui-panel').style.opacity = '1';
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            init();
-            animate();
-            nextStep();
+function playTapSound() {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 1);
+}
+
+function initThree() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 1000);
+    camera.position.z = 100;
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(totalParticles * 3);
+    for(let i=0; i<totalParticles * 3; i++) pos[i] = (Math.random()-0.5) * 200;
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    
+    const mat = new THREE.PointsMaterial({
+        size: 0.6,
+        color: 0xff4d6d,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        opacity: 0.8
+    });
+    
+    particles = new THREE.Points(geo, mat);
+    scene.add(particles);
+
+    window.addEventListener('click', nextDay);
+    animate();
+}
+
+function morphTo(shapeType) {
+    const posArr = particles.geometry.attributes.position.array;
+    for (let i = 0; i < totalParticles; i++) {
+        let x, y, z;
+        if (shapeType === 'heart') {
+            const t = Math.random() * Math.PI * 2;
+            x = 16 * Math.pow(Math.sin(t), 3);
+            y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+            z = (Math.random() - 0.5) * 5;
+            x *= 1.5; y *= 1.5;
+        } else {
+            const r = 25 + Math.random() * 10;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
+            x = r * Math.sin(phi) * Math.cos(theta);
+            y = r * Math.sin(phi) * Math.sin(theta);
+            z = r * Math.cos(phi);
         }
-
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-            camera.position.z = 80;
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            document.body.appendChild(renderer.domElement);
-
-            // Romantic Ambient Particles
-            const starGeo = new THREE.BufferGeometry();
-            const positions = [];
-            for(let i=0; i<1500; i++) {
-                positions.push((Math.random()-0.5)*400, (Math.random()-0.5)*400, (Math.random()-0.5)*400);
-            }
-            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.7, transparent: true, opacity: 0.4}));
-            scene.add(stars);
-
-            // Lighting
-            const pLight = new THREE.PointLight(0xffffff, 2, 200);
-            pLight.position.set(20, 30, 50);
-            scene.add(pLight);
-            scene.add(new THREE.AmbientLight(0x333333));
-
-            window.addEventListener('mousedown', nextStep);
-            window.addEventListener('touchstart', (e) => { e.preventDefault(); nextStep(); }, {passive: false});
-        }
-
-        function playHeartbeat() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(60, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
-            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
-        }
-
-        function nextStep() {
-            if(isMoving) return;
-            step++;
-            if(step >= journey.length) {
-                showFinalMessage();
-                return;
-            }
-            isMoving = true;
-            playHeartbeat();
-
-            const data = journey[step];
-            
-            // UI Update
-            document.getElementById('day-label').innerText = data.day;
-            document.getElementById('title').innerText = data.title;
-            document.getElementById('title').style.color = new THREE.Color(data.color).getStyle();
-            document.getElementById('aura').style.background = `radial-gradient(circle at center, ${new THREE.Color(data.color).getStyle()}33 0%, rgba(0,0,0,0) 70%)`;
-            
-            // Typewriter
-            let i = 0;
-            const msgEl = document.getElementById('msg');
-            msgEl.innerHTML = "";
-            const timer = setInterval(() => {
-                msgEl.innerHTML += data.msg.charAt(i);
-                i++;
-                if(i >= data.msg.length) { clearInterval(timer); isMoving = false; }
-            }, 30)
-
-            // Geometry Update
-            if(mainShape) scene.remove(mainShape);
-            let geo;
-            if(data.type === 'rose') geo = new THREE.TorusKnotGeometry(12, 5, 64, 8, 2, 5);
-            else if(data.type === 'knot') geo = new THREE.TorusKnotGeometry(10, 3, 100, 16);
-            else if(data.type === 'box') geo = new THREE.BoxGeometry(18, 18, 18);
-            else if(data.type === 'sphere') geo = new THREE.SphereGeometry(15, 32, 32);
-            else if(data.type === 'heart') {
-                const s = new THREE.Shape();
-                s.moveTo(0,0); s.bezierCurveTo(0,-3,-5,-15,-20,-15); s.bezierCurveTo(-35,-15,-35,7,-35,7);
-                s.bezierCurveTo(-35,11,-30,24,0,40); s.bezierCurveTo(30,24,35,11,35,7);
-                s.bezierCurveTo(35,7,35,-15,20,-15); s.bezierCurveTo(5,-15,0,-3,0,0);
-                geo = new THREE.ExtrudeGeometry(s, {depth: 6, bevelEnabled: true});
-                geo.center();
-            }
-
-            const mat = new THREE.MeshPhongMaterial({ 
-                color: data.color, 
-                shininess: 100, 
-                emissive: data.color, 
-                emissiveIntensity: 0.4,
-                flatShading: data.type === 'box'
-            });
-            mainShape = new THREE.Mesh(geo, mat);
-            if(data.type === 'heart') mainShape.rotation.x = Math.PI;
-            scene.add(mainShape);
-        }
-
-        function showFinalMessage() {
-            document.getElementById('ui-panel').style.bottom = '40%';
-            document.getElementById('day-label').style.display = 'none';
-            document.getElementById('title').innerText = "For You";
-            document.getElementById('msg').innerHTML = "I can't show what you mean to me in pixels or code... You are my favorite reality.<br><br>Happy Valentine's Day.";
-            if(mainShape) mainShape.scale.set(1.5, 1.5, 1.5);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if(mainShape) {
-                mainShape.rotation.y += 0.005;
-                mainShape.rotation.z += 0.002;
-                const p = 1 + Math.sin(Date.now()*0.002)*0.05;
-                mainShape.scale.set(p,p,p);
-            }
-            stars.rotation.y += 0.0003;
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        gsap.to(posArr, {
+            duration: 2.5,
+            ease: "power2.inOut",
+            [i * 3]: x,
+            [i * 3 + 1]: y,
+            [i * 3 + 2]: z,
+            onUpdate: () => particles.geometry.attributes.position.needsUpdate = true
         });
-    </script>
+    }
+}
+
+function nextDay() {
+    currentDay++;
+    if (currentDay >= story.length) {
+        showFinale();
+        return;
+    }
+    
+    const data = story[currentDay];
+    playTapSound();
+    
+    // UI Animations
+    gsap.to("#text-box", { opacity: 0, y: 10, duration: 0.5, onComplete: () => {
+        document.getElementById('day').innerText = data.day;
+        document.getElementById('quote').innerText = data.msg;
+        gsap.to("#text-box", { opacity: 1, y: 0, duration: 1.5 });
+    }});
+
+    // Color and Morph
+    gsap.to(particles.material.color, {
+        r: new THREE.Color(data.color).r,
+        g: new THREE.Color(data.color).g,
+        b: new THREE.Color(data.color).b,
+        duration: 2
+    });
+    
+    morphTo(data.isHeart ? 'heart' : 'sphere');
+}
+
+function showFinale() {
+    gsap.to("#text-box", { opacity: 0, duration: 1 });
+    setTimeout(() => {
+        document.getElementById('day').style.display = 'none';
+        document.getElementById('quote').innerHTML = `
+            <span style="font-size: 0.8rem; color: #ff85a2;">A FINAL CONFESSION</span><br><br>
+            I can't show what you mean to me with code or light.<br>
+            You are the gravity that holds my universe together.<br><br>
+            <span style="font-size: 2rem; color: #ff4d6d;">❤ Forever Yours ❤</span>`;
+        gsap.to("#text-box", { opacity: 1, duration: 3 });
+    }, 1500);
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    particles.rotation.y += 0.002;
+    renderer.render(scene, camera);
+}
+</script>
 </body>
 </html>
-
