@@ -9,6 +9,7 @@
 
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Quicksand', sans-serif; color: white; }
         
+        /* UI Layer */
         #ui {
             position: fixed; bottom: 8%; left: 0; width: 100%;
             display: flex; flex-direction: column; align-items: center;
@@ -51,7 +52,7 @@
         #gate {
             position: fixed; inset: 0; z-index: 200; background: radial-gradient(circle, #1a0510 0%, #000 100%);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            cursor: pointer; transition: opacity 2.5s ease;
+            cursor: pointer; transition: opacity 2s ease;
         }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
         .active-ui { opacity: 1 !important; transform: translateY(0) !important; }
@@ -62,7 +63,7 @@
 <body>
 
 <audio id="bg-music" loop>
-    <source src="https://cdn.pixabay.com/audio/2022/02/18/audio_d0a13d6935.mp3" type="audio/mpeg">
+    <source src="https://www.chosic.com/wp-content/uploads/2021/07/Rain-and-Flowers-chosic.com_.mp3" type="audio/mpeg">
 </audio>
 
 <label id="upload-btn" for="photo-input">UPLOAD MEMORY</label>
@@ -97,22 +98,11 @@ const S_COUNT = 3000;
 let photoOriginals = null;
 let starOriginals = null;
 
-const story = [
-    { title: "The First Bloom", msg: "A rose in the silence of the stars, blooming just for you.", color: 0xff1e56, shape: "rose" },
-    { title: "The Choice", msg: "In every galaxy I have ever imagined, it was always you.", color: 0x00d4ff, shape: "ring" },
-    { title: "Sweetness", msg: "Your love is the sugar that turns the darkness vanish.", color: 0xffaa00, shape: "box" },
-    { title: "A Soft Harbor", msg: "A place to hide, a space to stay. You are my home.", color: 0xffb7c5, shape: "teddy" },
-    { title: "The Promise", msg: "I promise to be the beat in your heart and the light in your eyes.", color: 0xffd700, shape: "infinity" },
-    { title: "One Orbit", msg: "Two separate stars, finally merging into a unified orbit.", color: 0x9d4edd, shape: "hug" },
-    { title: "The Spark", msg: "A touch that turns a second into a memory that echoes forever.", color: 0xff0055, shape: "kiss" },
-    { title: "My Universe", msg: "I can't show what you mean to me in pixels, Vir. You are my everything.", color: 0xff0000, shape: "heart" }
-];
-
 function startApp() {
     gsap.to("#gate", { opacity: 0, duration: 2, onComplete: () => document.getElementById('gate').remove() });
     const music = document.getElementById('bg-music');
-    music.volume = 0.4;
-    music.play();
+    music.volume = 0.5;
+    music.play().catch(e => console.log("Audio play failed, need gesture"));
     setupThree();
     nextDay();
 }
@@ -120,14 +110,14 @@ function startApp() {
 function setupThree() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 2000);
-    camera.position.z = 150;
+    camera.position.z = 160;
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
-    // Create textures
+    // TEXTURES
     const hCanvas = document.createElement('canvas'); hCanvas.width = 64; hCanvas.height = 64;
     const hCtx = hCanvas.getContext('2d'); hCtx.fillStyle = "white"; hCtx.beginPath();
     hCtx.moveTo(32, 55); hCtx.bezierCurveTo(32, 55, 5, 35, 5, 18);
@@ -142,21 +132,21 @@ function setupThree() {
     sCtx.fillStyle = grad; sCtx.fillRect(0,0,64,64);
     starTex = new THREE.CanvasTexture(sCanvas);
 
-    // 1. Morphing Hearts
+    // 1. MAIN OBJECT
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(H_COUNT * 3);
-    for(let i=0; i<H_COUNT*3; i++) pos[i] = (Math.random()-0.5)*600;
+    for(let i=0; i<H_COUNT*3; i++) pos[i] = (Math.random()-0.5)*800;
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    hearts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 2.2, map: heartTex, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    hearts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 2.5, map: heartTex, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
     scene.add(hearts);
 
-    // 2. Galaxy Stars
+    // 2. GALAXY (SOURCE LOCKED)
     const starGeo = new THREE.BufferGeometry();
     const starPos = new Float32Array(S_COUNT * 3);
     for(let i=0; i<S_COUNT*3; i++) starPos[i] = (Math.random()-0.5)*2000;
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-    starGalaxy = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 3.0, map: starTex, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
-    starOriginals = new Float32Array(starPos); // Lock positions
+    starGalaxy = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 3.5, map: starTex, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+    starOriginals = new Float32Array(starPos); // The Source of Truth
     scene.add(starGalaxy);
 
     window.addEventListener('mousemove', (e) => { targetY = (e.clientX/window.innerWidth-0.5)*1.8; targetX = (e.clientY/window.innerHeight-0.5)*1.8; });
@@ -165,19 +155,19 @@ function setupThree() {
     animate();
 }
 
-// --- PHOTO ENGINE (HEART MASKED) ---
+// --- PHOTO ENGINE (MAPPED TO HEART) ---
 document.getElementById('photo-input').addEventListener('change', function(e) {
     const reader = new FileReader();
     reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
             if(photoParticles) scene.remove(photoParticles);
-            const size = 65; 
+            const size = 70; 
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             
-            // 1. Create Heart Path
+            // Draw Perfect Heart Mask
             ctx.beginPath();
             ctx.moveTo(size/2, size);
             ctx.bezierCurveTo(size/2, size, 0, size/1.5, 0, size/3);
@@ -185,26 +175,24 @@ document.getElementById('photo-input').addEventListener('change', function(e) {
             ctx.bezierCurveTo(size/1.5, 0, size, 0, size, size/3);
             ctx.bezierCurveTo(size, size/1.5, size/2, size, size/2, size);
             ctx.clip();
-            
-            // 2. Draw Image (Subject centered)
             ctx.drawImage(img, 0, 0, size, size);
             
             const data = ctx.getImageData(0, 0, size, size).data;
             const pPosArr = []; const pCols = [];
             
             for(let i=0; i<size*size; i++) {
-                if(data[i*4+3] > 50) { 
+                if(data[i*4+3] > 10) { 
                     const px = i % size; const py = Math.floor(i / size);
                     pPosArr.push((px - size/2) * 1.5, (size/2 - py) * 1.5, 0);
                     pCols.push(data[i*4]/255, data[i*4+1]/255, data[i*4+2]/255);
                 }
             }
-            photoOriginals = new Float32Array(pPosArr);
+            photoOriginals = new Float32Array(pPosArr); // The Source of Truth
             const pGeo = new THREE.BufferGeometry();
             pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pPosArr), 3));
             pGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pCols), 3));
             
-            photoParticles = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 1.8, vertexColors: true, map: heartTex, transparent: true, opacity: 1, blending: THREE.AdditiveBlending }));
+            photoParticles = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 2.0, vertexColors: true, map: heartTex, transparent: true, opacity: 1, blending: THREE.AdditiveBlending }));
             scene.add(photoParticles);
             isShattered = false;
         };
@@ -213,7 +201,7 @@ document.getElementById('photo-input').addEventListener('change', function(e) {
     reader.readAsDataURL(e.target.files[0]);
 });
 
-// GLOBAL SHATTER (TAP SCREEN)
+// GLOBAL SHATTER
 window.addEventListener('click', (e) => {
     if(!isShattered && e.target.id !== 'photo-input' && e.target.id !== 'upload-btn') {
         isShattered = true;
@@ -226,6 +214,12 @@ window.addEventListener('click', (e) => {
     }
 });
 
+const timeline = [
+    { title: "The First Bloom", msg: "A rose in the silence of the stars, blooming just for you.", color: 0xff1e56, shape: "rose" },
+    { title: "The Promise", msg: "I promise to be the beat in your heart and the light in your eyes.", color: 0xffd700, shape: "infinity" },
+    { title: "My Universe", msg: "You are my sun, my moon, and all my stars. I love you, Vir.", color: 0xff0000, shape: "heart" }
+];
+
 function getPos(type, i) {
     const r = i / H_COUNT;
     let x, y, z;
@@ -236,34 +230,18 @@ function getPos(type, i) {
         const t = Math.random() * Math.PI * 2;
         x = 16 * Math.pow(Math.sin(t), 3); y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
         z = (Math.random()-0.5)*15; x *= 3.5; y *= 3.5;
-    } else if (type === 'ring') {
-        const t = r * Math.PI * 2; x = 45 * Math.cos(t); y = 45 * Math.sin(t); z = (Math.random()-0.5)*4;
-        if(i > H_COUNT*0.9) { y = 45 + Math.random()*15; x = (Math.random()-0.5)*15; z = (Math.random()-0.5)*15; }
-    } else if (type === 'infinity') {
+    } else { // Infinity
         const t = r * Math.PI * 2; const s = 75 / (3 - Math.cos(2*t));
         x = s * Math.cos(t); y = s * Math.sin(2*t)/2; z = (Math.random()-0.5)*6;
-    } else if (type === 'box') {
-        x = (Math.random()-0.5)*60; y = (Math.random()-0.5)*60; z = (Math.random()-0.5)*60;
-        if(Math.random()>0.3) { const ax = Math.floor(Math.random()*3); if(ax==0) x=Math.sign(x)*30; else if(ax==1) y=Math.sign(y)*30; else z=Math.sign(z)*30; }
-    } else if (type === 'teddy') {
-        const p = Math.random(); const rad = p < 0.5 ? 25 : (p < 0.8 ? 35 : 15); const off = p < 0.5 ? 25 : (p < 0.8 ? -25 : 42);
-        const t = Math.random()*Math.PI*2, ph = Math.random()*Math.PI;
-        x = rad*Math.sin(ph)*Math.cos(t); y = rad*Math.sin(ph)*Math.sin(t) + off; z = rad*Math.cos(ph);
-    } else if (type === 'hug') {
-        const shift = i % 2 === 0 ? 15 : -15; const t = Math.random()*Math.PI*2, ph = Math.random()*Math.PI;
-        x = 22*Math.sin(ph)*Math.cos(t) + shift; y = 22*Math.sin(ph)*Math.sin(t); z = 22*Math.cos(ph);
-    } else { // Kiss
-        const t = r * Math.PI * 2;
-        x = 50 * Math.cos(t); y = 20 * Math.sin(t) - 10 * Math.abs(Math.cos(t)) * Math.sin(t); z = (Math.random()-0.5)*6;
     }
     return {x, y, z};
 }
 
 function nextDay() {
-    step = (step + 1) % story.length;
-    const data = story[step];
+    step = (step + 1) % timeline.length;
+    const data = timeline[step];
     
-    // THE RECALL SYSTEM (RESET EVERYTHING TO SOURCE)
+    // THE RECALL (FIXED)
     if(isShattered) {
         if(photoParticles && photoOriginals) {
             const pArr = photoParticles.geometry.attributes.position.array;
@@ -299,7 +277,7 @@ function animate() {
     hearts.rotation.y = (Date.now() * 0.0004) + currentY; 
     hearts.rotation.x = currentX;
     if(photoParticles) { photoParticles.rotation.y = hearts.rotation.y; photoParticles.rotation.x = hearts.rotation.x; }
-    starGalaxy.rotation.y -= 0.0003; 
+    starGalaxy.rotation.y -= 0.0002; 
     renderer.render(scene, camera);
 }
 </script>
