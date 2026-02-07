@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vir's Valentine | Eternal Symphony</title>
+    <title>Vir's Valentine | Memory Heart Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Quicksand:wght@300;500&display=swap');
 
@@ -46,7 +46,10 @@
             background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
             color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 0.6rem;
             letter-spacing: 3px; cursor: pointer; backdrop-filter: blur(15px);
+            transition: all 0.3s;
         }
+        
+        #upload-btn.hidden { opacity: 0; pointer-events: none; }
 
         #gate {
             position: fixed; inset: 0; z-index: 200; background: radial-gradient(circle, #1a0510 0%, #000 100%);
@@ -55,7 +58,6 @@
         }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
         .active-ui { opacity: 1 !important; transform: translateY(0) !important; }
-        
         .pulse-heart { font-size: 4rem; color: #ff4d6d; animation: heartbeat 1.5s infinite; filter: drop-shadow(0 0 20px #ff4d6d); }
         @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
     </style>
@@ -90,7 +92,8 @@ let scene, camera, renderer, hearts, starGalaxy, photoParticles, audioCtx, heart
 let step = -1, isShattered = false;
 let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
 const H_COUNT = 6000;
-const S_COUNT = 3000;
+const S_COUNT = 3500;
+let photoOriginals = []; // Store original positions for recall
 
 const story = [
     { title: "The First Bloom", msg: "A rose in the silence of the stars, blooming just for you.", color: 0xff1e56, shape: "rose" },
@@ -149,28 +152,21 @@ function setupThree() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
-    // TEXTURE: Heart
-    const hCanvas = document.createElement('canvas');
-    hCanvas.width = 64; hCanvas.height = 64;
-    const hCtx = hCanvas.getContext('2d');
-    hCtx.fillStyle = "white"; hCtx.beginPath();
-    hCtx.moveTo(32, 55); hCtx.bezierCurveTo(32, 55, 5, 35, 5, 18);
-    hCtx.bezierCurveTo(5, 5, 22, 5, 32, 18); hCtx.bezierCurveTo(42, 5, 59, 5, 59, 18);
-    hCtx.bezierCurveTo(59, 35, 32, 55, 32, 55); hCtx.fill();
+    // TEXTURES
+    const hCanvas = document.createElement('canvas'); hCanvas.width = 64; hCanvas.height = 64;
+    const hCtx = hCanvas.getContext('2d'); hCtx.fillStyle = "white"; hCtx.beginPath();
+    hCtx.moveTo(32, 55); hCtx.bezierCurveTo(32, 55, 5, 35, 5, 18); hCtx.bezierCurveTo(5, 5, 22, 5, 32, 18); 
+    hCtx.bezierCurveTo(42, 5, 59, 5, 59, 18); hCtx.bezierCurveTo(59, 35, 32, 55, 32, 55); hCtx.fill();
     heartTex = new THREE.CanvasTexture(hCanvas);
 
-    // TEXTURE: Glowing Star
-    const sCanvas = document.createElement('canvas');
-    sCanvas.width = 64; sCanvas.height = 64;
+    const sCanvas = document.createElement('canvas'); sCanvas.width = 64; sCanvas.height = 64;
     const sCtx = sCanvas.getContext('2d');
     const grad = sCtx.createRadialGradient(32,32,0,32,32,32);
-    grad.addColorStop(0, 'rgba(255,255,255,1)');
-    grad.addColorStop(0.3, 'rgba(255,255,255,0.4)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.3, 'rgba(255,255,255,0.4)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
     sCtx.fillStyle = grad; sCtx.fillRect(0,0,64,64);
     starTex = new THREE.CanvasTexture(sCanvas);
 
-    // 1. MAIN MORPHING OBJECT
+    // MAIN MORPHING OBJECT
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(H_COUNT * 3);
     for(let i=0; i<H_COUNT*3; i++) pos[i] = (Math.random()-0.5)*600;
@@ -178,15 +174,14 @@ function setupThree() {
     hearts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 2.5, map: heartTex, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
     scene.add(hearts);
 
-    // 2. INTERACTIVE GALAXY
+    // INTERACTIVE GALAXY
     const starGeo = new THREE.BufferGeometry();
     const starPos = new Float32Array(S_COUNT * 3);
-    for(let i=0; i<S_COUNT*3; i++) starPos[i] = (Math.random()-0.5)*1800;
+    for(let i=0; i<S_COUNT*3; i++) starPos[i] = (Math.random()-0.5)*2000;
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
     starGalaxy = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 3.5, map: starTex, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+    starGalaxy.userData.origPos = new Float32Array(starPos); // Store original positions
     scene.add(starGalaxy);
-    // Store original star positions for re-assembly
-    starGalaxy.userData.origPos = new Float32Array(starPos);
 
     window.addEventListener('mousemove', (e) => { targetY = (e.clientX/window.innerWidth-0.5)*1.8; targetX = (e.clientY/window.innerHeight-0.5)*1.8; });
     window.addEventListener('touchmove', (e) => { targetY = (e.touches[0].clientX/window.innerWidth-0.5)*3.0; targetX = (e.touches[0].clientY/window.innerHeight-0.5)*3.0; });
@@ -194,35 +189,52 @@ function setupThree() {
     animate();
 }
 
-// --- PHOTO ENGINE ---
-let photoOriginals = null;
+// --- HEART-SHAPED PHOTO ENGINE ---
 document.getElementById('photo-input').addEventListener('change', function(e) {
     const reader = new FileReader();
     reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
             if(photoParticles) scene.remove(photoParticles);
-            const size = 50; 
+            // Hide upload button after success
+            document.getElementById('upload-btn').classList.add('hidden');
+            
+            const size = 80; // Higher resolution grid
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
             canvas.width = size; canvas.height = size;
-            ctx.drawImage(img, 0, 0, size, size);
-            const data = ctx.getImageData(0, 0, size, size).data;
+            const ctx = canvas.getContext('2d');
 
-            const pGeo = new THREE.BufferGeometry();
-            const pPos = new Float32Array(size * size * 3);
-            const pCols = new Float32Array(size * size * 3);
+            // 1. Draw Heart Mask
+            ctx.beginPath();
+            ctx.moveTo(size/2, size);
+            ctx.bezierCurveTo(size/2, size, 0, size/1.5, 0, size/3);
+            ctx.bezierCurveTo(0, 0, size/3, 0, size/2, size/3);
+            ctx.bezierCurveTo(size/1.5, 0, size, 0, size, size/3);
+            ctx.bezierCurveTo(size, size/1.5, size/2, size, size/2, size);
+            ctx.fill();
+            
+            // 2. Composite Photo INSIDE Heart
+            ctx.globalCompositeOperation = 'source-in';
+            ctx.drawImage(img, 0, 0, size, size);
+            
+            const data = ctx.getImageData(0, 0, size, size).data;
+            const pPos = []; const pCols = [];
             
             for(let i=0; i<size*size; i++) {
-                const px = i % size; const py = Math.floor(i / size);
-                pPos[i*3] = (px - size/2) * 1.5; pPos[i*3+1] = (size/2 - py) * 1.5; pPos[i*3+2] = 0;
-                pCols[i*3] = data[i*4]/255; pCols[i*3+1] = data[i*4+1]/255; pCols[i*3+2] = data[i*4+2]/255;
+                const alpha = data[i*4+3];
+                if(alpha > 0) { // Only create particles if inside the heart mask
+                    const px = i % size; const py = Math.floor(i / size);
+                    pPos.push((px - size/2) * 1.2, (size/2 - py) * 1.2, 0);
+                    pCols.push(data[i*4]/255, data[i*4+1]/255, data[i*4+2]/255);
+                }
             }
-            photoOriginals = new Float32Array(pPos); 
-            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-            pGeo.setAttribute('color', new THREE.BufferAttribute(pCols, 3));
+            photoOriginals = new Float32Array(pPos); // Store originals for recall
             
-            photoParticles = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 2.2, vertexColors: true, map: heartTex, transparent: true, opacity: 1, blending: THREE.AdditiveBlending }));
+            const pGeo = new THREE.BufferGeometry();
+            pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pPos), 3));
+            pGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pCols), 3));
+            
+            photoParticles = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 2.0, vertexColors: true, map: heartTex, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending }));
             scene.add(photoParticles);
             isShattered = false;
         };
@@ -231,19 +243,19 @@ document.getElementById('photo-input').addEventListener('change', function(e) {
     reader.readAsDataURL(e.target.files[0]);
 });
 
-// LIQUID SHATTER (PHOTO + GALAXY)
+// SHATTER LOGIC (CLICK PHOTO)
 window.addEventListener('click', (e) => {
     if(photoParticles && !isShattered && e.target.tagName !== 'LABEL' && e.target.id !== 'photo-input') {
         isShattered = true;
         // Shatter Photo
         const pPos = photoParticles.geometry.attributes.position.array;
         for(let i=0; i<pPos.length/3; i++) {
-            gsap.to(pPos, { [i*3]: pPos[i*3] + (Math.random()-0.5)*400, [i*3+1]: pPos[i*3+1] + (Math.random()-0.5)*400, [i*3+2]: pPos[i*3+2] + (Math.random()-0.5)*400, duration: 4, ease: "power2.out", onUpdate: () => photoParticles.geometry.attributes.position.needsUpdate = true });
+            gsap.to(pPos, { [i*3]: pPos[i*3] + (Math.random()-0.5)*500, [i*3+1]: pPos[i*3+1] + (Math.random()-0.5)*500, [i*3+2]: pPos[i*3+2] + (Math.random()-0.5)*500, duration: 4, ease: "power2.out", onUpdate: () => photoParticles.geometry.attributes.position.needsUpdate = true });
         }
-        // Shatter Galaxy
+        // Shatter Galaxy Sync
         const sPos = starGalaxy.geometry.attributes.position.array;
         for(let i=0; i<sPos.length/3; i++) {
-            gsap.to(sPos, { [i*3]: sPos[i*3] + (Math.random()-0.5)*200, [i*3+1]: sPos[i*3+1] + (Math.random()-0.5)*200, [i*3+2]: sPos[i*3+2] + (Math.random()-0.5)*200, duration: 6, ease: "power2.out", onUpdate: () => starGalaxy.geometry.attributes.position.needsUpdate = true });
+            gsap.to(sPos, { [i*3]: sPos[i*3] + (Math.random()-0.5)*300, [i*3+1]: sPos[i*3+1] + (Math.random()-0.5)*300, [i*3+2]: sPos[i*3+2] + (Math.random()-0.5)*300, duration: 5, ease: "power2.out", onUpdate: () => starGalaxy.geometry.attributes.position.needsUpdate = true });
         }
         playChime(7);
     }
@@ -287,11 +299,11 @@ function nextDay() {
     const data = story[step];
     playChime(step);
     
-    // RE-ASSEMBLE Logic (Reverses Shatter)
+    // RE-ASSEMBLE Logic (Reverses Shatter for Photo AND Galaxy)
     if(isShattered) {
-        if(photoParticles && photoOriginals) {
+        if(photoParticles && photoOriginals.length > 0) {
             const pPos = photoParticles.geometry.attributes.position.array;
-            for(let i=0; i<pPos.length; i++) { gsap.to(pPos, { [i]: photoOriginals[i], duration: 3, ease: "expo.out", onUpdate: () => photoParticles.geometry.attributes.position.needsUpdate = true }); }
+            for(let i=0; i<pPos.length; i++) { gsap.to(pPos, { [i]: photoOriginals[i], duration: 3.5, ease: "expo.out", onUpdate: () => photoParticles.geometry.attributes.position.needsUpdate = true }); }
         }
         const sPos = starGalaxy.geometry.attributes.position.array;
         const sOrig = starGalaxy.userData.origPos;
@@ -309,7 +321,7 @@ function nextDay() {
     const pos = hearts.geometry.attributes.position.array;
     for(let i=0; i<H_COUNT; i++) {
         const t = getPos(data.shape, i);
-        gsap.to(pos, { [i*3]: t.x, [i*3+1]: t.y, [i*3+2]: t.z, duration: 3.5, ease: "expo.inOut", delay: Math.random()*0.2, onUpdate: () => hearts.geometry.attributes.position.needsUpdate = true });
+        gsap.to(pos, { [i*3]: t.x, [i*3+1]: t.y, [i*3+2]: t.z, duration: 3.8, ease: "expo.inOut", delay: Math.random()*0.25, onUpdate: () => hearts.geometry.attributes.position.needsUpdate = true });
     }
     gsap.to(hearts.material.color, { r: new THREE.Color(data.color).r, g: new THREE.Color(data.color).g, b: new THREE.Color(data.color).b, duration: 2.5 });
 }
