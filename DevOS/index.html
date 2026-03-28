@@ -3,23 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Virendra Kumar - DevOS</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta name="description" content="Virendra Kumar — Senior Cloud DevOps Engineer II at McKinsey & Company. 12+ years building scalable cloud infrastructure, Kubernetes, Terraform, and CI/CD pipelines.">
+    <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DevOS">
+    <meta name="author" content="Virendra Kumar">
+    <meta name="keywords" content="DevOps, Cloud Engineer, Kubernetes, Terraform, Azure, Portfolio, McKinsey">
+    <link rel="canonical" href="https://virnahar.github.io">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Virendra Kumar — DevOps Portfolio">
+    <meta property="og:description" content="Senior Cloud DevOps Engineer II at McKinsey & Company. 12+ years of multi-cloud architecture, Kubernetes, Terraform, and CI/CD expertise.">
+    <meta property="og:url" content="https://virnahar.github.io">
+    <meta property="og:image" content="https://virnahar.github.io/DevOs/IMG_3028.jpeg">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Virendra Kumar — DevOps Portfolio">
+    <meta name="twitter:description" content="Senior Cloud DevOps Engineer II at McKinsey & Company. 12+ years of multi-cloud architecture, Kubernetes, Terraform, and CI/CD expertise.">
+    <title>Virendra Kumar - DevOS V2</title>
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Virendra Kumar",
+    "url": "https://virnahar.github.io",
+    "jobTitle": "Senior Cloud DevOps Engineer II",
+    "worksFor": {"@type": "Organization", "name": "McKinsey & Company"},
+    "sameAs": [
+        "https://linkedin.com/in/virnahar",
+        "https://github.com/virnahar"
+    ],
+    "knowsAbout": ["DevOps", "Kubernetes", "Terraform", "Azure", "CI/CD", "Platform Engineering"]
+}
+    </script>
+    <!-- DevOS V2 Unified CSS -->
+    <link rel="stylesheet" href="css/core.css">
+    <link rel="stylesheet" href="css/v2-features.css">
+    <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://code.jquery.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" fetchpriority="high">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M18.71,19.5C17.88,20.74 17,21.95 15.66,21.97C14.32,22 13.89,21.18 12.37,21.18C10.84,21.18 10.37,21.95 9.1,22C7.79,22.05 6.8,20.68 5.96,19.47C4.25,17 2.94,12.45 4.7,9.39C5.57,7.87 7.13,6.91 8.82,6.88C10.1,6.86 11.32,7.75 12.11,7.75C12.89,7.75 14.37,6.68 15.92,6.84C16.57,6.87 18.39,7.1 19.56,8.82C19.47,8.88 17.39,10.1 17.41,12.63C17.44,15.65 20.06,16.66 20.09,16.67C20.06,16.74 19.67,18.11 18.71,19.5M13,3.5C13.73,2.67 14.94,2.04 15.94,2C16.07,3.17 15.6,4.35 14.9,5.19C14.21,6.04 13.07,6.7 11.95,6.61C11.8,5.46 12.36,4.26 13,3.5Z'/></svg>">
     
-    <!-- jQuery Terminal for Interactive Terminal -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery.terminal@2.38.0/js/jquery.terminal.min.js"></script>
+    <!-- jQuery Terminal for Interactive Terminal (CSS only; scripts load before </body>) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jquery.terminal@2.38.0/css/jquery.terminal.min.css"/>
-    <script src="https://cdn.jsdelivr.net/npm/figlet@1.7.0/lib/figlet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/isomorphic-lolcat@1.2.1/dist/index.min.js"></script>
 </head>
-<body class="mac-cursor">
+<body class="mac-cursor" role="application">
+    <noscript><div style="position:fixed;inset:0;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;z-index:999999;font-family:-apple-system,sans-serif;text-align:center;padding:40px;"><div><h1 style="font-size:48px;margin-bottom:16px;">🍎</h1><h2>DevOS requires JavaScript</h2><p style="color:#888;margin-top:12px;">Please enable JavaScript to explore Virendra Kumar's interactive portfolio.</p><p style="margin-top:24px;"><a href="https://linkedin.com/in/virnahar" style="color:#007aff;">Visit LinkedIn instead →</a></p></div></div></noscript>
+    <canvas class="cursor-canvas" id="cursor-canvas"></canvas>
     <!-- Startup Screen -->
-    <div class="startup-screen" id="startup-screen" style="z-index: 100000;">
+    <div class="startup-screen" id="startup-screen" style="z-index: 99999;">
         <div class="startup-content">
             <svg class="apple-logo-startup" width="120" height="120" viewBox="0 0 24 24" fill="white">
                 <path d="M18.71,19.5C17.88,20.74 17,21.95 15.66,21.97C14.32,22 13.89,21.18 12.37,21.18C10.84,21.18 10.37,21.95 9.1,22C7.79,22.05 6.8,20.68 5.96,19.47C4.25,17 2.94,12.45 4.7,9.39C5.57,7.87 7.13,6.91 8.82,6.88C10.1,6.86 11.32,7.75 12.11,7.75C12.89,7.75 14.37,6.68 15.92,6.84C16.57,6.87 18.39,7.1 19.56,8.82C19.47,8.88 17.39,10.1 17.41,12.63C17.44,15.65 20.06,16.66 20.09,16.67C20.06,16.74 19.67,18.11 18.71,19.5M13,3.5C13.73,2.67 14.94,2.04 15.94,2C16.07,3.17 15.6,4.35 14.9,5.19C14.21,6.04 13.07,6.7 11.95,6.61C11.8,5.46 12.36,4.26 13,3.5Z"/>
@@ -27,11 +65,12 @@
             <div class="progress-bar">
                 <div class="progress-fill" id="progress-fill"></div>
             </div>
+            <div class="boot-logs" id="boot-logs" style="margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.5); text-align: left; max-width: 400px; height: 60px; overflow: hidden;"></div>
         </div>
     </div>
 
     <!-- Login Screen - Elegant Design -->
-    <div class="login-screen" id="login-screen" style="display: none; z-index: 99999; position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
+    <div class="login-screen" id="login-screen" style="display: none; z-index: 99998;">
         <div class="login-content">
             <svg class="login-apple-logo" width="100" height="100" viewBox="0 0 24 24" fill="white">
                 <path d="M18.71,19.5C17.88,20.74 17,21.95 15.66,21.97C14.32,22 13.89,21.18 12.37,21.18C10.84,21.18 10.37,21.95 9.1,22C7.79,22.05 6.8,20.68 5.96,19.47C4.25,17 2.94,12.45 4.7,9.39C5.57,7.87 7.13,6.91 8.82,6.88C10.1,6.86 11.32,7.75 12.11,7.75C12.89,7.75 14.37,6.68 15.92,6.84C16.57,6.87 18.39,7.1 19.56,8.82C19.47,8.88 17.39,10.1 17.41,12.63C17.44,15.65 20.06,16.66 20.09,16.67C20.06,16.74 19.67,18.11 18.71,19.5M13,3.5C13.73,2.67 14.94,2.04 15.94,2C16.07,3.17 15.6,4.35 14.9,5.19C14.21,6.04 13.07,6.7 11.95,6.61C11.8,5.46 12.36,4.26 13,3.5Z"/>
@@ -46,7 +85,7 @@
     </div>
 
     <!-- Menu Bar -->
-    <div class="menu-bar" id="menu-bar" style="display: none;">
+    <div class="menu-bar" id="menu-bar" style="display: none;" aria-label="Main menu">
         <div class="menu-bar-left">
             <div class="apple-logo menu-trigger" data-menu="apple">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -65,12 +104,16 @@
             <div class="menu-icon now-playing-indicator" id="now-playing" style="display: none;" onclick="openWindow('music')" title="Click to open Music Player">
                 <span style="color: #FF6B9D;">♪ Playing Music</span>
             </div>
-            <div class="menu-icon" id="battery-icon" title="Battery">
-                <svg width="22" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="1" y="6" width="18" height="12" rx="2"/>
-                    <path d="M19 10v4"/>
-                    <rect x="3" y="8" width="12" height="8" fill="currentColor"/>
+            <div class="menu-icon battery-menu-icon" id="battery-icon" title="Battery">
+                <svg width="22" height="14" viewBox="0 0 25 14" fill="none">
+                    <rect x="0.5" y="0.5" width="20" height="13" rx="2" stroke="currentColor" stroke-width="1"/>
+                    <rect x="21" y="4" width="2.5" height="6" rx="1" fill="currentColor" opacity="0.5"/>
+                    <rect id="battery-fill" x="2" y="2" width="17" height="10" rx="1" fill="currentColor"/>
                 </svg>
+                <svg id="battery-charging-icon" width="8" height="12" viewBox="0 0 10 16" fill="none" style="display:none;position:absolute;left:6px;top:2px;">
+                    <path d="M6 0L0 9h4l-1 7 7-10H6z" fill="#FFD60A"/>
+                </svg>
+                <span id="battery-percent" style="font-size:11px;margin-left:3px;">100%</span>
             </div>
             <div class="menu-icon" id="wifi-icon" title="Wi-Fi">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -109,13 +152,14 @@
         <div class="menu-divider"></div>
         <div class="menu-dropdown-item">Recent Items</div>
         <div class="menu-divider"></div>
+        <div class="menu-dropdown-item" id="sleep-item">Sleep</div>
         <div class="menu-dropdown-item" id="logout-item">Log Out Virendra Kumar...</div>
         <div class="menu-dropdown-item" id="restart-item">Restart...</div>
         <div class="menu-dropdown-item" id="shutdown-item">Shut Down...</div>
     </div>
 
     <div class="dropdown-menu" id="finder-menu" style="display: none;">
-        <div class="menu-dropdown-item" data-action="open-finder">About Finder</div>
+        <div class="menu-dropdown-item" data-action="about-finder">About Finder</div>
         <div class="menu-divider"></div>
         <div class="menu-dropdown-item">Preferences...</div>
         <div class="menu-divider"></div>
@@ -405,6 +449,61 @@
                 </svg>
                 <span>Games</span>
             </div>
+            
+            <!-- V2 New Apps -->
+            <div class="launchpad-item" onclick="openWindow('stickynotes'); closeLaunchpad();">
+                <svg width="80" height="80" viewBox="0 0 64 64" fill="none">
+                    <rect width="64" height="64" rx="14" fill="#fff9c4"/>
+                    <rect x="12" y="14" width="40" height="36" rx="4" fill="#fff176" stroke="#f0e68c" stroke-width="1"/>
+                    <line x1="18" y1="26" x2="46" y2="26" stroke="#c0ca33" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="18" y1="32" x2="42" y2="32" stroke="#c0ca33" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="18" y1="38" x2="38" y2="38" stroke="#c0ca33" stroke-width="1.5" opacity="0.5"/>
+                </svg>
+                <span>Sticky Notes</span>
+            </div>
+
+            <div class="launchpad-item" onclick="openWindow('codeeditor'); closeLaunchpad();">
+                <svg width="80" height="80" viewBox="0 0 64 64" fill="none">
+                    <rect width="64" height="64" rx="14" fill="#1e1e1e"/>
+                    <path d="M24 22L16 32L24 42" stroke="#569cd6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M40 22L48 32L40 42" stroke="#569cd6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="35" y1="18" x2="29" y2="46" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>Code Editor</span>
+            </div>
+
+            <div class="launchpad-item" onclick="openWindow('notes'); closeLaunchpad();">
+                <svg width="80" height="80" viewBox="0 0 64 64" fill="none">
+                    <rect width="64" height="64" rx="14" fill="#ffcc02"/>
+                    <rect x="14" y="12" width="36" height="40" rx="4" fill="white"/>
+                    <line x1="20" y1="22" x2="44" y2="22" stroke="#e5e5ea" stroke-width="1.5"/>
+                    <line x1="20" y1="28" x2="44" y2="28" stroke="#e5e5ea" stroke-width="1.5"/>
+                    <line x1="20" y1="34" x2="40" y2="34" stroke="#e5e5ea" stroke-width="1.5"/>
+                    <line x1="20" y1="40" x2="36" y2="40" stroke="#e5e5ea" stroke-width="1.5"/>
+                </svg>
+                <span>Notes</span>
+            </div>
+
+            <div class="launchpad-item" onclick="openWindow('calculator'); closeLaunchpad();">
+                <svg width="80" height="80" viewBox="0 0 64 64" fill="none">
+                    <rect width="64" height="64" rx="14" fill="url(#calcLaunch)"/>
+                    <rect x="18" y="14" width="28" height="36" rx="4" fill="white" opacity="0.95"/>
+                    <rect x="22" y="18" width="20" height="10" rx="2" fill="#1c1c1e"/>
+                    <rect x="22" y="32" width="5" height="5" rx="1" fill="#d4d4d4"/>
+                    <rect x="30" y="32" width="5" height="5" rx="1" fill="#d4d4d4"/>
+                    <rect x="38" y="32" width="5" height="5" rx="1" fill="#ff9f0a"/>
+                    <rect x="22" y="40" width="5" height="5" rx="1" fill="#d4d4d4"/>
+                    <rect x="30" y="40" width="5" height="5" rx="1" fill="#d4d4d4"/>
+                    <rect x="38" y="40" width="5" height="5" rx="1" fill="#ff9f0a"/>
+                    <defs>
+                        <linearGradient id="calcLaunch" x1="0" y1="0" x2="64" y2="64">
+                            <stop offset="0%" stop-color="#636366"/>
+                            <stop offset="100%" stop-color="#3a3a3c"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span>Calculator</span>
+            </div>
         </div>
         <div class="launchpad-dots">
             <div class="launchpad-dot active"></div>
@@ -426,195 +525,129 @@
         </div>
     </div>
 
-    <!-- Control Center -->
+    <!-- Control Center — real macOS Sequoia layout -->
     <div class="control-center" id="control-center" style="display: none;">
-        <div class="control-grid">
-            <div class="control-item">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12,18C11.11,18 10.26,17.8 9.5,17.45C11.56,16.5 13,14.42 13,12C13,9.58 11.56,7.5 9.5,6.55C10.26,6.2 11.11,6 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31L23.31,12L20,8.69Z"/>
-                </svg>
-                <span>Wi-Fi</span>
+        <!-- Top: Connectivity (left) + Now Playing (right) -->
+        <div class="cc-top-grid">
+            <div class="cc-connectivity-stack">
+                <div class="cc-tile cc-tile-active">
+                    <div class="cc-tile-icon" style="background:#007aff;"><svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M1,9l2,2c4.97-4.97 13.03-4.97 18,0l2-2C16.93,2.93 7.08,2.93 1,9zM9,17l3,3 3-3c-1.65-1.66-4.34-1.66-6,0zM5,13l2,2c2.76-2.76 7.24-2.76 10,0l2-2C15.14,9.14 8.87,9.14 5,13z"/></svg></div>
+                    <div class="cc-tile-text"><div class="cc-tile-label">Wi-Fi</div><div class="cc-tile-sub">Home</div></div>
+                </div>
+                <div class="cc-tile cc-tile-active">
+                    <div class="cc-tile-icon" style="background:#007aff;"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M14.88,16.29L13,18.17V14.41M13,5.83L14.88,7.71L13,9.58M17.71,7.71L12,2H11V9.58L6.41,5L5,6.41L10.59,12L5,17.58L6.41,19L11,14.41V22H12L17.71,16.29L13.41,12"/></svg></div>
+                    <div class="cc-tile-text"><div class="cc-tile-label">Bluetooth</div><div class="cc-tile-sub">On</div></div>
+                </div>
+                <div class="cc-tile">
+                    <div class="cc-tile-icon" style="background:#58595b;"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2a7.2 7.2 0 01-6-3.22c.03-1.99 4-3.08 6-3.08s5.97 1.09 6 3.08A7.2 7.2 0 0112 19.2z"/></svg></div>
+                    <div class="cc-tile-text"><div class="cc-tile-label">AirDrop</div><div class="cc-tile-sub">Off</div></div>
+                </div>
             </div>
-            <div class="control-item">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.9,17.39C17.64,16.59 16.89,16 16,16H15V13A1,1 0 0,0 14,12H8V10H10A1,1 0 0,0 11,9V7H13A2,2 0 0,0 15,5V4.59C17.93,5.77 20,8.64 20,12C20,14.08 19.2,15.97 17.9,17.39M11,19.93C7.05,19.44 4,16.08 4,12C4,11.38 4.08,10.78 4.21,10.21L9,15V16A2,2 0 0,0 11,18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
-                </svg>
-                <span>Network</span>
-            </div>
-            <div class="control-item">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M14,3V5A6,6 0 0,1 20,11A6,6 0 0,1 14,17H10L7.5,19.5L4,23V17H2A2,2 0 0,1 0,15V3A2,2 0 0,1 2,1H14A2,2 0 0,1 16,3M14,15A4,4 0 0,0 18,11A4,4 0 0,0 14,7A4,4 0 0,0 10,11A4,4 0 0,0 14,15Z"/>
-                </svg>
-                <span>AirDrop</span>
+            <div class="cc-now-playing" onclick="openWindow('music')">
+                <div class="cc-np-label">Not Playing</div>
+                <div class="cc-np-controls">
+                    <span>⏮</span>
+                    <span class="cc-np-play-btn">▶</span>
+                    <span>⏭</span>
+                </div>
             </div>
         </div>
-        <div class="brightness-control">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12,18C11.11,18 10.26,17.8 9.5,17.45C11.56,16.5 13,14.42 13,12C13,9.58 11.56,7.5 9.5,6.55C10.26,6.2 11.11,6 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31L23.31,12L20,8.69Z"/>
-            </svg>
-            <input type="range" min="0" max="100" value="75" class="control-slider">
+        <!-- Middle row: AirDrop style + Stage Manager + Screen Mirror -->
+        <div class="cc-row cc-toggles">
+            <div class="cc-toggle-circle" id="cc-darkmode" onclick="if(typeof applyTheme==='function'){var d=document.body.classList.toggle('dark-mode');applyTheme(d?'dark':'light');}">
+                <div class="cc-circle-icon">🌙</div>
+                <div class="cc-circle-label">Dark Mode</div>
+            </div>
+            <div class="cc-toggle-circle" onclick="showMacModal('Screenshot','Press ⌘+Shift+5 for screenshot tools.','📸')">
+                <div class="cc-circle-icon">📸</div>
+                <div class="cc-circle-label">Screenshot</div>
+            </div>
+            <div class="cc-toggle-circle" onclick="showMacModal('Focus','Focus mode would silence notifications.','🌙')">
+                <div class="cc-circle-icon">🔕</div>
+                <div class="cc-circle-label">Focus</div>
+            </div>
         </div>
-        <div class="volume-control">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/>
-            </svg>
-            <input type="range" min="0" max="100" value="50" class="control-slider">
+        <!-- Display -->
+        <div class="cc-slider-section brightness-control">
+            <div class="cc-slider-label">Display</div>
+            <div class="cc-slider-row">
+                <span class="cc-slider-icon">🔅</span>
+                <input type="range" min="0" max="100" value="75" class="cc-range">
+                <span class="cc-slider-icon">🔆</span>
+            </div>
+        </div>
+        <!-- Sound -->
+        <div class="cc-slider-section volume-control">
+            <div class="cc-slider-label">Sound</div>
+            <div class="cc-slider-row">
+                <span class="cc-slider-icon">🔈</span>
+                <input type="range" min="0" max="100" value="50" class="cc-range">
+                <span class="cc-slider-icon">🔊</span>
+            </div>
         </div>
     </div>
 
     <!-- Desktop -->
-    <div class="desktop" id="desktop">
-        <!-- Desktop Icons -->
+    <div class="desktop" id="desktop" style="display: none;">
         <div class="desktop-icon" data-app="finder" style="cursor: pointer;">
             <div class="desktop-icon-img">
-                <img src="IMG_3028.jpeg" style="width: 64px; height: 64px; border-radius: 14px; object-fit: cover; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);" alt="Virendra Kumar">
+                <img src="IMG_3028.jpeg" style="width: 64px; height: 64px; border-radius: 14px; object-fit: cover; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);" alt="Virendra Kumar" loading="lazy">
             </div>
             <div class="desktop-icon-label">Virendra Kumar</div>
         </div>
         
         <div class="desktop-icon" onclick="openLaunchpad()" style="cursor: pointer;">
             <div class="desktop-icon-img">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                    <rect width="64" height="64" rx="14" fill="url(#launchpadGradient)"/>
-                    <rect x="12" y="12" width="12" height="12" rx="3" fill="white" opacity="0.9"/>
-                    <rect x="28" y="12" width="12" height="12" rx="3" fill="white" opacity="0.9"/>
-                    <rect x="44" y="12" width="8" height="12" rx="3" fill="white" opacity="0.9"/>
-                    <rect x="12" y="28" width="12" height="12" rx="3" fill="white" opacity="0.9"/>
-                    <rect x="28" y="28" width="12" height="12" rx="3" fill="white" opacity="0.9"/>
-                    <rect x="44" y="28" width="8" height="12" rx="3" fill="white" opacity="0.9"/>
-                    <rect x="12" y="44" width="12" height="8" rx="3" fill="white" opacity="0.9"/>
-                    <rect x="28" y="44" width="12" height="8" rx="3" fill="white" opacity="0.9"/>
-                    <defs>
-                        <linearGradient id="launchpadGradient" x1="0" y1="0" x2="64" y2="64">
-                            <stop offset="0%" stop-color="#B4B4B8"/>
-                            <stop offset="100%" stop-color="#86868b"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
+                <svg width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="lpDt" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#B0BEC5"/><stop offset="100%" stop-color="#78909C"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#lpDt)"/><rect x="14" y="14" width="10" height="10" rx="3" fill="white" opacity="0.85"/><rect x="27" y="14" width="10" height="10" rx="3" fill="white" opacity="0.85"/><rect x="40" y="14" width="10" height="10" rx="3" fill="white" opacity="0.85"/><rect x="14" y="27" width="10" height="10" rx="3" fill="white" opacity="0.85"/><rect x="27" y="27" width="10" height="10" rx="3" fill="white" opacity="0.85"/><rect x="40" y="27" width="10" height="10" rx="3" fill="white" opacity="0.85"/><rect x="14" y="40" width="10" height="10" rx="3" fill="white" opacity="0.85"/><rect x="27" y="40" width="10" height="10" rx="3" fill="white" opacity="0.85"/><rect x="40" y="40" width="10" height="10" rx="3" fill="white" opacity="0.85"/></svg>
             </div>
             <div class="desktop-icon-label">Launchpad</div>
         </div>
         
         <div class="desktop-icon" data-app="projects" style="cursor: pointer;">
             <div class="desktop-icon-img">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                    <rect width="64" height="64" rx="14" fill="url(#projectsDesktop)"/>
-                    <rect x="16" y="20" width="32" height="24" rx="2" fill="white" opacity="0.9"/>
-                    <rect x="20" y="24" width="8" height="8" rx="1" fill="#7C3AED"/>
-                    <rect x="30" y="24" width="8" height="8" rx="1" fill="#7C3AED"/>
-                    <defs>
-                        <linearGradient id="projectsDesktop" x1="0" y1="0" x2="64" y2="64">
-                            <stop offset="0%" stop-color="#A78BFA"/>
-                            <stop offset="100%" stop-color="#7C3AED"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
+                <svg width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="prjDt" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#B388FF"/><stop offset="100%" stop-color="#651FFF"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#prjDt)"/><rect x="12" y="16" width="40" height="32" rx="3" fill="white" opacity="0.15"/><rect x="16" y="20" width="14" height="12" rx="2" fill="white" opacity="0.85"/><rect x="34" y="20" width="14" height="12" rx="2" fill="white" opacity="0.85"/><rect x="16" y="36" width="14" height="8" rx="2" fill="white" opacity="0.85"/><rect x="34" y="36" width="14" height="8" rx="2" fill="white" opacity="0.85"/></svg>
             </div>
             <div class="desktop-icon-label">Projects</div>
         </div>
         
         <div class="desktop-icon" data-app="terminal" style="cursor: pointer;">
             <div class="desktop-icon-img">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                    <rect width="64" height="64" rx="14" fill="#1E1E1E"/>
-                    <path d="M20 24L28 32L20 40" stroke="#4ADE80" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="32" y1="40" x2="44" y2="40" stroke="#4ADE80" stroke-width="2" stroke-linecap="round"/>
-                </svg>
+                <svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0D0D0D"/><rect x="4" y="4" width="56" height="56" rx="12" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/><path d="M19 22L29 32L19 42" stroke="#4ADE80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="33" y1="42" x2="46" y2="42" stroke="#4ADE80" stroke-width="2.5" stroke-linecap="round"/></svg>
             </div>
             <div class="desktop-icon-label">Terminal</div>
         </div>
         
         <div class="desktop-icon" data-app="resume" style="cursor: pointer;">
             <div class="desktop-icon-img">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                    <rect width="64" height="64" rx="14" fill="url(#resumeDesktop)"/>
-                    <rect x="18" y="14" width="28" height="36" rx="2" fill="white"/>
-                    <rect x="22" y="20" width="20" height="2" rx="1" fill="#F97316"/>
-                    <defs>
-                        <linearGradient id="resumeDesktop" x1="0" y1="0" x2="64" y2="64">
-                            <stop offset="0%" stop-color="#FB923C"/>
-                            <stop offset="100%" stop-color="#F97316"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
+                <svg width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="rsDt" x1="0" y1="0" x2="0" y2="64"><stop offset="0%" stop-color="#FF8A65"/><stop offset="100%" stop-color="#E65100"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#rsDt)"/><rect x="16" y="10" width="32" height="44" rx="3" fill="white" opacity="0.92"/><rect x="20" y="16" width="24" height="3" rx="1.5" fill="#E65100" opacity="0.8"/><rect x="20" y="23" width="20" height="2" rx="1" fill="#BDBDBD"/><rect x="20" y="28" width="24" height="2" rx="1" fill="#BDBDBD"/><rect x="20" y="33" width="18" height="2" rx="1" fill="#BDBDBD"/></svg>
             </div>
             <div class="desktop-icon-label">Resume</div>
         </div>
         
         <div class="desktop-icon" data-app="contact" style="cursor: pointer;">
             <div class="desktop-icon-img">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                    <rect width="64" height="64" rx="14" fill="url(#contactDesktop)"/>
-                    <rect x="14" y="20" width="36" height="24" rx="2" fill="white" opacity="0.9"/>
-                    <path d="M14 22L32 34L50 22" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
-                    <defs>
-                        <linearGradient id="contactDesktop" x1="0" y1="0" x2="64" y2="64">
-                            <stop offset="0%" stop-color="#34D399"/>
-                            <stop offset="100%" stop-color="#10B981"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
+                <svg width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="mlDt" x1="0" y1="0" x2="0" y2="64"><stop offset="0%" stop-color="#42A5F5"/><stop offset="100%" stop-color="#1976D2"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#mlDt)"/><rect x="10" y="18" width="44" height="28" rx="3" fill="white" opacity="0.92"/><path d="M12 20L32 36L52 20" stroke="#1976D2" stroke-width="2" stroke-linecap="round" opacity="0.7"/></svg>
             </div>
             <div class="desktop-icon-label">Contact</div>
         </div>
         
         <div class="desktop-icon" data-app="music" style="cursor: pointer;">
             <div class="desktop-icon-img">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                    <rect width="64" height="64" rx="14" fill="url(#musicDesktop)"/>
-                    <circle cx="20" cy="44" r="8" fill="white" opacity="0.9"/>
-                    <circle cx="44" cy="44" r="8" fill="white" opacity="0.9"/>
-                    <path d="M28 44V20l16-4v28" stroke="white" stroke-width="3" fill="none"/>
-                    <circle cx="20" cy="44" r="5" fill="#FF6B9D"/>
-                    <circle cx="44" cy="44" r="5" fill="#FF6B9D"/>
-                    <defs>
-                        <linearGradient id="musicDesktop" x1="0" y1="0" x2="64" y2="64">
-                            <stop offset="0%" stop-color="#FF6B9D"/>
-                            <stop offset="100%" stop-color="#C94B7E"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
+                <svg width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="muDt" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#FC466B"/><stop offset="100%" stop-color="#C4004E"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#muDt)"/><circle cx="24" cy="42" r="7" fill="white" opacity="0.9"/><circle cx="24" cy="42" r="3.5" fill="#C4004E"/><circle cx="42" cy="38" r="7" fill="white" opacity="0.9"/><circle cx="42" cy="38" r="3.5" fill="#C4004E"/><path d="M31 42V18L49 14v24" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
             </div>
             <div class="desktop-icon-label">Music</div>
         </div>
         
         <div class="desktop-icon" data-app="games" style="cursor: pointer;">
             <div class="desktop-icon-img">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                    <rect width="64" height="64" rx="14" fill="url(#gamesDesktop)"/>
-                    <circle cx="24" cy="32" r="6" fill="white" opacity="0.9"/>
-                    <circle cx="40" cy="32" r="6" fill="white" opacity="0.9"/>
-                    <rect x="28" y="20" width="8" height="6" fill="white" opacity="0.9"/>
-                    <rect x="28" y="38" width="8" height="6" fill="white" opacity="0.9"/>
-                    <rect x="16" y="28" width="6" height="8" fill="white" opacity="0.9"/>
-                    <rect x="42" y="28" width="6" height="8" fill="white" opacity="0.9"/>
-                    <defs>
-                        <linearGradient id="gamesDesktop" x1="0" y1="0" x2="64" y2="64">
-                            <stop offset="0%" stop-color="#667eea"/>
-                            <stop offset="100%" stop-color="#764ba2"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
+                <svg width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="gmDt" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#7C4DFF"/><stop offset="100%" stop-color="#304FFE"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#gmDt)"/><rect x="10" y="22" width="44" height="24" rx="12" fill="white" opacity="0.2"/><circle cx="22" cy="34" r="3" fill="white" opacity="0.9"/><rect x="19" y="28" width="6" height="2" rx="1" fill="white" opacity="0.9"/><rect x="21" y="30" width="2" height="6" rx="1" fill="white" opacity="0.9"/><circle cx="38" cy="30" r="2.5" fill="white" opacity="0.9"/><circle cx="44" cy="34" r="2.5" fill="white" opacity="0.9"/></svg>
             </div>
             <div class="desktop-icon-label">Games</div>
         </div>
         
         <div class="desktop-icon" onclick="emptyTrashAnimation()" style="cursor: pointer;">
             <div class="desktop-icon-img">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                    <rect width="64" height="64" rx="14" fill="url(#trashDesktop)"/>
-                    <path d="M24 20h16v-4h-16v4zm-4 4h24v28a4 4 0 01-4 4H24a4 4 0 01-4-4V24z" fill="white" opacity="0.9"/>
-                    <rect x="20" y="16" width="24" height="2" fill="white" opacity="0.9"/>
-                    <line x1="28" y1="28" x2="28" y2="44" stroke="#86868b" stroke-width="2"/>
-                    <line x1="32" y1="28" x2="32" y2="44" stroke="#86868b" stroke-width="2"/>
-                    <line x1="36" y1="28" x2="36" y2="44" stroke="#86868b" stroke-width="2"/>
-                    <defs>
-                        <linearGradient id="trashDesktop" x1="0" y1="0" x2="64" y2="64">
-                            <stop offset="0%" stop-color="#E5E5EA"/>
-                            <stop offset="100%" stop-color="#AEAEB2"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
+                <svg width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="trDt" x1="0" y1="0" x2="0" y2="64"><stop offset="0%" stop-color="#E0E0E0"/><stop offset="100%" stop-color="#9E9E9E"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#trDt)"/><rect x="20" y="14" width="24" height="4" rx="2" fill="white" opacity="0.9"/><rect x="18" y="18" width="28" height="2" rx="1" fill="white" opacity="0.7"/><path d="M20 22h24v28a4 4 0 01-4 4H24a4 4 0 01-4-4V22z" fill="white" opacity="0.85"/><line x1="27" y1="28" x2="27" y2="46" stroke="#9E9E9E" stroke-width="1.5" stroke-linecap="round"/><line x1="32" y1="28" x2="32" y2="46" stroke="#9E9E9E" stroke-width="1.5" stroke-linecap="round"/><line x1="37" y1="28" x2="37" y2="46" stroke="#9E9E9E" stroke-width="1.5" stroke-linecap="round"/></svg>
             </div>
             <div class="desktop-icon-label">Trash</div>
         </div>
@@ -625,8 +658,8 @@
     <div class="window" id="finder-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">About Me</div>
@@ -673,7 +706,7 @@
             <div class="finder-main">
                 <div class="content-header">
                     <div class="profile-header">
-                        <img src="IMG_3028.jpeg" alt="Virendra Kumar" class="profile-pic">
+                        <img src="IMG_3028.jpeg" alt="Virendra Kumar" class="profile-pic" loading="lazy">
                         <div>
                             <h1>👋 Hello, I'm Virendra Kumar</h1>
                             <p class="subtitle">Senior Cloud DevOps Engineer II @ McKinsey & Company</p>
@@ -689,7 +722,8 @@
                         <strong>Uptime:</strong> 12+ years and counting...<br>
                         <strong>Primary Function:</strong> DevOps Architect, Cloud Automation Specialist, AI-Driven Workflow Optimizer<br>
                         <strong>Skills Loaded:</strong> Multi-Cloud Architecture, Kubernetes, Terraform, AI Automation, Cost Optimization<br>
-                        <strong>Current Status:</strong> Transforming Enterprise DevOps @ McKinsey</p>
+                        <strong>Current Status:</strong> Building scalable cloud platforms<br>
+                        <strong>Education:</strong> Bachelor's, Computer Science — Jai Narain Vyas University, Jodhpur (2009–2012)</p>
                         
                         <h3>My Journey</h3>
                         <p>From <strong>carrying CPUs across office floors</strong> to <strong>leading DevOps automation at McKinsey</strong>, my journey has been all about transforming challenges into opportunities.</p>
@@ -705,103 +739,185 @@
                         ✅ <strong>Mentoring and enabling DevOps teams</strong> to drive innovation and operational excellence</p>
                         
                         <h3>Previously At Accenture, Mercer & Clavax</h3>
-                        <p>✅ Developed cloud-native strategies improving deployment speed and system resilience<br>
+                        <p>✅ Led DevOps delivery for <strong>enterprise clients</strong> at Accenture (team of 10); Terraform, Ansible, Jenkins/CloudBees<br>
+                        ✅ Developed cloud-native strategies improving deployment speed and system resilience<br>
                         ✅ Implemented security-focused DevOps (DevSecOps) ensuring compliance and reliability<br>
                         ✅ Scaled CI/CD pipelines & multi-cloud infrastructures for enterprise-grade applications<br>
                         ✅ Bridged the gap between development and operations, ensuring seamless collaboration</p>
                         
                         <h3>💡 Impact & Achievements</h3>
-                        <p>✅ Cost savings through cloud optimization & automation<br>
+                        <p>✅ <strong>$100K+ annual cloud savings</strong> through optimization & automation<br>
+                        ✅ <strong>15+ environments migrated</strong> with zero downtime<br>
+                        ✅ <strong>70+ applications</strong> CI/CD pipelines built at Mercer<br>
                         ✅ <strong>75% faster deployments</strong> by rearchitecting CI/CD pipelines and DevOps processes<br>
+                        ✅ <strong>Team of 10 engineers</strong> led at Accenture<br>
+                        ✅ <strong>20+ technical interviews</strong> conducted for hiring DevOps talent<br>
+                        ✅ Achieved <strong>SOC2 compliance</strong><br>
                         ✅ Multi-client DevOps architectures with dynamic configurations & auto-scaling<br>
-                        ✅ AI-powered automation significantly reducing manual workflows<br>
-                        ✅ Mentored & onboarded DevOps professionals, creating high-performing teams</p>
+                        ✅ AI-powered automation significantly reducing manual workflows</p>
                         
                         <p><strong>🎯 Philosophy:</strong> I firmly believe that DevOps is not just about automation - it's about building a culture of innovation, efficiency, and continuous improvement.</p>
                     </div>
                     
                     <div class="about-section">
-                        <h2>What I Do</h2>
-                        <div class="info-grid">
-                            <div class="info-card">
-                                <div class="info-icon">☁️</div>
-                                <h3>Cloud Architecture</h3>
-                                <p>Designing and implementing scalable cloud infrastructure on AWS, Azure, and GCP with focus on reliability and cost optimization.</p>
+                        <h2>At a Glance</h2>
+                        <div class="bento-grid">
+                            <div class="bento-card bento-hero">
+                                <div class="bento-eyebrow">DevOps Platform Engineer</div>
+                                <div class="bento-tagline">Build.</div>
+                                <div class="bento-tagline">Ship.</div>
+                                <div class="bento-tagline-dim">Sleep.</div>
+                                <div class="bento-footer">
+                                    <div class="bento-name">Virendra Kumar</div>
+                                    <div class="bento-role">Sr. Cloud DevOps Engineer II · McKinsey</div>
+                                </div>
                             </div>
-                            <div class="info-card">
-                                <div class="info-icon">🔄</div>
-                                <h3>DevOps & Automation</h3>
-                                <p>Building CI/CD pipelines, Infrastructure as Code, and automating everything from deployments to monitoring.</p>
+                            
+                            <div class="bento-card bento-stat">
+                                <div class="bento-num" style="color: #0a84ff;">75%</div>
+                                <div class="bento-label">Faster deployments<br><strong>CI/CD redesign</strong></div>
                             </div>
-                            <div class="info-card">
-                                <div class="info-icon">🎯</div>
-                                <h3>Kubernetes & Containers</h3>
-                                <p>Orchestrating containerized applications at scale with Kubernetes, Docker, and modern container platforms.</p>
+                            
+                            <div class="bento-card bento-stat">
+                                <div class="bento-num" style="color: #30d158;">$100K+</div>
+                                <div class="bento-label">Annual cloud savings<br><strong>Automation & optimization</strong></div>
+                            </div>
+                            
+                            <div class="bento-card bento-highlight">
+                                <div class="bento-num" style="color: #fff; font-size: 42px;">14+</div>
+                                <div class="bento-label" style="color: rgba(255,255,255,0.85);"><strong>Certifications</strong></div>
+                                <div class="bento-sub">Azure · Terraform · RHCSA · Databricks · AI</div>
+                            </div>
+                            
+                            <div class="bento-card bento-stat">
+                                <div class="bento-num" style="color: #ff453a;">15+</div>
+                                <div class="bento-label">Environments migrated<br><strong>Zero downtime</strong></div>
+                            </div>
+                            
+                            <div class="bento-card bento-stat">
+                                <div class="bento-num" style="color: #bf5af2;">70+</div>
+                                <div class="bento-label">Applications<br><strong>CI/CD from scratch</strong></div>
+                            </div>
+                            
+                            <div class="bento-card bento-category">
+                                <div class="bento-cat-name" style="color: #0a84ff;">Cloud & Infra</div>
+                                <div class="bento-pills">
+                                    <span class="bento-pill">Azure (30+)</span>
+                                    <span class="bento-pill">Kubernetes</span>
+                                    <span class="bento-pill">Terraform</span>
+                                    <span class="bento-pill">ArgoCD</span>
+                                    <span class="bento-pill">Helm</span>
+                                    <span class="bento-pill">KEDA</span>
+                                </div>
+                            </div>
+                            
+                            <div class="bento-card bento-category">
+                                <div class="bento-cat-name" style="color: #ff453a;">DevSecOps</div>
+                                <div class="bento-pills">
+                                    <span class="bento-pill">SonarQube</span>
+                                    <span class="bento-pill">JFrog Xray</span>
+                                    <span class="bento-pill">Wiz</span>
+                                    <span class="bento-pill">Gitleaks</span>
+                                    <span class="bento-pill">SOC2 ✓</span>
+                                </div>
+                            </div>
+                            
+                            <div class="bento-card bento-category">
+                                <div class="bento-cat-name" style="color: #30d158;">Observability</div>
+                                <div class="bento-pills">
+                                    <span class="bento-pill">Dynatrace</span>
+                                    <span class="bento-pill">ELK Stack</span>
+                                    <span class="bento-pill">Azure Monitor</span>
+                                </div>
+                            </div>
+                            
+                            <div class="bento-card bento-release">
+                                <div class="bento-release-row">
+                                    <span class="bento-from">20 steps</span>
+                                    <span class="bento-arrow">→</span>
+                                    <span class="bento-to">1 click</span>
+                                </div>
+                                <div class="bento-label">Deployment automation<br>single-trigger pipeline</div>
+                            </div>
+                            
+                            <div class="bento-card bento-quote">
+                                <div class="bento-quote-text">"I build the systems that let developers <em>ship code and sleep at night.</em>"</div>
                             </div>
                         </div>
                     </div>
+
 
                     <div class="about-section">
                         <h2>Experience Highlights</h2>
                         <div class="experience-timeline">
                             <div class="exp-item">
-                                <div class="exp-year">Feb 2023 - Present (1 year 8 months)</div>
-                                <h3>Senior Cloud DevOps Engineer II</h3>
+                                <div class="exp-year">Feb 2023 - Present</div>
+                                <h3>Senior Cloud DevOps Engineer I → II</h3>
                                 <h4>McKinsey & Company</h4>
-                                <p>🚀 Optimizing cloud infrastructure costs through automation and strategic resource optimization<br>
-                                📈 Enhancing scalability by designing cloud solutions for increasing workloads<br>
-                                🤖 Integrating AI-driven automation tools to streamline DevOps workflows<br>
-                                🏗️ Designing multi-client DevOps architectures with dynamic configurations and auto-scaling<br>
-                                👥 Championing mentorship and knowledge sharing across DevOps teams</p>
+                                <p><strong>Sr. Cloud DevOps Engineer II</strong> (Nov 2024 – Present)<br>
+                                <strong>Sr. Cloud DevOps Engineer I</strong> (Feb 2023 – Nov 2024)</p>
+                                <p>🚀 Reduced deployment cycle time by <strong>75%</strong> across GitHub Actions, Azure DevOps, GitLab CI, ArgoCD<br>
+                                💰 Drove <strong>$100K+ annual cloud savings</strong> through hibernation, right-sizing, and decommissioning<br>
+                                🔄 Migrated <strong>15+ environments</strong> to GitHub Actions with <strong>zero production downtime</strong><br>
+                                🏗️ Architected unified deployment framework — <strong>20 manual steps → 1 automated trigger</strong><br>
+                                🔒 Achieved <strong>SOC2 compliance</strong> — comprehensive DevSecOps pipeline<br>
+                                🛠️ Built <strong>internal developer portal</strong>, Terraform Plan Visualizer, and self-service config tools<br>
+                                📈 <strong>Dynatrace</strong> observability — dashboards, alerting, automated performance testing<br>
+                                📦 Led source control platform migration; <strong>40+ reusable</strong> GitHub Actions workflows<br>
+                                👥 Conducted <strong>20+ technical interviews</strong> and mentored junior engineers on Terraform, K8s, CI/CD<br>
+                                🎓 <strong>Selected for firm-wide engineering development program</strong> (2025)</p>
                             </div>
                             <div class="exp-item">
                                 <div class="exp-year">Sep 2021 - Jan 2023 (1 year 5 months)</div>
                                 <h3>DevOps Associate Manager</h3>
                                 <h4>Accenture</h4>
-                                <p>🎯 Developed cloud-native strategies orchestrating product delivery speed<br>
-                                🔄 Spearheaded CI/CD pipelines with Jenkins, CloudBees, Terraform, Ansible<br>
-                                👨‍💼 Provided technical leadership ensuring DevOps best practices<br>
-                                📚 Maintained detailed documentation for seamless knowledge transfer</p>
+                                <p>👨‍💼 Led a <strong>team of 10 DevOps engineers</strong> for enterprise clients — established standards for pipelines, Terraform modules, Ansible playbooks<br>
+                                🔄 Designed CI/CD pipelines with Jenkins and CloudBees for multiple development teams<br>
+                                🏗️ Automated infrastructure provisioning with <strong>Terraform and Ansible</strong>, reducing environment setup time<br>
+                                📚 Maintained compliance documentation and runbooks for knowledge transfer</p>
                             </div>
                             <div class="exp-item">
                                 <div class="exp-year">Sep 2016 - Sep 2021 (5 years 1 month)</div>
-                                <h3>DevOps Technical Lead</h3>
+                                <h3>Sr. Software Engineer → Module Lead → DevOps Technical Lead</h3>
                                 <h4>Mercer</h4>
-                                <p>🔧 Developed robust cloud pipelines using Jenkins, Azure DevOps, SonarQube<br>
-                                🚀 Led DevOps transformation making it a true business enabler<br>
-                                🤝 Collaborated with cross-functional teams optimizing workflows<br>
-                                👥 Mentored DevOps teams building operational excellence culture</p>
+                                <p>🔧 Built CI/CD for <strong>70+ applications</strong> using Jenkins and Azure DevOps with automated quality gates<br>
+                                🔒 Introduced DevSecOps — SonarQube, OWASP ZAP, DefectDojo — significantly reduced security findings<br>
+                                🚀 Led cross-team DevOps standardization — shared libraries, templates adopted by multiple teams<br>
+                                👥 Mentored <strong>~10 junior engineers</strong> through code reviews, pair programming, weekly sessions</p>
                             </div>
                             <div class="exp-item">
                                 <div class="exp-year">Mar 2014 - Sep 2016 (2 years 7 months)</div>
-                                <h3>DevOps Engineer</h3>
+                                <h3>System Administrator → Sr. System Administrator</h3>
                                 <h4>Clavax</h4>
-                                <p>🔨 Designed and implemented robust CI/CD pipelines<br>
-                                💡 Led DevOps transformation building scalable processes from ground up<br>
-                                👨‍🏫 Championed mentorship cultivating continuous learning culture<br>
-                                📝 Standardized best practices across development teams</p>
+                                <p>🖥️ Administered GitLab servers for 30+ developers — repos, CI runners, access controls<br>
+                                🔧 Automated daily ops with Bash — eliminated ~2 hours/day of manual work<br>
+                                🌐 Managed WHM/cPanel hosting for 9+ client websites (99.9% uptime)<br>
+                                📊 Optimized MySQL performance — backups, query tuning, Nagios/Zabbix monitoring</p>
                             </div>
                             <div class="exp-item">
                                 <div class="exp-year">Apr 2013 - Feb 2014 (11 months)</div>
-                                <h3>System Administrator</h3>
-                                <h4>Aannya</h4>
-                                <p>💻 From carrying CPUs across office floors to system administration<br>
-                                🔧 Automated daily operations using Bash scripts<br>
-                                💾 Optimized MySQL database performance with Percona<br>
-                                🏗️ Built foundations in system operations and automation</p>
+                                <h3>System Engineer</h3>
+                                <h4>Aannya Softwares Pvt. Ltd.</h4>
+                                <p>📞 Administered Linux and <strong>Asterisk-based VoIP</strong> for call-center ops (downtime = revenue loss)<br>
+                                🏢 On-site customer deployments — server install, network, application setup<br>
+                                🔧 Bash scripts for maintenance and monitoring<br>
+                                🌙 Production incidents on <strong>night shifts and weekends</strong> — early ops under pressure</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="about-section">
                         <h2>Technical Arsenal</h2>
-                        <p>☁️ <strong>Cloud Platforms:</strong> AWS, Azure, Google Cloud Platform</p>
-                        <p>🏗️ <strong>Infrastructure as Code:</strong> Terraform, CloudFormation, Ansible</p>
-                        <p>🔄 <strong>CI/CD:</strong> Jenkins, GitHub Actions, GitLab CI, Azure DevOps</p>
-                        <p>📦 <strong>Containers & Orchestration:</strong> Docker, Kubernetes, Helm, EKS, AKS, GKE</p>
-                        <p>💻 <strong>Programming:</strong> Python, Groovy, Shell Scripting, Go, HCL</p>
-                        <p>📊 <strong>Monitoring & Observability:</strong> Prometheus, Grafana, ELK Stack, CloudWatch, Datadog</p>
-                        <p>🔧 <strong>Version Control & Collaboration:</strong> Git, GitHub, GitLab, Bitbucket</p>
+                        <p>☁️ <strong>Cloud Platforms:</strong> Azure (30+ services, primary), AWS (VPC, EKS, S3, IAM)</p>
+                        <p>🏗️ <strong>Infrastructure as Code:</strong> Terraform, Ansible, ARM Templates</p>
+                        <p>🔄 <strong>CI/CD & GitOps:</strong> GitHub Actions, Azure DevOps, GitLab CI, Jenkins, ArgoCD</p>
+                        <p>📦 <strong>Containers & Orchestration:</strong> Kubernetes (AKS), Docker, Helm, KEDA, Traefik, Consul</p>
+                        <p>📊 <strong>Data Platforms:</strong> Databricks (SQL, Unity Catalog, DAB), PostgreSQL, Redis, dbt, Trino, Event Hub</p>
+                        <p>🔍 <strong>Observability:</strong> Dynatrace, ELK Stack, Azure Monitor</p>
+                        <p>🔒 <strong>DevSecOps:</strong> SonarQube, JFrog Xray, Gitleaks, Wiz, DefectDojo</p>
+                        <p>💻 <strong>Languages:</strong> Bash, Python, Go, SQL, JavaScript, PowerShell</p>
+                        <p>🤖 <strong>AI/GenAI:</strong> Ollama, LangChain, MCP Servers, GitHub Copilot, Cursor</p>
+                        <p>🛠️ <strong>Platform Tools:</strong> Backstage, Slack Automation, Confluence, Jira, Miro</p>
                     </div>
 
                     <div class="about-section fun-section">
@@ -817,32 +933,32 @@
                     <div class="about-section connect-section">
                         <h2>🌐 Connect & Explore</h2>
                         <div class="connect-grid">
-                            <a href="https://virnahar.github.io" target="_blank" class="connect-card">
+                            <a href="https://virnahar.github.io" target="_blank" rel="noopener noreferrer" class="connect-card">
                                 <div class="connect-icon">🌐</div>
                                 <h4>Main Portfolio</h4>
                                 <p>virnahar.github.io</p>
                             </a>
-                            <a href="https://virnahar.github.io/meetme" target="_blank" class="connect-card">
+                            <a href="https://virnahar.github.io/meetme" target="_blank" rel="noopener noreferrer" class="connect-card">
                                 <div class="connect-icon">💻</div>
                                 <h4>Terminal Experience</h4>
                                 <p>Interactive CLI</p>
                             </a>
-                            <a href="https://virnahar.github.io/talktome" target="_blank" class="connect-card">
+                            <a href="https://virnahar.github.io/talktome" target="_blank" rel="noopener noreferrer" class="connect-card">
                                 <div class="connect-icon">🤖</div>
                                 <h4>AI Chat Portfolio</h4>
                                 <p>Talk to my AI</p>
                             </a>
-                            <a href="https://github.com/virnahar" target="_blank" class="connect-card">
+                            <a href="https://github.com/virnahar" target="_blank" rel="noopener noreferrer" class="connect-card">
                                 <div class="connect-icon">🐙</div>
                                 <h4>GitHub</h4>
                                 <p>@virnahar</p>
                             </a>
-                            <a href="https://linkedin.com/in/virnahar" target="_blank" class="connect-card">
+                            <a href="https://linkedin.com/in/virnahar" target="_blank" rel="noopener noreferrer" class="connect-card">
                                 <div class="connect-icon">💼</div>
                                 <h4>LinkedIn</h4>
                                 <p>/in/virnahar</p>
                             </a>
-                            <a href="https://virnahar.github.io/myexperience" target="_blank" class="connect-card">
+                            <a href="https://virnahar.github.io/myexperience" target="_blank" rel="noopener noreferrer" class="connect-card">
                                 <div class="connect-icon">🕐</div>
                                 <h4>Experience Clock</h4>
                                 <p>Live counter</p>
@@ -861,8 +977,8 @@
     <div class="window" id="projects-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">Projects</div>
@@ -888,7 +1004,7 @@
                             <span class="tag">GCP</span>
                         </div>
                         <div class="project-links">
-                            <a href="https://github.com/virnahar/Terraform" target="_blank" class="project-link">GitHub →</a>
+                            <a href="https://github.com/virnahar/Terraform" target="_blank" rel="noopener noreferrer" class="project-link">GitHub →</a>
                         </div>
                     </div>
                 </div>
@@ -911,7 +1027,7 @@
                             <span class="tag">DevOps</span>
                         </div>
                         <div class="project-links">
-                            <a href="https://github.com/virnahar/Jenkins-SharedLibrary" target="_blank" class="project-link">GitHub →</a>
+                            <a href="https://github.com/virnahar/Jenkins-SharedLibrary" target="_blank" rel="noopener noreferrer" class="project-link">GitHub →</a>
                         </div>
                     </div>
                 </div>
@@ -934,7 +1050,7 @@
                             <span class="tag">K8s</span>
                         </div>
                         <div class="project-links">
-                            <a href="https://github.com/virnahar/k8s-demos" target="_blank" class="project-link">GitHub →</a>
+                            <a href="https://github.com/virnahar/k8s-demos" target="_blank" rel="noopener noreferrer" class="project-link">GitHub →</a>
                         </div>
                     </div>
                 </div>
@@ -957,7 +1073,7 @@
                             <span class="tag">Scripts</span>
                         </div>
                         <div class="project-links">
-                            <a href="https://github.com/virnahar/Python" target="_blank" class="project-link">GitHub →</a>
+                            <a href="https://github.com/virnahar/Python" target="_blank" rel="noopener noreferrer" class="project-link">GitHub →</a>
                         </div>
                     </div>
                 </div>
@@ -980,7 +1096,7 @@
                             <span class="tag">API</span>
                         </div>
                         <div class="project-links">
-                            <a href="https://virnahar.github.io/talktome" target="_blank" class="project-link">View Demo →</a>
+                            <a href="https://virnahar.github.io/talktome" target="_blank" rel="noopener noreferrer" class="project-link">View Demo →</a>
                         </div>
                     </div>
                 </div>
@@ -1003,7 +1119,74 @@
                             <span class="tag">UI/UX</span>
                         </div>
                         <div class="project-links">
-                            <a href="https://virnahar.github.io/meetme/" target="_blank" class="project-link">View Demo →</a>
+                            <a href="https://virnahar.github.io/meetme/" target="_blank" rel="noopener noreferrer" class="project-link">View Demo →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="project-card">
+                    <div class="project-image">
+                        <div class="project-placeholder" style="background: linear-gradient(135deg, #0052D4 0%, #4361EE 100%);">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                                <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="project-info">
+                        <h3>Terraform Plan Visualizer</h3>
+                        <p>Custom Azure DevOps extension that generates executive-friendly Terraform plan summaries with visual charts.</p>
+                        <div class="project-tags">
+                            <span class="tag">Azure DevOps</span>
+                            <span class="tag">JavaScript</span>
+                            <span class="tag">Terraform</span>
+                        </div>
+                        <div class="project-links">
+                            <a href="#" class="project-link">View project →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="project-card">
+                    <div class="project-image">
+                        <div class="project-placeholder" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                                <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="project-info">
+                        <h3>Internal Developer Portal</h3>
+                        <p>Internal developer portal with Azure DevOps integration, self-service environment lifecycle, and service catalog.</p>
+                        <div class="project-tags">
+                            <span class="tag">React</span>
+                            <span class="tag">Platform</span>
+                            <span class="tag">Azure DevOps</span>
+                        </div>
+                        <div class="project-links">
+                            <a href="#" class="project-link">View project →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="project-card">
+                    <div class="project-image">
+                        <div class="project-placeholder" style="background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%);">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="project-info">
+                        <h3>MCP Server for Azure DevOps</h3>
+                        <p>AI agent built with FastMCP that interacts with Azure DevOps pipelines, repositories, and work items through natural language.</p>
+                        <div class="project-tags">
+                            <span class="tag">Python</span>
+                            <span class="tag">FastMCP</span>
+                            <span class="tag">AI</span>
+                            <span class="tag">Azure DevOps</span>
+                        </div>
+                        <div class="project-links">
+                            <a href="#" class="project-link">View project →</a>
                         </div>
                     </div>
                 </div>
@@ -1015,8 +1198,8 @@
     <div class="window terminal-window" id="terminal-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">Terminal — zsh</div>
@@ -1032,8 +1215,8 @@
     <div class="window" id="resume-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">Resume.pdf</div>
@@ -1043,12 +1226,55 @@
             <div class="resume-document">
                 <div class="resume-header">
                     <h1>Virendra Kumar</h1>
-                    <p class="resume-subtitle">DevOps Technical Architect</p>
+                    <p class="resume-subtitle">Senior Cloud DevOps Engineer | Platform Engineering | 12+ Years</p>
                     <div class="resume-contact">
+                        <span>📧 Contact via LinkedIn</span>
                         <span>🌐 virnahar.github.io</span>
                         <span>💼 linkedin.com/in/virnahar</span>
                         <span>🐙 github.com/virnahar</span>
-                        <span>📍 India</span>
+                    </div>
+                </div>
+
+                <div class="resume-section">
+                    <h2>Summary</h2>
+                    <p style="line-height: 1.6; font-size: 0.92em;">Senior Cloud DevOps Engineer with 12+ years of progressive experience from system administration through enterprise-scale platform engineering. Currently at McKinsey & Company, owning the end-to-end DevOps platform for an enterprise-scale Azure platform — CI/CD, Kubernetes orchestration, infrastructure-as-code, observability, security, and cost optimization. Reduced deployment cycle time by 75%, delivered $100K+ in annual cloud savings, and migrated 15+ production environments to GitHub Actions with zero downtime. 14+ industry certifications. Track record of building DevOps functions from scratch, leading teams of 10+ engineers, and driving DevSecOps adoption across organizations.</p>
+                </div>
+
+                <div class="resume-section">
+                    <h2>Impact Highlights</h2>
+                    <div class="resume-bento">
+                        <div class="rb-card rb-accent">
+                            <div class="rb-num">75%</div>
+                            <div class="rb-label">Faster Deployments</div>
+                        </div>
+                        <div class="rb-card rb-green">
+                            <div class="rb-num">$100K+</div>
+                            <div class="rb-label">Annual Savings</div>
+                        </div>
+                        <div class="rb-card">
+                            <div class="rb-num">15+</div>
+                            <div class="rb-label">Zero-Downtime Migrations</div>
+                        </div>
+                        <div class="rb-card">
+                            <div class="rb-num">70+</div>
+                            <div class="rb-label">CI/CD Pipelines Built</div>
+                        </div>
+                        <div class="rb-card">
+                            <div class="rb-num">20→1</div>
+                            <div class="rb-label">Steps Automated</div>
+                        </div>
+                        <div class="rb-card">
+                            <div class="rb-num">10</div>
+                            <div class="rb-label">Engineers Led</div>
+                        </div>
+                        <div class="rb-card rb-accent">
+                            <div class="rb-num">SOC2</div>
+                            <div class="rb-label">Compliance achieved</div>
+                        </div>
+                        <div class="rb-card rb-green">
+                            <div class="rb-num">14+</div>
+                            <div class="rb-label">Certifications</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1057,17 +1283,22 @@
                     <div class="resume-item">
                         <div class="resume-item-header">
                             <div>
-                                <h3>Senior Cloud DevOps Engineer II</h3>
+                                <h3>Senior Cloud DevOps Engineer I → II</h3>
                                 <p class="company">McKinsey & Company</p>
                             </div>
                             <span class="date">Feb 2023 - Present</span>
                         </div>
+                        <p style="margin: 4px 0 8px 0; font-size: 0.9em; color: #666;">Sr. Cloud DevOps Engineer II (Nov 2024 – Present) · Sr. Cloud DevOps Engineer I (Feb 2023 – Nov 2024)</p>
                         <ul>
-                            <li>Optimizing cloud infrastructure costs through automation and strategic resource optimization, ensuring high performance without unnecessary expenses</li>
-                            <li>Enhancing scalability by designing cloud solutions that efficiently handle increasing workloads and user demands</li>
-                            <li>Integrating AI-driven automation tools to streamline DevOps workflows, significantly improving workflow efficiency</li>
-                            <li>Designing and implementing multi-client DevOps architectures, enabling seamless deployments with dynamic configurations and auto-scaling capabilities</li>
-                            <li>Championing mentorship and knowledge sharing, helping junior engineers grow while cultivating a culture of continuous learning</li>
+                            <li>Reduced deployment cycle time by 75% — redesigned CI/CD across GitHub Actions, Azure DevOps, GitLab CI, and ArgoCD</li>
+                            <li>Drove $100K+ annual cloud savings through automated hibernation, right-sizing, and decommissioning</li>
+                            <li>Led migration of 15+ environments to GitHub Actions with zero production downtime; led source control platform migration; created 40+ reusable workflows</li>
+                            <li>Architected unified deployment framework — reduced 20 manual steps to 1 automated trigger</li>
+                            <li>Built internal developer portal, plan visualization tools, and event-driven autoscaling architecture</li>
+                            <li>Owned Dynatrace observability — dashboards, cross-environment alerting, automated performance testing</li>
+                            <li>Achieved SOC2 compliance — comprehensive DevSecOps pipeline</li>
+                            <li>Conducted 20+ technical interviews; mentored junior engineers on Terraform, Kubernetes, and CI/CD</li>
+                            <li>Selected for firm-wide engineering development program (2025)</li>
                         </ul>
                     </div>
 
@@ -1080,58 +1311,59 @@
                             <span class="date">Sep 2021 - Jan 2023</span>
                         </div>
                         <ul>
-                            <li>As a Moderator at the forefront of revolutionizing microservices-based infrastructures and DevOps practices to improve scalability, efficiency, and cost effectiveness</li>
-                            <li>Enhanced deployment efficiency and ensured robust application delivery and system resilience with streamlined CI/CD and infrastructure automation</li>
-                            <li>Integrated AI-driven automation to eliminate manual interventions, significantly improving workflow efficiency</li>
-                            <li>Designed and implemented multi-client DevOps architectures, enabling seamless deployments with dynamic configurations and auto-scaling capabilities</li>
+                            <li>Led a team of 10 DevOps engineers for enterprise clients — established standards for pipeline-as-code, Terraform modules, and Ansible playbooks</li>
+                            <li>Designed CI/CD pipelines using Jenkins and CloudBees for multiple development teams</li>
+                            <li>Automated infrastructure provisioning with Terraform and Ansible, reducing environment setup time</li>
+                            <li>Maintained compliance documentation and runbooks for knowledge transfer</li>
                         </ul>
                     </div>
 
                     <div class="resume-item">
                         <div class="resume-item-header">
                             <div>
-                                <h3>DevOps Technical Lead</h3>
+                                <h3>Sr. Software Engineer → Module Lead → DevOps Technical Lead</h3>
                                 <p class="company">Mercer</p>
                             </div>
                             <span class="date">Sep 2016 - Sep 2021</span>
                         </div>
                         <ul>
-                            <li>Led DevOps transformation with strategic execution, making it a true business enabler</li>
-                            <li>Developed robust cloud pipelines using Jenkins, Azure DevOps, SonarQube, and DefectDojo</li>
-                            <li>Collaborated with cross-functional teams optimizing workflows for multiple projects</li>
-                            <li>Mentored and enabled DevOps teams, building operational excellence culture</li>
+                            <li>Built CI/CD for 70+ applications using Jenkins and Azure DevOps with automated quality gates</li>
+                            <li>Introduced DevSecOps — SonarQube, OWASP ZAP, DefectDojo — significantly reduced security findings reaching production</li>
+                            <li>Led cross-team DevOps standardization — shared Jenkins libraries and pipeline templates adopted by multiple teams</li>
+                            <li>Provisioned and managed Azure infrastructure with ARM templates and Azure DevOps release pipelines</li>
+                            <li>Mentored ~10 junior engineers through code reviews, pair programming, and weekly knowledge-sharing sessions</li>
                         </ul>
                     </div>
 
                     <div class="resume-item">
                         <div class="resume-item-header">
                             <div>
-                                <h3>DevOps Engineer</h3>
+                                <h3>System Administrator → Sr. System Administrator</h3>
                                 <p class="company">Clavax</p>
                             </div>
                             <span class="date">Mar 2014 - Sep 2016</span>
                         </div>
                         <ul>
-                            <li>Designed and implemented robust CI/CD pipelines using Jenkins, Azure DevOps</li>
-                            <li>Led DevOps transformation, building scalable processes from the ground up</li>
-                            <li>Championed mentorship cultivating continuous learning culture</li>
-                            <li>Standardized best practices across development teams</li>
+                            <li>Administered GitLab servers for 30+ developers — repos, CI runners, access controls</li>
+                            <li>Automated daily ops with Bash scripts — eliminated ~2 hours/day of manual work</li>
+                            <li>Managed WHM/cPanel hosting for 9+ client websites with 99.9% uptime</li>
+                            <li>Optimized MySQL database performance — backups, query tuning, monitoring with Nagios/Zabbix</li>
                         </ul>
                     </div>
 
                     <div class="resume-item">
                         <div class="resume-item-header">
                             <div>
-                                <h3>System Administrator</h3>
-                                <p class="company">Aannya</p>
+                                <h3>System Engineer</h3>
+                                <p class="company">Aannya Softwares Pvt. Ltd.</p>
                             </div>
                             <span class="date">Apr 2013 - Feb 2014</span>
                         </div>
                         <ul>
-                            <li>Managed servers, maintained system uptime, ensuring high availability and performance</li>
-                            <li>Automated daily operational tasks using Bash scripts, improving version control efficiency</li>
-                            <li>Optimized MySQL database performance, implementing efficient backup and recovery strategies with MySQL Percona</li>
-                            <li>Built foundations in system operations, automation, and reliability</li>
+                            <li>Administered Linux (CentOS, Ubuntu) and Asterisk-based VoIP for call-center operations under strict SLA</li>
+                            <li>On-site customer deployments: server installation, network configuration, and application setup</li>
+                            <li>Automated routine maintenance and monitoring with Bash scripts</li>
+                            <li>Handled production incidents during night shifts and weekends; Apache Tomcat, VoIP/SIP exposure</li>
                         </ul>
                     </div>
                 </div>
@@ -1141,43 +1373,57 @@
                     <div class="resume-item">
                         <div class="resume-item-header">
                             <div>
-                                <h3>Bachelor of Technology in Computer Science</h3>
-                                <p class="company">Technical University</p>
+                                <h3>Bachelor's Degree, Computer Science</h3>
+                                <p class="company">Jai Narain Vyas University, Jodhpur</p>
                             </div>
-                            <span class="date">2011 - 2015</span>
+                            <span class="date">2009 - 2012</span>
                         </div>
-                        <ul>
-                            <li>Specialized in Cloud Computing and Distributed Systems</li>
-                            <li>Relevant coursework: System Design, Cloud Architecture, DevOps Practices, Network Security</li>
-                            <li>Final Year Project: Automated Cloud Infrastructure Management System</li>
-                        </ul>
                     </div>
                 </div>
 
                 <div class="resume-section">
                     <h2>Certifications & Achievements</h2>
                     <ul class="certifications-list">
-                        <li>AWS Certified Solutions Architect – Professional</li>
-                        <li>Certified Kubernetes Administrator (CKA)</li>
-                        <li>HashiCorp Certified: Terraform Associate</li>
                         <li>Microsoft Azure DevOps Engineer Expert</li>
-                        <li>Google Cloud Professional Cloud Architect</li>
-                        <li>Jenkins Certified Engineer</li>
+                        <li>Microsoft Azure Administrator Associate</li>
+                        <li>HashiCorp Certified: Terraform Associate</li>
+                        <li>Red Hat Certified System Administrator</li>
+                        <li>Databricks Platform Architect</li>
+                        <li>Oracle Cloud Infrastructure 2024 Generative AI Professional (1Z0-1127-24)</li>
+                        <li>Oracle AI Foundations</li>
+                        <li>Salesforce Certified AI Associate</li>
+                        <li>Operating Kubernetes on IBM Cloud</li>
+                        <li>Google Prompting Essentials</li>
+                        <li>Databricks GenAI Fundamentals</li>
+                        <li>IBM Generative AI</li>
+                        <li>Generative AI: Prompt Engineering Basics</li>
+                        <li>Microsoft Azure Fundamentals</li>
                     </ul>
                 </div>
 
                 <div class="resume-section">
                     <h2>Key Skills Summary</h2>
-                    <p><strong>Infrastructure:</strong> AWS, Azure, GCP, Multi-Cloud Architecture, Hybrid Cloud</p>
-                    <p><strong>Automation:</strong> Terraform, Ansible, CloudFormation, ARM Templates</p>
-                    <p><strong>Containers:</strong> Docker, Kubernetes, EKS, AKS, GKE, Helm, Service Mesh</p>
-                    <p><strong>CI/CD:</strong> Jenkins, GitHub Actions, GitLab CI, Azure DevOps, ArgoCD</p>
-                    <p><strong>Monitoring:</strong> Prometheus, Grafana, ELK Stack, Datadog, New Relic</p>
-                    <p><strong>Languages:</strong> Python, Bash, Groovy, Go, HCL, YAML</p>
+                    <p><strong>Cloud & Infra:</strong> Azure (30+ services), AWS, Kubernetes/AKS, Docker, Helm, KEDA, Traefik</p>
+                    <p><strong>IaC & Config:</strong> Terraform (modules, state, multi-client), Ansible, ARM Templates</p>
+                    <p><strong>CI/CD & GitOps:</strong> GitHub Actions, Azure DevOps, GitLab CI, Jenkins, ArgoCD</p>
+                    <p><strong>Data Platforms:</strong> Databricks (SQL, Unity Catalog, DAB), PostgreSQL, Redis, dbt, Trino</p>
+                    <p><strong>Observability:</strong> Dynatrace, ELK Stack, Azure Monitor</p>
+                    <p><strong>DevSecOps:</strong> SonarQube, JFrog Xray, Gitleaks, Wiz, DefectDojo</p>
+                    <p><strong>Languages:</strong> Bash, Python, Go, SQL, JavaScript, PowerShell</p>
+                </div>
+
+                <div class="resume-section">
+                    <h2>Notable Projects & Tools</h2>
+                    <ul>
+                        <li><strong>Terraform Plan Visualizer</strong> — Custom Azure DevOps extension providing executive-friendly Terraform plan summaries with charts</li>
+                        <li><strong>Internal Developer Portal</strong> — Internal portal with Azure DevOps integration, self-service environment lifecycle, service catalog</li>
+                        <li><strong>MCP Server for Azure DevOps</strong> — AI agent (FastMCP + Python) interacting with pipelines, repos, and work items</li>
+                        <li><strong>Interactive Resume</strong> — ChatGPT-style portfolio: virnahar.github.io/talktome</li>
+                    </ul>
                 </div>
 
                 <div class="resume-download">
-                    <button class="download-btn">
+                    <button class="download-btn" id="download-resume-btn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
@@ -1194,8 +1440,8 @@
     <div class="window" id="games-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">Games</div>
@@ -1203,41 +1449,78 @@
         </div>
         <div class="window-content games-content">
             <div class="games-grid">
-                <div class="game-item" onclick="showMacModal('💡 Puzzle Game', 'Fun puzzle platformer coming soon!', '💡')">
-                    <div class="game-icon">💡</div>
-                    <h3>Puzzle Game</h3>
-                    <p>Coming Soon</p>
+                <div class="game-item" onclick="openWhackAPod()">
+                    <div class="game-icon">⎈</div>
+                    <h3>Whack-a-Pod</h3>
+                    <p>Whack crashing pods!</p>
                 </div>
-                <div class="game-item" onclick="showMacModal('💣 Minesweeper', 'Classic minesweeper coming soon!', '💣')">
+                <div class="game-item" onclick="openMinesweeper()">
                     <div class="game-icon">💣</div>
                     <h3>Minesweeper</h3>
-                    <p>Coming Soon</p>
+                    <p>8×8 · 10 mines</p>
                 </div>
-                <div class="game-item" onclick="showMacModal('🃏 Card Game', 'Memory card game coming soon!', '🃏')">
+                <div class="game-item" onclick="openCardMatch()">
                     <div class="game-icon">🃏</div>
                     <h3>Card Match</h3>
-                    <p>Coming Soon</p>
+                    <p>Match DevOps pairs!</p>
                 </div>
-                <div class="game-item" onclick="showMacModal('🎯 Arcade Game', 'Fun arcade game coming soon!', '🎯')">
+                <div class="game-item" onclick="openDevOpsQuiz()">
+                    <div class="game-icon">🧠</div>
+                    <h3>DevOps Quiz</h3>
+                    <p>Test your knowledge!</p>
+                </div>
+                <div class="game-item" onclick="openReactionTest()">
+                    <div class="game-icon">⚡</div>
+                    <h3>Reaction Test</h3>
+                    <p>How fast can you click?</p>
+                </div>
+                <div class="game-item" onclick="openEmojiCatcher()">
                     <div class="game-icon">🎯</div>
-                    <h3>Arcade Game</h3>
-                    <p>Coming Soon</p>
+                    <h3>Emoji Catcher</h3>
+                    <p>Catch the DevOps tools!</p>
                 </div>
-                <div class="game-item" onclick="showMacModal('🐍 Snake', 'Already available in Terminal!\n\nOpen Terminal and type "snake" to play!', '🐍')">
-                    <div class="game-icon">🐍</div>
-                    <h3>K8s Snake</h3>
-                    <p>In Terminal - type "snake"</p>
+                <div class="game-item" onclick="openColorGuess()">
+                    <div class="game-icon">🎨</div>
+                    <h3>Color Guess</h3>
+                    <p>Guess the hex color!</p>
                 </div>
-                <div class="game-item" onclick="openWindow('music')">
-                    <div class="game-icon">🎵</div>
-                    <h3>Music Player</h3>
-                    <p>REAL music playlists!</p>
-                </div>
-                <div class="game-item" onclick="openWindow('games')">
-                    <div class="game-icon">🎮</div>
-                    <h3>Games Folder</h3>
-                    <p>Fun & relaxing!</p>
-                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calculator Window -->
+    <div class="window" id="calculator-window" style="display: none;">
+        <div class="window-titlebar">
+            <div class="window-controls">
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
+                <button class="window-control maximize" data-action="maximize" aria-label="Maximize window"></button>
+            </div>
+            <div class="window-title">Calculator</div>
+            <div class="window-controls-placeholder"></div>
+        </div>
+        <div class="window-content calculator-content">
+            <div class="calc-display" id="calc-display">0</div>
+            <div class="calc-buttons">
+                <button class="calc-btn calc-fn" onclick="calcClear()">AC</button>
+                <button class="calc-btn calc-fn" onclick="calcToggleSign()">±</button>
+                <button class="calc-btn calc-fn" onclick="calcPercent()">%</button>
+                <button class="calc-btn calc-op" onclick="calcOp('/')">÷</button>
+                <button class="calc-btn" onclick="calcDigit('7')">7</button>
+                <button class="calc-btn" onclick="calcDigit('8')">8</button>
+                <button class="calc-btn" onclick="calcDigit('9')">9</button>
+                <button class="calc-btn calc-op" onclick="calcOp('*')">×</button>
+                <button class="calc-btn" onclick="calcDigit('4')">4</button>
+                <button class="calc-btn" onclick="calcDigit('5')">5</button>
+                <button class="calc-btn" onclick="calcDigit('6')">6</button>
+                <button class="calc-btn calc-op" onclick="calcOp('-')">−</button>
+                <button class="calc-btn" onclick="calcDigit('1')">1</button>
+                <button class="calc-btn" onclick="calcDigit('2')">2</button>
+                <button class="calc-btn" onclick="calcDigit('3')">3</button>
+                <button class="calc-btn calc-op" onclick="calcOp('+')">+</button>
+                <button class="calc-btn calc-zero" onclick="calcDigit('0')">0</button>
+                <button class="calc-btn" onclick="calcDecimal()">.</button>
+                <button class="calc-btn calc-op calc-eq" onclick="calcEquals()">=</button>
             </div>
         </div>
     </div>
@@ -1246,8 +1529,8 @@
     <div class="window" id="music-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">Music</div>
@@ -1259,7 +1542,7 @@
                     <div class="cassette-top-section">
                         <div class="brand-logo">VIRENDRA'S PLAYER</div>
                         <div class="cassette-display-large">
-                            <img src="IMG_3028.jpeg" class="cassette-avatar-large">
+                            <img src="IMG_3028.jpeg" class="cassette-avatar-large" alt="Virendra Kumar" loading="lazy">
                             <div class="cassette-info">
                                 <h2>🎵 India Top 100</h2>
                                 <p>Weekly Chart • 100 Songs</p>
@@ -1280,7 +1563,7 @@
                     </div>
                     
                     <div class="player-embed-section">
-                        <iframe src="https://audiomack.com/embed/geo-charts/playlist/india?background=1" scrolling="no" width="100%" height="450" frameborder="0" title="India Top 100"></iframe>
+                        <iframe src="https://audiomack.com/embed/geo-charts/playlist/india?background=1" scrolling="no" width="100%" height="450" frameborder="0" title="India Top 100 Music" loading="lazy"></iframe>
                     </div>
                     
                     <div class="cassette-footer">
@@ -1301,8 +1584,8 @@
     <div class="window safari-window" id="safari-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">Safari</div>
@@ -1318,7 +1601,7 @@
             </div>
         </div>
         <div class="window-content safari-content">
-            <iframe id="safari-iframe" src="" style="width:100%;height:100%;border:none;background:#fff;"></iframe>
+            <iframe id="safari-iframe" src="" style="width:100%;height:100%;border:none;background:#fff;" loading="lazy"></iframe>
         </div>
     </div>
 
@@ -1326,8 +1609,8 @@
     <div class="window" id="contact-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">Contact</div>
@@ -1341,7 +1624,7 @@
                 </div>
 
                 <div class="contact-methods">
-                    <a href="https://virnahar.github.io" target="_blank" class="contact-card">
+                    <a href="https://virnahar.github.io" target="_blank" rel="noopener noreferrer" class="contact-card">
                         <div class="contact-icon">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
@@ -1351,7 +1634,7 @@
                         <p>virnahar.github.io</p>
                     </a>
 
-                    <a href="https://linkedin.com/in/virnahar" target="_blank" class="contact-card">
+                    <a href="https://linkedin.com/in/virnahar" target="_blank" rel="noopener noreferrer" class="contact-card">
                         <div class="contact-icon">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
@@ -1361,7 +1644,7 @@
                         <p>/in/virnahar</p>
                     </a>
 
-                    <a href="https://github.com/virnahar" target="_blank" class="contact-card">
+                    <a href="https://github.com/virnahar" target="_blank" rel="noopener noreferrer" class="contact-card">
                         <div class="contact-icon">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
@@ -1371,7 +1654,7 @@
                         <p>@virnahar</p>
                     </a>
 
-                    <a href="https://virnahar.github.io/talktome" target="_blank" class="contact-card">
+                    <a href="https://virnahar.github.io/talktome" target="_blank" rel="noopener noreferrer" class="contact-card">
                         <div class="contact-icon">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
@@ -1384,7 +1667,7 @@
 
                 <div class="contact-form-section">
                     <h2>Send a Message</h2>
-                    <form class="contact-form" id="contact-form">
+                    <form class="contact-form" id="contact-form" action="javascript:void(0)">
                         <div class="form-group">
                             <label for="name">Name</label>
                             <input type="text" id="name" name="name" required>
@@ -1401,7 +1684,7 @@
                             <label for="message">Message</label>
                             <textarea id="message" name="message" rows="6" required></textarea>
                         </div>
-                        <button type="submit" class="submit-btn">Send Message</button>
+                        <button type="submit" class="submit-btn" id="contact-submit-btn">Send Message</button>
                     </form>
                 </div>
             </div>
@@ -1412,8 +1695,8 @@
     <div class="window about-mac-window" id="about-mac-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">About This Mac</div>
@@ -1422,10 +1705,10 @@
         <div class="window-content about-mac-content">
             <div class="about-mac-container">
                 <div class="about-mac-logo">
-                    <img src="IMG_3028.jpeg" style="width: 100px; height: 100px; border-radius: 50%; border: 4px solid #007aff; object-fit: cover; box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);" alt="Virendra Kumar">
+                    <img src="IMG_3028.jpeg" style="width: 100px; height: 100px; border-radius: 50%; border: 4px solid #007aff; object-fit: cover; box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);" alt="Virendra Kumar" loading="lazy">
                 </div>
                 <h1>Virendra's DevOS</h1>
-                <p class="version">Version 1.0.0</p>
+                <p class="version">Version 2.0.0</p>
                 <div class="about-mac-info">
                     <div class="info-row">
                         <span class="info-label">Owner:</span>
@@ -1456,8 +1739,8 @@
     <div class="window preferences-window" id="preferences-window" style="display: none;">
         <div class="window-titlebar">
             <div class="window-controls">
-                <button class="window-control close" data-action="close"></button>
-                <button class="window-control minimize" data-action="minimize"></button>
+                <button class="window-control close" data-action="close" aria-label="Close window"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize window"></button>
                 <button class="window-control maximize" data-action="maximize"></button>
             </div>
             <div class="window-title">System Preferences</div>
@@ -1535,7 +1818,7 @@
     </div>
 
     <!-- Mac-Style Modal Dialog -->
-    <div class="mac-modal-overlay" id="mac-modal-overlay" style="display: none;">
+    <div class="mac-modal-overlay" id="mac-modal-overlay" style="display: none;" role="dialog" aria-modal="true">
         <div class="mac-modal">
             <div class="mac-modal-icon" id="mac-modal-icon">ℹ️</div>
             <h3 class="mac-modal-title" id="mac-modal-title">Information</h3>
@@ -1603,7 +1886,7 @@
                 <div class="company-label" onclick="showCompanyModal('Aannya')">Aannya</div>
             </div>
             <div class="timeline-bars">
-                <div class="timeline-bar-horizontal" onclick="showCompanyModal('McKinsey')" title="Feb 2023-Present (1y 8m)">
+                <div class="timeline-bar-horizontal" onclick="showCompanyModal('McKinsey')" title="Feb 2023-Present">
                     <div class="bar-fill-horizontal" style="width: 18%; background: linear-gradient(90deg, #A78BFA, #7C3AED);">
                         <span class="bar-years">Feb 23-Now</span>
                     </div>
@@ -1636,200 +1919,356 @@
     <div class="desktop-widget skills-widget" id="skills-widget" style="top: 640px; right: 24px;">
         <div class="widget-title">TOP SKILLS</div>
         <div class="mini-skills">
-            <div class="mini-skill">K8s <span>96%</span></div>
+            <div class="mini-skill">Azure <span>98%</span></div>
+            <div class="mini-skill">Kubernetes <span>96%</span></div>
             <div class="mini-skill">Terraform <span>98%</span></div>
-            <div class="mini-skill">Docker <span>98%</span></div>
-            <div class="mini-skill">AWS <span>95%</span></div>
-            <div class="mini-skill">Jenkins <span>97%</span></div>
+            <div class="mini-skill">ArgoCD <span>92%</span></div>
+            <div class="mini-skill">GitHub Actions <span>95%</span></div>
         </div>
     </div>
     
 
-    <!-- Dock -->
-    <div class="dock">
-        <div class="dock-item" data-app="finder" title="Virendra Kumar">
-            <img src="IMG_3028.jpeg" class="dock-profile-pic" alt="Virendra Kumar">
+    <!-- Dock — macOS Sequoia style -->
+    <div class="dock" style="display: none;" aria-label="Application dock">
+        <!-- Finder / About Me -->
+        <div class="dock-item" data-app="finder" title="About Me">
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkFinder" x1="0" y1="0" x2="0" y2="64"><stop offset="0%" stop-color="#42A5F5"/><stop offset="100%" stop-color="#1565C0"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkFinder)"/>
+                <rect x="14" y="18" width="36" height="30" rx="3" fill="white" opacity="0.15"/>
+                <circle cx="26" cy="30" r="5" fill="white" opacity="0.9"/>
+                <circle cx="38" cy="30" r="5" fill="white" opacity="0.9"/>
+                <circle cx="26" cy="30" r="2.5" fill="#1565C0"/>
+                <circle cx="38" cy="30" r="2.5" fill="#1565C0"/>
+                <path d="M24 40 Q32 46 40 40" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.9"/>
+            </svg>
             <div class="dock-tooltip">About Me</div>
         </div>
-        
+
         <div class="dock-separator"></div>
-        
+
+        <!-- Terminal -->
+        <div class="dock-item" data-app="terminal" title="Terminal">
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <rect width="64" height="64" rx="14" fill="#0D0D0D"/>
+                <rect x="4" y="4" width="56" height="56" rx="12" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                <path d="M19 22L29 32L19 42" stroke="#4ADE80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="33" y1="42" x2="46" y2="42" stroke="#4ADE80" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+            <div class="dock-tooltip">Terminal</div>
+        </div>
+
+        <!-- Code Editor -->
+        <div class="dock-item" data-app="codeeditor" title="Code Editor">
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkCode" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#2196F3"/><stop offset="100%" stop-color="#0D47A1"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkCode)"/>
+                <path d="M24 20L14 32L24 44" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+                <path d="M40 20L50 32L40 44" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+                <line x1="35" y1="16" x2="29" y2="48" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+            </svg>
+            <div class="dock-tooltip">Code Editor</div>
+        </div>
+
+        <!-- Notes -->
+        <div class="dock-item" data-app="notes" title="Notes">
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkNotes" x1="0" y1="0" x2="0" y2="64"><stop offset="0%" stop-color="#FDD835"/><stop offset="100%" stop-color="#F9A825"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkNotes)"/>
+                <rect x="14" y="12" width="36" height="42" rx="4" fill="white"/>
+                <rect x="14" y="12" width="36" height="10" rx="4" fill="#FDD835" opacity="0.3"/>
+                <line x1="20" y1="28" x2="44" y2="28" stroke="#E0E0E0" stroke-width="1.5"/>
+                <line x1="20" y1="34" x2="44" y2="34" stroke="#E0E0E0" stroke-width="1.5"/>
+                <line x1="20" y1="40" x2="38" y2="40" stroke="#E0E0E0" stroke-width="1.5"/>
+                <line x1="20" y1="46" x2="32" y2="46" stroke="#E0E0E0" stroke-width="1.5"/>
+            </svg>
+            <div class="dock-tooltip">Notes</div>
+        </div>
+
+        <div class="dock-separator"></div>
+
+        <!-- Projects -->
         <div class="dock-item" data-app="projects" title="Projects">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="url(#projectsGradient2)"/>
-                <rect x="16" y="20" width="32" height="24" rx="2" fill="white" opacity="0.9"/>
-                <rect x="20" y="24" width="8" height="8" rx="1" fill="#7C3AED"/>
-                <rect x="30" y="24" width="8" height="8" rx="1" fill="#7C3AED"/>
-                <rect x="20" y="34" width="8" height="6" rx="1" fill="#7C3AED"/>
-                <defs>
-                    <linearGradient id="projectsGradient2" x1="0" y1="0" x2="64" y2="64">
-                        <stop offset="0%" stop-color="#A78BFA"/>
-                        <stop offset="100%" stop-color="#7C3AED"/>
-                    </linearGradient>
-                </defs>
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkProj" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#B388FF"/><stop offset="100%" stop-color="#651FFF"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkProj)"/>
+                <rect x="12" y="16" width="40" height="32" rx="3" fill="white" opacity="0.15"/>
+                <rect x="16" y="20" width="14" height="12" rx="2" fill="white" opacity="0.85"/>
+                <rect x="34" y="20" width="14" height="12" rx="2" fill="white" opacity="0.85"/>
+                <rect x="16" y="36" width="14" height="8" rx="2" fill="white" opacity="0.85"/>
+                <rect x="34" y="36" width="14" height="8" rx="2" fill="white" opacity="0.85"/>
             </svg>
             <div class="dock-tooltip">Projects</div>
         </div>
-        
-        <div class="dock-item" data-app="terminal" title="Skills">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="#1E1E1E"/>
-                <path d="M20 24L28 32L20 40" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="32" y1="40" x2="44" y2="40" stroke="#4ADE80" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <div class="dock-tooltip">Skills</div>
-        </div>
-        
-        <div class="dock-separator"></div>
-        
+
+        <!-- Resume -->
         <div class="dock-item" data-app="resume" title="Resume">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="url(#resumeGradient2)"/>
-                <rect x="18" y="14" width="28" height="36" rx="2" fill="white"/>
-                <rect x="22" y="20" width="20" height="2" rx="1" fill="#F97316"/>
-                <rect x="22" y="26" width="16" height="2" rx="1" fill="#D1D5DB"/>
-                <rect x="22" y="30" width="18" height="2" rx="1" fill="#D1D5DB"/>
-                <rect x="22" y="34" width="14" height="2" rx="1" fill="#D1D5DB"/>
-                <defs>
-                    <linearGradient id="resumeGradient2" x1="0" y1="0" x2="64" y2="64">
-                        <stop offset="0%" stop-color="#FB923C"/>
-                        <stop offset="100%" stop-color="#F97316"/>
-                    </linearGradient>
-                </defs>
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkResume" x1="0" y1="0" x2="0" y2="64"><stop offset="0%" stop-color="#FF8A65"/><stop offset="100%" stop-color="#E65100"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkResume)"/>
+                <rect x="16" y="10" width="32" height="44" rx="3" fill="white" opacity="0.92"/>
+                <rect x="20" y="16" width="24" height="3" rx="1.5" fill="#E65100" opacity="0.8"/>
+                <rect x="20" y="23" width="20" height="2" rx="1" fill="#BDBDBD"/>
+                <rect x="20" y="28" width="24" height="2" rx="1" fill="#BDBDBD"/>
+                <rect x="20" y="33" width="18" height="2" rx="1" fill="#BDBDBD"/>
+                <rect x="20" y="38" width="22" height="2" rx="1" fill="#BDBDBD"/>
+                <rect x="20" y="43" width="16" height="2" rx="1" fill="#BDBDBD"/>
             </svg>
             <div class="dock-tooltip">Resume</div>
         </div>
-        
+
+        <!-- Contact / Mail -->
         <div class="dock-item" data-app="contact" title="Contact">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="url(#contactGradient2)"/>
-                <rect x="14" y="20" width="36" height="24" rx="2" fill="white" opacity="0.9"/>
-                <path d="M14 22L32 34L50 22" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <defs>
-                    <linearGradient id="contactGradient2" x1="0" y1="0" x2="64" y2="64">
-                        <stop offset="0%" stop-color="#34D399"/>
-                        <stop offset="100%" stop-color="#10B981"/>
-                    </linearGradient>
-                </defs>
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkMail" x1="0" y1="0" x2="0" y2="64"><stop offset="0%" stop-color="#42A5F5"/><stop offset="100%" stop-color="#1976D2"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkMail)"/>
+                <rect x="10" y="18" width="44" height="28" rx="3" fill="white" opacity="0.92"/>
+                <path d="M12 20L32 36L52 20" stroke="#1976D2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
             </svg>
             <div class="dock-tooltip">Contact</div>
         </div>
-        
+
         <div class="dock-separator"></div>
-        
+
+        <!-- Launchpad -->
         <div class="dock-item" onclick="openLaunchpad()" title="Launchpad">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="url(#launchpadDockGradient)"/>
-                <rect x="14" y="14" width="10" height="10" rx="2" fill="white" opacity="0.9"/>
-                <rect x="28" y="14" width="10" height="10" rx="2" fill="white" opacity="0.9"/>
-                <rect x="42" y="14" width="8" height="10" rx="2" fill="white" opacity="0.9"/>
-                <rect x="14" y="28" width="10" height="10" rx="2" fill="white" opacity="0.9"/>
-                <rect x="28" y="28" width="10" height="10" rx="2" fill="white" opacity="0.9"/>
-                <rect x="42" y="28" width="8" height="10" rx="2" fill="white" opacity="0.9"/>
-                <rect x="14" y="42" width="10" height="8" rx="2" fill="white" opacity="0.9"/>
-                <rect x="28" y="42" width="10" height="8" rx="2" fill="white" opacity="0.9"/>
-                <defs>
-                    <linearGradient id="launchpadDockGradient" x1="0" y1="0" x2="64" y2="64">
-                        <stop offset="0%" stop-color="#B4B4B8"/>
-                        <stop offset="100%" stop-color="#86868b"/>
-                    </linearGradient>
-                </defs>
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkLP" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#B0BEC5"/><stop offset="100%" stop-color="#78909C"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkLP)"/>
+                <rect x="14" y="14" width="10" height="10" rx="3" fill="white" opacity="0.85"/>
+                <rect x="27" y="14" width="10" height="10" rx="3" fill="white" opacity="0.85"/>
+                <rect x="40" y="14" width="10" height="10" rx="3" fill="white" opacity="0.85"/>
+                <rect x="14" y="27" width="10" height="10" rx="3" fill="white" opacity="0.85"/>
+                <rect x="27" y="27" width="10" height="10" rx="3" fill="white" opacity="0.85"/>
+                <rect x="40" y="27" width="10" height="10" rx="3" fill="white" opacity="0.85"/>
+                <rect x="14" y="40" width="10" height="10" rx="3" fill="white" opacity="0.85"/>
+                <rect x="27" y="40" width="10" height="10" rx="3" fill="white" opacity="0.85"/>
+                <rect x="40" y="40" width="10" height="10" rx="3" fill="white" opacity="0.85"/>
             </svg>
             <div class="dock-tooltip">Launchpad</div>
         </div>
-        
+
+        <!-- Settings -->
         <div class="dock-item" data-app="preferences" title="System Preferences">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="url(#settingsGradient)"/>
-                <circle cx="32" cy="32" r="12" fill="none" stroke="white" stroke-width="2"/>
-                <circle cx="32" cy="20" r="2" fill="white"/>
-                <circle cx="32" cy="44" r="2" fill="white"/>
-                <circle cx="20" cy="32" r="2" fill="white"/>
-                <circle cx="44" cy="32" r="2" fill="white"/>
-                <circle cx="23" cy="23" r="2" fill="white"/>
-                <circle cx="41" cy="41" r="2" fill="white"/>
-                <circle cx="41" cy="23" r="2" fill="white"/>
-                <circle cx="23" cy="41" r="2" fill="white"/>
-                <defs>
-                    <linearGradient id="settingsGradient" x1="0" y1="0" x2="64" y2="64">
-                        <stop offset="0%" stop-color="#86868b"/>
-                        <stop offset="100%" stop-color="#636366"/>
-                    </linearGradient>
-                </defs>
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkSet" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#90A4AE"/><stop offset="100%" stop-color="#546E7A"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkSet)"/>
+                <circle cx="32" cy="32" r="14" fill="none" stroke="white" stroke-width="2.5" opacity="0.9"/>
+                <circle cx="32" cy="32" r="5" fill="white" opacity="0.9"/>
+                <circle cx="32" cy="16" r="3" fill="white" opacity="0.8"/>
+                <circle cx="32" cy="48" r="3" fill="white" opacity="0.8"/>
+                <circle cx="16" cy="32" r="3" fill="white" opacity="0.8"/>
+                <circle cx="48" cy="32" r="3" fill="white" opacity="0.8"/>
             </svg>
-            <div class="dock-tooltip">System Preferences</div>
+            <div class="dock-tooltip">Settings</div>
         </div>
-        
+
+        <div class="dock-separator"></div>
+
+        <!-- LinkedIn -->
         <div class="dock-item" onclick="window.open('https://linkedin.com/in/virnahar', '_blank')" title="LinkedIn">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+            <svg width="48" height="48" viewBox="0 0 64 64">
                 <rect width="64" height="64" rx="14" fill="#0A66C2"/>
-                <path d="M22 24h4v16h-4V24zm2-6a2 2 0 110 4 2 2 0 010-4zm6 6h4v2.5c.5-1 1.8-2.5 4-2.5 4.3 0 5 2.8 5 6.5V40h-4v-9c0-1.7-.5-3-2-3-2 0-3 1.5-3 3v9h-4V24z" fill="white"/>
+                <rect x="6" y="6" width="52" height="52" rx="11" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                <path d="M21 26h5v16h-5V26zm2.5-7a3 3 0 110 6 3 3 0 010-6zm8 7h5v2.2c.8-1.2 2.4-2.8 5-2.8 5 0 6.5 3.2 6.5 7.6v9h-5v-8c0-2-.6-3.5-2.5-3.5s-3 1.5-3 3.5v8h-5V26z" fill="white"/>
             </svg>
             <div class="dock-tooltip">LinkedIn</div>
         </div>
-        
+
+        <!-- GitHub -->
         <div class="dock-item" onclick="window.open('https://github.com/virnahar', '_blank')" title="GitHub">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="#24292e"/>
-                <path d="M32 16c-8.84 0-16 7.16-16 16 0 7.07 4.58 13.06 10.94 15.18.8.15 1.09-.35 1.09-.77 0-.38-.01-1.39-.02-2.73-4.45.97-5.39-2.14-5.39-2.14-.73-1.85-1.78-2.34-1.78-2.34-1.45-.99.11-.97.11-.97 1.61.11 2.45 1.65 2.45 1.65 1.43 2.45 3.75 1.74 4.66 1.33.14-1.03.56-1.74 1.01-2.14-3.55-.4-7.29-1.78-7.29-7.91 0-1.75.63-3.18 1.65-4.3-.17-.4-.71-2.03.16-4.23 0 0 1.34-.43 4.4 1.64 1.28-.36 2.65-.54 4.01-.54 1.36 0 2.73.18 4.01.54 3.06-2.07 4.4-1.64 4.4-1.64.87 2.2.33 3.83.16 4.23 1.02 1.12 1.65 2.55 1.65 4.3 0 6.15-3.74 7.5-7.31 7.9.58.5 1.09 1.48 1.09 2.98 0 2.15-.02 3.88-.02 4.41 0 .43.29.93 1.1.77C43.42 45.06 48 39.07 48 32c0-8.84-7.16-16-16-16z" fill="white"/>
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <rect width="64" height="64" rx="14" fill="#171515"/>
+                <rect x="6" y="6" width="52" height="52" rx="11" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                <path d="M32 14c-9.94 0-18 8.06-18 18 0 7.95 5.16 14.7 12.32 17.08.9.17 1.23-.39 1.23-.87 0-.43-.02-1.56-.02-3.07-5.01 1.09-6.07-2.41-6.07-2.41-.82-2.08-2-2.63-2-2.63-1.63-1.12.12-1.09.12-1.09 1.81.13 2.76 1.86 2.76 1.86 1.6 2.76 4.22 1.96 5.25 1.5.16-1.16.63-1.96 1.14-2.41-4-.45-8.2-2-8.2-8.9 0-1.97.7-3.58 1.86-4.84-.19-.45-.8-2.28.18-4.76 0 0 1.51-.48 4.95 1.85 1.44-.4 2.98-.6 4.51-.61 1.53.01 3.07.21 4.51.61 3.44-2.33 4.95-1.85 4.95-1.85.98 2.48.37 4.31.18 4.76 1.16 1.26 1.86 2.87 1.86 4.84 0 6.92-4.21 8.44-8.22 8.89.65.56 1.22 1.66 1.22 3.35 0 2.42-.02 4.37-.02 4.96 0 .48.33 1.05 1.24.87C44.84 46.7 50 39.95 50 32c0-9.94-8.06-18-18-18z" fill="white"/>
             </svg>
             <div class="dock-tooltip">GitHub</div>
         </div>
-        
+
         <div class="dock-separator"></div>
-        
+
+        <!-- Music -->
         <div class="dock-item" data-app="music" title="Music">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="url(#musicDock)"/>
-                <circle cx="20" cy="44" r="8" fill="white" opacity="0.9"/>
-                <circle cx="44" cy="44" r="8" fill="white" opacity="0.9"/>
-                <path d="M28 44V20l16-4v28" stroke="white" stroke-width="3" fill="none"/>
-                <defs>
-                    <linearGradient id="musicDock" x1="0" y1="0" x2="64" y2="64">
-                        <stop offset="0%" stop-color="#FF6B9D"/>
-                        <stop offset="100%" stop-color="#C94B7E"/>
-                    </linearGradient>
-                </defs>
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkMusic" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#FC466B"/><stop offset="100%" stop-color="#C4004E"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkMusic)"/>
+                <circle cx="24" cy="42" r="7" fill="white" opacity="0.9"/>
+                <circle cx="24" cy="42" r="3.5" fill="#C4004E"/>
+                <circle cx="42" cy="38" r="7" fill="white" opacity="0.9"/>
+                <circle cx="42" cy="38" r="3.5" fill="#C4004E"/>
+                <path d="M31 42V18L49 14v24" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
             </svg>
             <div class="dock-tooltip">Music</div>
         </div>
-        
+
+        <!-- Games -->
         <div class="dock-item" data-app="games" title="Games">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="url(#gamesDock)"/>
-                <circle cx="24" cy="32" r="6" fill="white" opacity="0.9"/>
-                <circle cx="40" cy="32" r="6" fill="white" opacity="0.9"/>
-                <defs>
-                    <linearGradient id="gamesDock" x1="0" y1="0" x2="64" y2="64">
-                        <stop offset="0%" stop-color="#667eea"/>
-                        <stop offset="100%" stop-color="#764ba2"/>
-                    </linearGradient>
-                </defs>
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkGame" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stop-color="#7C4DFF"/><stop offset="100%" stop-color="#304FFE"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkGame)"/>
+                <rect x="10" y="22" width="44" height="24" rx="12" fill="white" opacity="0.2"/>
+                <circle cx="22" cy="34" r="3" fill="white" opacity="0.9"/>
+                <rect x="19" y="28" width="6" height="2" rx="1" fill="white" opacity="0.9"/>
+                <rect x="21" y="30" width="2" height="6" rx="1" fill="white" opacity="0.9"/>
+                <circle cx="38" cy="30" r="2.5" fill="white" opacity="0.9"/>
+                <circle cx="44" cy="34" r="2.5" fill="white" opacity="0.9"/>
+                <circle cx="38" cy="38" r="2.5" fill="white" opacity="0.9"/>
+                <circle cx="32" cy="34" r="2.5" fill="white" opacity="0.9"/>
             </svg>
             <div class="dock-tooltip">Games</div>
         </div>
-        
+
+        <!-- Sticky Notes -->
+        <div class="dock-item" data-app="stickynotes" title="Sticky Notes">
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <rect width="64" height="64" rx="14" fill="#FFD54F"/>
+                <rect x="10" y="10" width="44" height="44" rx="4" fill="#FFF176" opacity="0.9"/>
+                <path d="M38 54L54 38" stroke="#FBC02D" stroke-width="1"/>
+                <path d="M38 54V42a4 4 0 014-4h12" fill="#FFECB3"/>
+                <line x1="18" y1="24" x2="40" y2="24" stroke="#E6C74A" stroke-width="1.5" opacity="0.5"/>
+                <line x1="18" y1="32" x2="36" y2="32" stroke="#E6C74A" stroke-width="1.5" opacity="0.5"/>
+                <line x1="18" y1="40" x2="32" y2="40" stroke="#E6C74A" stroke-width="1.5" opacity="0.5"/>
+            </svg>
+            <div class="dock-tooltip">Sticky Notes</div>
+        </div>
+
+        <div class="dock-separator"></div>
+
+        <!-- Trash -->
         <div class="dock-item" onclick="emptyTrashAnimation()" title="Trash">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                <rect width="64" height="64" rx="14" fill="url(#trashDock)"/>
-                <path d="M24 20h16v-4h-16v4zm-4 4h24v28a4 4 0 01-4 4H24a4 4 0 01-4-4V24z" fill="white" opacity="0.95"/>
-                <rect x="20" y="16" width="24" height="2" rx="1" fill="white" opacity="0.95"/>
-                <line x1="28" y1="28" x2="28" y2="44" stroke="#86868b" stroke-width="2" stroke-linecap="round"/>
-                <line x1="32" y1="28" x2="32" y2="44" stroke="#86868b" stroke-width="2" stroke-linecap="round"/>
-                <line x1="36" y1="28" x2="36" y2="44" stroke="#86868b" stroke-width="2" stroke-linecap="round"/>
-                <defs>
-                    <linearGradient id="trashDock" x1="0" y1="0" x2="64" y2="64">
-                        <stop offset="0%" stop-color="#E5E5EA"/>
-                        <stop offset="100%" stop-color="#AEAEB2"/>
-                    </linearGradient>
-                </defs>
+            <svg width="48" height="48" viewBox="0 0 64 64">
+                <defs><linearGradient id="dkTrash" x1="0" y1="0" x2="0" y2="64"><stop offset="0%" stop-color="#E0E0E0"/><stop offset="100%" stop-color="#9E9E9E"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#dkTrash)"/>
+                <rect x="20" y="14" width="24" height="4" rx="2" fill="white" opacity="0.9"/>
+                <rect x="18" y="18" width="28" height="2" rx="1" fill="white" opacity="0.7"/>
+                <path d="M20 22h24v28a4 4 0 01-4 4H24a4 4 0 01-4-4V22z" fill="white" opacity="0.85"/>
+                <line x1="27" y1="28" x2="27" y2="46" stroke="#9E9E9E" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="32" y1="28" x2="32" y2="46" stroke="#9E9E9E" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="37" y1="28" x2="37" y2="46" stroke="#9E9E9E" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
             <div class="dock-tooltip">Trash</div>
         </div>
-        
     </div>
 
-    <script src="script.js"></script>
+    <div class="notification" id="welcome-notification" style="display: none;">
+        <div class="notification-header">
+            <span class="notification-app">DevOS</span>
+            <span class="notification-time">now</span>
+            <button class="notification-close" onclick="this.parentElement.parentElement.style.display='none'">&times;</button>
+        </div>
+        <div class="notification-body">
+            <strong>Welcome!</strong>
+            <p>Try the Terminal — type "help" for commands. Or click About Me to explore!</p>
+        </div>
+    </div>
+
+    <!-- V2 New App Windows -->
+
+    <!-- Sticky Notes Window -->
+    <div class="window" id="stickynotes-window" style="display: none;">
+        <div class="window-titlebar">
+            <div class="window-controls">
+                <button class="window-control close" data-action="close" aria-label="Close"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize"></button>
+                <button class="window-control maximize" data-action="maximize"></button>
+            </div>
+            <div class="window-title">Sticky Notes</div>
+            <div class="window-controls-placeholder"></div>
+        </div>
+        <div class="window-content" style="padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-content:flex-start;">
+            <div style="width:100%;display:flex;gap:8px;margin-bottom:8px;">
+                <button class="mac-btn" onclick="createStickyNote('yellow')" style="background:#fff9c4;border:1px solid #f0e68c;padding:6px 14px;border-radius:8px;cursor:pointer;">+ Yellow</button>
+                <button class="mac-btn" onclick="createStickyNote('pink')" style="background:#f8bbd0;border:1px solid #f48fb1;padding:6px 14px;border-radius:8px;cursor:pointer;">+ Pink</button>
+                <button class="mac-btn" onclick="createStickyNote('green')" style="background:#c8e6c9;border:1px solid #a5d6a7;padding:6px 14px;border-radius:8px;cursor:pointer;">+ Green</button>
+                <button class="mac-btn" onclick="createStickyNote('blue')" style="background:#bbdefb;border:1px solid #90caf9;padding:6px 14px;border-radius:8px;cursor:pointer;">+ Blue</button>
+                <button class="mac-btn" onclick="createStickyNote('purple')" style="background:#e1bee7;border:1px solid #ce93d8;padding:6px 14px;border-radius:8px;cursor:pointer;">+ Purple</button>
+            </div>
+            <div id="sticky-notes-container" style="display:flex;flex-wrap:wrap;gap:12px;width:100%;"></div>
+        </div>
+    </div>
+
+    <!-- Code Editor Window -->
+    <div class="window" id="codeeditor-window" style="display: none;">
+        <div class="window-titlebar">
+            <div class="window-controls">
+                <button class="window-control close" data-action="close" aria-label="Close"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize"></button>
+                <button class="window-control maximize" data-action="maximize"></button>
+            </div>
+            <div class="window-title">Code Editor</div>
+            <div class="window-controls-placeholder"></div>
+        </div>
+        <div class="window-content code-editor-content" style="background:#1e1e1e;display:flex;flex-direction:column;height:100%;">
+            <div class="code-editor-tabs" id="code-editor-tabs" style="display:flex;background:#252526;border-bottom:1px solid #333;overflow-x:auto;"></div>
+            <div class="code-editor-body" style="flex:1;display:flex;overflow:hidden;">
+                <div class="code-line-numbers" id="code-line-numbers" style="width:48px;background:#1e1e1e;color:#858585;font-family:var(--font-mono);font-size:13px;text-align:right;padding:12px 8px 12px 0;line-height:1.5;overflow:hidden;user-select:none;border-right:1px solid #333;"></div>
+                <textarea id="code-editor-textarea" spellcheck="false" style="flex:1;background:#1e1e1e;color:#d4d4d4;font-family:var(--font-mono);font-size:13px;border:none;outline:none;padding:12px;line-height:1.5;resize:none;tab-size:4;white-space:pre;overflow:auto;"></textarea>
+            </div>
+            <div class="code-editor-status" style="display:flex;justify-content:space-between;padding:4px 12px;background:#007acc;color:#fff;font-size:11px;">
+                <span id="code-editor-lang">Terraform</span>
+                <span>UTF-8 | LF</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes App Window -->
+    <div class="window" id="notes-window" style="display: none;">
+        <div class="window-titlebar">
+            <div class="window-controls">
+                <button class="window-control close" data-action="close" aria-label="Close"></button>
+                <button class="window-control minimize" data-action="minimize" aria-label="Minimize"></button>
+                <button class="window-control maximize" data-action="maximize"></button>
+            </div>
+            <div class="window-title">Notes</div>
+            <div class="window-controls-placeholder"></div>
+        </div>
+        <div class="window-content notes-content" style="display:flex;height:100%;">
+            <div class="notes-sidebar" id="notes-sidebar" style="width:240px;background:var(--sidebar-bg);border-right:1px solid var(--color-border);overflow-y:auto;padding:8px;">
+                <button id="new-note-btn" style="width:100%;padding:8px;margin-bottom:8px;border:none;background:var(--color-accent);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;">+ New Note</button>
+                <div id="notes-list"></div>
+            </div>
+            <div class="notes-editor" style="flex:1;display:flex;flex-direction:column;">
+                <input id="note-title-input" type="text" placeholder="Note Title" style="border:none;outline:none;padding:16px;font-size:20px;font-weight:600;background:transparent;color:var(--color-text);border-bottom:1px solid var(--color-divider);">
+                <div id="note-editor" contenteditable="true" style="flex:1;padding:16px;outline:none;font-size:14px;line-height:1.6;overflow-y:auto;color:var(--color-text);"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mission Control Overlay -->
+    <div class="mission-control-overlay" id="mission-control-overlay" style="display:none;"></div>
+
+    <!-- Window Snap Preview -->
+    <div class="window-snap-preview" id="window-snap-preview" style="display:none;"></div>
+
+    <!-- Sticky Notes on Desktop -->
+    <div id="desktop-sticky-notes" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50;"></div>
+
+    <!-- Dependencies -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery.terminal@2.38.0/js/jquery.terminal.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/figlet@1.7.0/lib/figlet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/isomorphic-lolcat@1.2.1/dist/index.min.js"></script>
+    <!-- html2pdf for resume download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js" defer></script>
+
+    <!-- V2 Modular JavaScript (load order matters) -->
+    <script src="js/sounds.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/startup.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/apps.js"></script>
+    <script src="js/terminal.js"></script>
+    <script src="js/games.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js', { scope: './' })
+                .then(reg => console.log('SW registered:', reg.scope))
+                .catch(err => console.log('SW registration failed:', err));
+        });
+    }
+    </script>
 </body>
 </html>
-
