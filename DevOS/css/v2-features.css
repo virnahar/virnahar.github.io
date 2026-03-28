@@ -1,0 +1,793 @@
+/* === DevOS V2 — Feature Styles ===
+   These styles add V2 features on top of core.css.
+*/
+
+/* ============================
+   Sleep Overlay (V2)
+   ============================ */
+.sleep-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 999998;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    cursor: pointer;
+    transition: opacity 1s ease;
+}
+
+.sleep-overlay .sleep-logo {
+    animation: sleepPulse 4s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 60px rgba(100, 150, 255, 0.35));
+}
+
+.sleep-quote {
+    max-width: 420px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 16px;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    line-height: 1.6;
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.sleep-hint {
+    position: absolute;
+    bottom: 40px;
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 11px;
+    animation: blinkHint 3s ease-in-out infinite;
+}
+
+@keyframes sleepPulse {
+    0%, 100% {
+        opacity: 0.4;
+        transform: scale(1);
+        filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.4)) drop-shadow(0 0 40px rgba(100, 150, 255, 0.2));
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 80px rgba(100, 150, 255, 0.5));
+    }
+}
+
+/* ============================
+   Window Snap Preview (V2)
+   ============================ */
+.window-snap-preview {
+    position: fixed;
+    background: rgba(0, 122, 255, 0.15);
+    border: 2px solid rgba(0, 122, 255, 0.4);
+    border-radius: 10px;
+    z-index: 99;
+    pointer-events: none;
+    transition: all 0.2s ease;
+}
+
+.window-snap-preview.snap-left {
+    top: 28px;
+    left: 0;
+    width: 50vw;
+    height: calc(100vh - 108px);
+}
+
+.window-snap-preview.snap-right {
+    top: 28px;
+    right: 0;
+    width: 50vw;
+    height: calc(100vh - 108px);
+}
+
+/* ============================
+   Mission Control (V2)
+   ============================ */
+.mission-control-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 50000;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 60px 40px;
+    animation: missionControlIn 0.3s ease;
+    cursor: pointer;
+}
+
+.mission-control-overlay .mc-window {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    max-width: 400px;
+    max-height: 300px;
+}
+
+.mission-control-overlay .mc-window:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+}
+
+.mission-control-overlay .mc-label {
+    text-align: center;
+    color: white;
+    font-size: 12px;
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+@keyframes missionControlIn {
+    from { opacity: 0; transform: scale(1.05); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================
+   Dock Bounce on Launch (V2)
+   ============================ */
+.dock-item.launching {
+    animation: dockBounce 0.5s ease;
+}
+
+@keyframes dockBounce {
+    0% { transform: translateY(0); }
+    20% { transform: translateY(-20px); }
+    40% { transform: translateY(0); }
+    60% { transform: translateY(-10px); }
+    80% { transform: translateY(0); }
+    100% { transform: translateY(0); }
+}
+
+/* ============================
+   Sticky Notes (V2)
+   ============================ */
+.sticky-note {
+    width: 200px;
+    min-height: 180px;
+    border-radius: 4px;
+    padding: 0;
+    box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', -apple-system, sans-serif;
+    transition: box-shadow 0.2s ease;
+    animation: stickyNoteAppear 0.3s ease;
+}
+
+.sticky-note:hover {
+    box-shadow: 4px 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.sticky-note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.6;
+    cursor: move;
+}
+
+.sticky-note-close {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.sticky-note-close:hover {
+    background: rgba(255, 59, 48, 0.8);
+    color: white;
+}
+
+.sticky-note-body {
+    flex: 1;
+    padding: 8px 12px 12px;
+    outline: none;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #333;
+    min-height: 120px;
+}
+
+.sticky-note.yellow { background: #fff9c4; }
+.sticky-note.pink { background: #f8bbd0; }
+.sticky-note.green { background: #c8e6c9; }
+.sticky-note.blue { background: #bbdefb; }
+.sticky-note.purple { background: #e1bee7; }
+.sticky-note.orange { background: #ffe0b2; }
+
+@keyframes stickyNoteAppear {
+    from { opacity: 0; transform: scale(0.8) rotate(-3deg); }
+    to { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+/* ============================
+   Code Editor (V2)
+   ============================ */
+.code-editor-tabs {
+    display: flex;
+    background: #252526;
+    border-bottom: 1px solid #333;
+    overflow-x: auto;
+}
+
+.code-editor-tab {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: #888;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-right: 1px solid #333;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.code-editor-tab:hover {
+    background: #2d2d2d;
+}
+
+.code-editor-tab.active {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-bottom: 2px solid #007acc;
+}
+
+/* ============================
+   Notes App (V2)
+   ============================ */
+.notes-list-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 4px;
+    transition: background 0.15s ease;
+}
+
+.notes-list-item:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+body.dark-mode .notes-list-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.notes-list-item.active {
+    background: rgba(0, 122, 255, 0.12);
+}
+
+.notes-list-item h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    color: inherit;
+}
+
+.notes-list-item p {
+    font-size: 11px;
+    color: #86868b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============================
+   Control Center — macOS Ventura
+   ============================ */
+/* Override core.css control center — DO NOT set display here (JS controls it) */
+.control-center {
+    position: fixed;
+    top: 38px;
+    right: 14px;
+    width: 330px;
+    background: rgba(28, 28, 30, 0.88);
+    backdrop-filter: blur(60px) saturate(200%);
+    -webkit-backdrop-filter: blur(60px) saturate(200%);
+    border-radius: 16px;
+    box-shadow: 0 16px 56px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.1), inset 0 0.5px 0 rgba(255,255,255,0.08);
+    padding: 14px;
+    z-index: 15000;
+    flex-direction: column;
+    gap: 10px;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    animation: controlCenterSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+.control-center[style*="display: block"] {
+    display: flex !important;
+}
+
+/* Top 2-column grid: connectivity stack + now playing */
+.cc-top-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.cc-connectivity-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cc-tile {
+    background: rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+.cc-tile:hover { background: rgba(255,255,255,0.13); }
+.cc-tile-active { background: rgba(0,122,255,0.25); }
+.cc-tile-active:hover { background: rgba(0,122,255,0.35); }
+
+.cc-tile-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+
+.cc-tile-text { min-width: 0; overflow: hidden; }
+.cc-tile-label { font-size: 12px; font-weight: 600; white-space: nowrap; letter-spacing: -0.01em; }
+.cc-tile-sub { font-size: 10px; color: rgba(255,255,255,0.4); white-space: nowrap; margin-top: 1px; }
+
+.cc-now-playing {
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+.cc-now-playing:hover { background: rgba(255,255,255,0.1); }
+.cc-np-label { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); }
+.cc-np-controls {
+    display: flex; gap: 16px; align-items: center; justify-content: center;
+    margin-top: 12px; font-size: 16px; color: rgba(255,255,255,0.7);
+}
+.cc-np-play-btn { font-size: 20px; color: #fff; }
+
+/* Circle toggles row */
+.cc-row { display: flex; gap: 10px; }
+.cc-toggles { gap: 12px; justify-content: center; }
+
+.cc-toggle-circle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.cc-circle-icon {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+.cc-circle-icon:hover { background: rgba(255,255,255,0.15); transform: scale(1.05); }
+.cc-circle-icon:active { transform: scale(0.95); }
+
+.cc-circle-label { font-size: 10px; color: rgba(255,255,255,0.5); text-align: center; font-weight: 500; }
+
+.cc-slider-section {
+    background: rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 14px 16px;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+.cc-slider-label { font-size: 12px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em; }
+.cc-slider-row { display: flex; align-items: center; gap: 12px; }
+.cc-slider-icon { font-size: 16px; flex-shrink: 0; }
+.cc-range {
+    flex: 1; height: 6px;
+    -webkit-appearance: none; appearance: none;
+    background: rgba(255,255,255,0.15); border-radius: 4px; outline: none;
+    transition: background 0.15s;
+}
+.cc-range:hover { background: rgba(255,255,255,0.25); }
+.cc-range::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px;
+    border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35); cursor: pointer;
+    transition: transform 0.15s;
+}
+.cc-range::-webkit-slider-thumb:hover { transform: scale(1.1); }
+
+/* (Now Playing styles are in the cc-top-grid section above) */
+
+/* ============================
+   Glassmorphism Inside Apps
+   ============================ */
+
+/* Calculator — frosted dark glass */
+.calculator-content {
+    background: rgba(20, 20, 22, 0.9) !important;
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+}
+
+/* Contact — glass cards */
+.contact-content {
+    background: rgba(255,255,255,0.4) !important;
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+body.dark-mode .contact-content {
+    background: rgba(28,28,30,0.7) !important;
+}
+
+.contact-card {
+    background: rgba(255,255,255,0.6) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease !important;
+}
+.contact-card:hover {
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12) !important;
+}
+body.dark-mode .contact-card {
+    background: rgba(58, 58, 60, 0.5) !important;
+    border-color: rgba(255,255,255,0.08) !important;
+}
+body.dark-mode .contact-card:hover {
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4) !important;
+}
+
+/* Projects — glass cards with hover lift */
+.project-card {
+    background: rgba(255,255,255,0.7) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease !important;
+}
+.project-card:hover {
+    transform: translateY(-6px) scale(1.015) !important;
+    box-shadow: 0 20px 48px rgba(0,0,0,0.15) !important;
+}
+body.dark-mode .project-card {
+    background: rgba(44, 44, 46, 0.6) !important;
+    border-color: rgba(255,255,255,0.06) !important;
+}
+body.dark-mode .project-card:hover {
+    box-shadow: 0 20px 48px rgba(0,0,0,0.5) !important;
+}
+
+/* Finder sections — subtle glass */
+.about-section {
+    background: rgba(255,255,255,0.5) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+}
+body.dark-mode .about-section {
+    background: rgba(44, 44, 46, 0.4) !important;
+    border-color: rgba(255,255,255,0.06);
+}
+
+/* Bento cards — glass */
+.bento-card {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.bento-card:hover {
+    transform: scale(1.02);
+}
+
+/* Preferences sections */
+.pref-category {
+    background: rgba(255,255,255,0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+body.dark-mode .pref-category {
+    background: rgba(44, 44, 46, 0.4);
+    border-color: rgba(255,255,255,0.06);
+}
+
+/* ============================
+   Enhanced macOS Modals (V2)
+   ============================ */
+.mac-modal-overlay {
+    backdrop-filter: blur(8px) saturate(150%);
+    -webkit-backdrop-filter: blur(8px) saturate(150%);
+}
+
+.mac-modal-overlay.welcome-active .mac-modal {
+    animation: springIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mac-modal {
+    border-radius: 14px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+}
+
+.mac-modal-btn.primary {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mac-modal-btn.primary:hover {
+    transform: scale(1.02);
+    filter: brightness(1.1);
+}
+
+.mac-modal-btn.primary:active {
+    transform: scale(0.97);
+}
+
+@keyframes springIn {
+    0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+    50% { opacity: 1; transform: scale(1.04) translateY(-2px); }
+    75% { transform: scale(0.99) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes springOut {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.85) translateY(10px); }
+}
+
+/* ============================
+   Mobile App Launcher (V2)
+   ============================ */
+@media (max-width: 480px) {
+    .mobile-app-launcher {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 16px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        z-index: 9999;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .mobile-app-launcher .mobile-app-icon {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+    }
+
+    .mobile-app-launcher .mobile-app-icon svg,
+    .mobile-app-launcher .mobile-app-icon img {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+    }
+
+    .mobile-app-launcher .mobile-app-icon span {
+        font-size: 10px;
+        color: white;
+        text-align: center;
+    }
+}
+
+/* ============================
+   PWA Standalone Mode
+   ============================ */
+@media (display-mode: standalone) {
+    body {
+        padding-top: env(safe-area-inset-top);
+    }
+    
+    .menu-bar {
+        padding-top: env(safe-area-inset-top);
+    }
+}
+
+/* ============================
+   Reduced Motion
+   ============================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================
+   Print Styles
+   ============================ */
+@media print {
+    .menu-bar, .dock, .desktop-widget, .launchpad-overlay,
+    .spotlight-overlay, .control-center, .cursor-canvas,
+    .notification, .mac-modal-overlay {
+        display: none !important;
+    }
+    
+    .window {
+        position: static !important;
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        box-shadow: none !important;
+    }
+}
+
+/* ============================
+   Liquid Glass / Glassmorphism Design System
+   ============================ */
+
+/* Glass effect on window titlebars */
+.window .window-titlebar {
+    background: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+body.dark-mode .window .window-titlebar {
+    background: rgba(40, 40, 42, 0.7) !important;
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Glass dock */
+.dock {
+    background: rgba(255, 255, 255, 0.18) !important;
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .dock {
+    background: rgba(30, 30, 30, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Glass modal */
+.mac-modal {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(60px) saturate(200%);
+    -webkit-backdrop-filter: blur(60px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+body.dark-mode .mac-modal {
+    background: rgba(44, 44, 46, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Glass menu bar */
+.menu-bar {
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(30px) saturate(200%);
+    -webkit-backdrop-filter: blur(30px) saturate(200%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .menu-bar {
+    background: rgba(25, 25, 25, 0.65) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Glass notification */
+.notification {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+body.dark-mode .notification {
+    background: rgba(44, 44, 46, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Glass spotlight */
+.spotlight-search {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(60px) saturate(200%);
+    -webkit-backdrop-filter: blur(60px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+body.dark-mode .spotlight-search {
+    background: rgba(44, 44, 46, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Glass dropdown menus */
+.dropdown-menu {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .dropdown-menu {
+    background: rgba(44, 44, 46, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Glass desktop widgets */
+.desktop-widget {
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode .desktop-widget {
+    background: rgba(30, 30, 30, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Neumorphic button effects for dock items */
+.dock-item svg,
+.dock-item img {
+    border-radius: 14px;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.dock-item:hover svg,
+.dock-item:hover img {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Glass window chrome */
+.window {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2), 0 0 0 0.5px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark-mode .window {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Glass launchpad */
+.launchpad-overlay {
+    backdrop-filter: blur(30px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(150%) !important;
+}
