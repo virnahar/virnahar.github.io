@@ -164,10 +164,14 @@ const wallpapers = {
     'ventura': `url('wallpapers/pexels-philippedonn-1169754.jpg')`,
     'sonoma': `url('wallpapers/pexels-eberhardgross-691668.jpg')`,
     'catalina': `url('wallpapers/pexels-souvenirpixels-417074.jpg')`,
-    'animated': `
-        linear-gradient(45deg, #FF6B9D 0%, #C94B7E 20%, #8B5CF6 40%, #4A90E2 60%, #38F9D7 80%, #FF8E53 100%)
-    `
+    'animated': `linear-gradient(45deg, #FF6B9D 0%, #C94B7E 20%, #8B5CF6 40%, #4A90E2 60%, #38F9D7 80%, #FF8E53 100%)`,
+    'aurora': `linear-gradient(135deg, #0f0c29 0%, #302b63 30%, #24243e 50%, #0f0c29 70%, #1a1a2e 100%)`,
+    'ocean': `linear-gradient(180deg, #0077b6 0%, #00b4d8 25%, #90e0ef 50%, #caf0f8 75%, #023e8a 100%)`,
+    'sunset': `linear-gradient(135deg, #1a1a2e 0%, #16213e 15%, #e94560 40%, #f97316 55%, #fbbf24 70%, #533483 85%, #0f3460 100%)`,
+    'matrix': `linear-gradient(180deg, #000000 0%, #001a00 30%, #003300 50%, #001a00 70%, #000000 100%)`
 };
+
+var _dynamicWallpapers = ['animated','aurora','ocean','sunset','matrix'];
 
 let currentWallpaper = 'bigsur';
 let currentTheme = 'dark';
@@ -208,12 +212,14 @@ function applyWallpaper(wallpaper) {
     const body = document.body;
 
     body.classList.remove('animated-wallpaper');
+    body.style.animation = 'none';
 
-    if (wallpaper === 'animated') {
+    if (_dynamicWallpapers.indexOf(wallpaper) !== -1) {
         body.style.background = wallpapers[wallpaper];
         body.style.backgroundSize = '400% 400%';
-        body.style.animation = 'gradientShift 15s ease infinite';
         body.classList.add('animated-wallpaper');
+        var speeds = { animated: 15, aurora: 25, ocean: 20, sunset: 18, matrix: 10 };
+        body.style.animation = 'gradientShift ' + (speeds[wallpaper] || 15) + 's ease infinite';
     } else {
         body.style.backgroundImage = wallpapers[wallpaper];
         body.style.backgroundSize = 'cover';

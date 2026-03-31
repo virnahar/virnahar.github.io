@@ -19,7 +19,8 @@ const windows = {
     'calculator': document.getElementById('calculator-window'),
     'notes': document.getElementById('notes-window'),
     'codeeditor': document.getElementById('codeeditor-window'),
-    'stickynotes': document.getElementById('stickynotes-window')
+    'stickynotes': document.getElementById('stickynotes-window'),
+    'monitor': document.getElementById('monitor-window')
 };
 
 let recentWindows = [];
@@ -39,7 +40,8 @@ const windowPositions = {
     'calculator': { top: '120px', left: '400px', width: '260px', height: 'auto' },
     'notes': { top: '80px', left: '200px', width: '850px', height: '600px' },
     'codeeditor': { top: '90px', left: '180px', width: '950px', height: '650px' },
-    'stickynotes': { top: '110px', left: '250px', width: '600px', height: '500px' }
+    'stickynotes': { top: '110px', left: '250px', width: '600px', height: '500px' },
+    'monitor': { top: '60px', left: '120px', width: '1050px', height: '700px' }
 };
 
 // ===== OPEN WINDOW =====
@@ -104,6 +106,9 @@ function openWindow(appName) {
     if (appName === 'notes' && typeof initNotesApp === 'function') {
         setTimeout(() => initNotesApp(), 200);
     }
+    if (appName === 'monitor' && typeof initMonitorDashboard === 'function') {
+        setTimeout(function() { initMonitorDashboard(); }, 200);
+    }
     if (appName === 'codeeditor' && typeof initCodeEditor === 'function') {
         setTimeout(() => initCodeEditor(), 200);
     }
@@ -153,7 +158,8 @@ function updateMenuBarAppName(win) {
         'calculator-window': 'Calculator',
         'notes-window': 'Notes',
         'codeeditor-window': 'Code Editor',
-        'stickynotes-window': 'Sticky Notes'
+        'stickynotes-window': 'Sticky Notes',
+        'monitor-window': 'DevOs Monitor'
     };
 
     activeAppName.textContent = appNames[win.id] || "Virendra's OS";
@@ -238,6 +244,7 @@ function toggleMaximize(win) {
         win.style.left = win.dataset.originalLeft;
         win.style.width = win.dataset.originalWidth;
         win.style.height = win.dataset.originalHeight;
+        win.style.borderRadius = '';
         setTimeout(() => {
             win.classList.remove('maximizing');
             win.style.transition = '';
@@ -253,7 +260,9 @@ function toggleMaximize(win) {
         win.style.top = '28px';
         win.style.left = '0';
         win.style.width = '100vw';
-        win.style.height = 'calc(100vh - 108px)';
+        win.style.height = 'calc(100vh - 100px)';
+        win.style.zIndex = ++zIndexCounter;
+        win.style.borderRadius = '0';
         setTimeout(() => {
             win.classList.remove('maximizing');
             win.style.transition = '';
@@ -1427,6 +1436,104 @@ function closeMissionControl() {
 if (!localStorage.getItem('devos-theme')) {
     if (typeof applyTheme === 'function') applyTheme('dark');
 }
+
+// ===== ORBITING DESKTOP ICONS =====
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        var desktop = document.getElementById('desktop');
+        if (!desktop) return;
+
+        var icons = Array.from(desktop.querySelectorAll('.desktop-icon'));
+        if (icons.length === 0) return;
+
+        var centerX = desktop.offsetWidth / 2;
+        var centerY = desktop.offsetHeight / 2;
+
+        var appleLogo = document.createElement('div');
+        appleLogo.id = 'desktop-apple-logo';
+        appleLogo.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;';
+
+        var glowBg = document.createElement('div');
+        glowBg.style.cssText = 'position:absolute;width:160px;height:160px;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-55%);background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%);pointer-events:none;transition:all 0.6s ease;';
+
+        var svgWrap = document.createElement('div');
+        svgWrap.style.cssText = 'position:relative;transition:transform 0.3s ease;';
+        svgWrap.innerHTML = '<svg width="56" height="56" viewBox="0 0 24 24" fill="white" style="opacity:0.7;transition:opacity 0.4s ease,filter 0.4s ease;filter:drop-shadow(0 0 12px rgba(255,255,255,0.2));"><path d="M18.71,19.5C17.88,20.74 17,21.95 15.66,21.97C14.32,22 13.89,21.18 12.37,21.18C10.84,21.18 10.37,21.95 9.1,22C7.79,22.05 6.8,20.68 5.96,19.47C4.25,17 2.94,12.45 4.7,9.39C5.57,7.87 7.13,6.91 8.82,6.88C10.1,6.86 11.32,7.75 12.11,7.75C12.89,7.75 14.37,6.68 15.92,6.84C16.57,6.87 18.39,7.1 19.56,8.82C19.47,8.88 17.39,10.1 17.41,12.63C17.44,15.65 20.06,16.66 20.09,16.67C20.06,16.74 19.67,18.11 18.71,19.5M13,3.5C13.73,2.67 14.94,2.04 15.94,2C16.07,3.17 15.6,4.35 14.9,5.19C14.21,6.04 13.07,6.7 11.95,6.61C11.8,5.46 12.36,4.26 13,3.5Z"/></svg>';
+        var svgEl = svgWrap.querySelector('svg');
+
+        var textEl = document.createElement('div');
+        textEl.style.cssText = 'color:rgba(255,255,255,0.45);font-size:12px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,sans-serif;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.4s ease;';
+        textEl.textContent = "Vir's DevOs";
+
+        appleLogo.appendChild(glowBg);
+        appleLogo.appendChild(svgWrap);
+        appleLogo.appendChild(textEl);
+        desktop.appendChild(appleLogo);
+
+        appleLogo.addEventListener('mouseenter', function() {
+            svgEl.style.opacity = '1';
+            svgEl.style.filter = 'drop-shadow(0 0 25px rgba(255,255,255,0.5))';
+            glowBg.style.width = '200px';
+            glowBg.style.height = '200px';
+            glowBg.style.background = 'radial-gradient(circle, rgba(255,255,255,0.14) 0%, transparent 70%)';
+            textEl.style.color = 'rgba(255,255,255,0.75)';
+            textEl.style.letterSpacing = '2.5px';
+        });
+
+        appleLogo.addEventListener('mouseleave', function() {
+            svgEl.style.opacity = '0.7';
+            svgEl.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.2))';
+            svgWrap.style.transform = '';
+            glowBg.style.width = '160px';
+            glowBg.style.height = '160px';
+            glowBg.style.background = 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)';
+            textEl.style.color = 'rgba(255,255,255,0.45)';
+            textEl.style.letterSpacing = '1.5px';
+        });
+
+        appleLogo.addEventListener('mousemove', function(e) {
+            var rect = appleLogo.getBoundingClientRect();
+            var x = (e.clientX - rect.left) / rect.width - 0.5;
+            var y = (e.clientY - rect.top) / rect.height - 0.5;
+            svgWrap.style.transform = 'rotateY(' + (x * 20) + 'deg) rotateX(' + (-y * 20) + 'deg)';
+        });
+
+        appleLogo.addEventListener('click', function() { openLaunchpad(); });
+
+        var count = icons.length;
+        var radius = Math.min(centerX, centerY) * 0.65;
+        var angle = 0;
+        var speed = 0.0008;
+
+        function positionIcons() {
+            centerX = desktop.offsetWidth / 2;
+            centerY = desktop.offsetHeight / 2;
+            var isMobile = window.innerWidth < 768;
+            radius = Math.min(centerX, centerY) * (isMobile ? 0.55 : 0.65);
+            if (radius < 80) radius = 80;
+            if (radius > 300) radius = 300;
+
+            for (var i = 0; i < count; i++) {
+                var a = angle + (i / count) * Math.PI * 2;
+                var x = centerX + Math.cos(a) * radius - 38;
+                var y = centerY + Math.sin(a) * radius - 45;
+                icons[i].style.left = x + 'px';
+                icons[i].style.top = y + 'px';
+            }
+        }
+
+        function animate() {
+            angle += speed;
+            positionIcons();
+            requestAnimationFrame(animate);
+        }
+
+        positionIcons();
+        animate();
+
+        window.addEventListener('resize', function() { positionIcons(); });
+    }, 1500);
+});
 
 // ===== CONSOLE LOG MESSAGES =====
 console.log("🍎 Virendra's DevOS v2.0!");

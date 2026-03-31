@@ -1133,3 +1133,652 @@ function resetContactForm() {
         section.style.opacity = '1';
     }, 300);
 }
+
+// ===== MONITOR DASHBOARD — Real-time DevOps Monitoring =====
+var monitorInitialized = false;
+
+function initMonitorDashboard() {
+    if (monitorInitialized) return;
+    monitorInitialized = true;
+
+    var container = document.getElementById('monitor-dashboard');
+    if (!container) return;
+
+    container.innerHTML = '';
+    container.style.cssText = 'background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;padding:0;overflow-y:auto;height:100%;';
+
+    var monIntervals = [];
+
+    function monSafeInterval(fn, ms) {
+        var id = setInterval(function() {
+            if (!document.getElementById('monitor-dashboard')) { clearInterval(id); return; }
+            fn();
+        }, ms);
+        monIntervals.push(id);
+        return id;
+    }
+
+    function monEl(tag, styles, text) {
+        var el = document.createElement(tag);
+        if (styles) el.style.cssText = styles;
+        if (text !== undefined) el.textContent = text;
+        return el;
+    }
+
+    function monRand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    function monTimeStr() { var d = new Date(); return d.toLocaleTimeString('en-US', { hour12: false }); }
+
+    var pulseStyle = document.createElement('style');
+    pulseStyle.textContent = '@keyframes monPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}} @keyframes monNumTick{0%{transform:translateY(-4px);opacity:.5}100%{transform:translateY(0);opacity:1}} .mon-num-tick{animation:monNumTick .3s ease-out;} @keyframes monBarGrow{from{width:0}to{width:var(--target-w)}}';
+    container.appendChild(pulseStyle);
+
+    // ── DARK NAV BAR ──
+    var navBar = monEl('div', 'display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:#161b22;border-bottom:1px solid rgba(255,255,255,0.08);');
+
+    var navLeft = monEl('div', 'display:flex;align-items:center;gap:8px;');
+    var navDot = monEl('div', 'width:8px;height:8px;border-radius:50%;background:#3fb950;box-shadow:0 0 6px #3fb950;animation:monPulse 2s infinite;');
+    var navTitle = monEl('span', 'font-size:15px;font-weight:700;color:#e6edf3;letter-spacing:0.02em;', 'DevOs Monitor');
+    navLeft.appendChild(navDot);
+    navLeft.appendChild(navTitle);
+
+    var navCenter = monEl('div', 'display:flex;gap:4px;');
+    var tabBtns = [];
+    ['Overview', 'Services', 'Logs'].forEach(function(t, idx) {
+        var btn = monEl('button', 'background:' + (idx === 0 ? 'rgba(63,185,80,0.15)' : 'transparent') + ';color:' + (idx === 0 ? '#3fb950' : '#8b949e') + ';border:1px solid ' + (idx === 0 ? 'rgba(63,185,80,0.3)' : 'rgba(255,255,255,0.06)') + ';border-radius:6px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s ease;');
+        btn.textContent = t;
+        btn.dataset.tab = t;
+        btn.onmouseenter = function() { if (this.dataset.tab !== _monActiveTab) this.style.background = 'rgba(255,255,255,0.06)'; };
+        btn.onmouseleave = function() { if (this.dataset.tab !== _monActiveTab) this.style.background = 'transparent'; };
+        btn.onclick = function() { _monSwitchTab(t); };
+        tabBtns.push(btn);
+        navCenter.appendChild(btn);
+    });
+    var _monActiveTab = 'Overview';
+    var _monSections = {};
+
+    function _monSwitchTab(tab) {
+        _monActiveTab = tab;
+        tabBtns.forEach(function(b) {
+            var active = b.dataset.tab === tab;
+            b.style.background = active ? 'rgba(63,185,80,0.15)' : 'transparent';
+            b.style.color = active ? '#3fb950' : '#8b949e';
+            b.style.borderColor = active ? 'rgba(63,185,80,0.3)' : 'rgba(255,255,255,0.06)';
+        });
+        var target = _monSections[tab];
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            target.style.transition = 'box-shadow 0.3s ease';
+            target.style.boxShadow = '0 0 0 2px rgba(63,185,80,0.3)';
+            setTimeout(function() { target.style.boxShadow = ''; }, 1500);
+        }
+    }
+
+    var navRight = monEl('span', 'font-size:11px;color:#8b949e;');
+    navRight.textContent = 'Last updated: ' + monTimeStr();
+
+    navBar.appendChild(navLeft);
+    navBar.appendChild(navCenter);
+    navBar.appendChild(navRight);
+    container.appendChild(navBar);
+
+    monSafeInterval(function() { navRight.textContent = 'Last updated: ' + monTimeStr(); }, 2000);
+
+    var wrap = monEl('div', 'padding:16px 20px;display:flex;flex-direction:column;gap:16px;');
+    container.appendChild(wrap);
+
+    // ── TOP BAR: Status Banner ──
+    var statusDegraded = false;
+    var topBar = monEl('div', 'display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:10px;border-left:3px solid #00e676;background:rgba(0,255,0,0.05);transition:box-shadow 0.3s ease;');
+    _monSections['Overview'] = topBar;
+
+    var statusLeft = monEl('div', 'display:flex;align-items:center;gap:10px;');
+    var pulseDot = monEl('div', 'width:10px;height:10px;border-radius:50%;background:#00e676;box-shadow:0 0 8px #00e676;animation:monPulse 2s infinite;');
+    var statusText = monEl('span', 'font-size:14px;font-weight:600;color:#00e676;', 'All Systems Operational');
+    statusLeft.appendChild(pulseDot);
+    statusLeft.appendChild(statusText);
+
+    var lastUpdated = monEl('span', 'font-size:12px;color:#8b949e;', 'Last updated: ' + monTimeStr());
+    topBar.appendChild(statusLeft);
+    topBar.appendChild(lastUpdated);
+    wrap.appendChild(topBar);
+
+    monSafeInterval(function() {
+        lastUpdated.textContent = 'Last updated: ' + monTimeStr();
+        if (Math.random() < 0.05 && !statusDegraded) {
+            statusDegraded = true;
+            pulseDot.style.background = '#f0b429';
+            pulseDot.style.boxShadow = '0 0 8px #f0b429';
+            statusText.textContent = 'Degraded Performance';
+            statusText.style.color = '#f0b429';
+            topBar.style.borderLeftColor = '#f0b429';
+            topBar.style.background = 'rgba(240,180,41,0.05)';
+            setTimeout(function() {
+                statusDegraded = false;
+                pulseDot.style.background = '#00e676';
+                pulseDot.style.boxShadow = '0 0 8px #00e676';
+                statusText.textContent = 'All Systems Operational';
+                statusText.style.color = '#00e676';
+                topBar.style.borderLeftColor = '#00e676';
+                topBar.style.background = 'rgba(0,255,0,0.05)';
+            }, 6000);
+        }
+    }, 2000);
+
+    // ── ROW 1: 5 Metric Cards (with sparklines) ──
+    var metricsRow = monEl('div', 'display:grid;grid-template-columns:repeat(5,1fr);gap:12px;');
+    var cardStyle = 'background:rgba(255,255,255,0.04);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;gap:4px;';
+
+    var activeUsers = 142;
+    var pageViews = 2847;
+    var avgResp = 24;
+    var uptime = 99.97;
+    var deploys = 12;
+
+    function monSparkline(color, data) {
+        var spark = monEl('div', 'display:flex;align-items:flex-end;gap:2px;height:16px;margin-top:4px;');
+        var bars = [];
+        for (var i = 0; i < 5; i++) {
+            var h = data ? data[i] : monRand(30, 100);
+            var seg = monEl('div', 'flex:1;border-radius:1px;background:' + color + ';opacity:0.4;transition:height 0.4s ease;');
+            seg.style.height = h + '%';
+            spark.appendChild(seg);
+            bars.push(seg);
+        }
+        return { el: spark, bars: bars };
+    }
+
+    function monMetricCard(emoji, value, label, trendDir, trendColor) {
+        var card = monEl('div', cardStyle);
+        var icon = monEl('div', 'font-size:16px;margin-bottom:2px;', emoji);
+        var num = monEl('div', 'font-size:28px;font-weight:800;color:#e6edf3;letter-spacing:-0.02em;');
+        num.textContent = value;
+        var row = monEl('div', 'display:flex;align-items:center;justify-content:space-between;');
+        var lbl = monEl('span', 'font-size:11px;color:#8b949e;', label);
+        var trend = monEl('span', 'font-size:11px;font-weight:600;color:' + trendColor + ';', trendDir);
+        row.appendChild(lbl);
+        row.appendChild(trend);
+        var sparkData = monSparkline(trendColor);
+        card.appendChild(icon);
+        card.appendChild(num);
+        card.appendChild(row);
+        card.appendChild(sparkData.el);
+        return { el: card, numEl: num, trendEl: trend, spark: sparkData };
+    }
+
+    var c1 = monMetricCard('👥', activeUsers.toLocaleString(), 'Active Users', '↑ 12%', '#3fb950');
+    var c2 = monMetricCard('📊', pageViews.toLocaleString(), 'Page Views', '↑ 8%', '#3fb950');
+    var c3 = monMetricCard('⚡', avgResp + 'ms', 'Avg Response', '↓ 3ms', '#3fb950');
+    var c4 = monMetricCard('🕐', uptime.toFixed(2) + '%', 'Uptime', '— stable', '#8b949e');
+    var c5 = monMetricCard('🚀', deploys.toString(), 'Deploys Today', '↑ 4', '#a371f7');
+    c5.el.style.borderColor = 'rgba(163,113,247,0.15)';
+
+    metricsRow.appendChild(c1.el);
+    metricsRow.appendChild(c2.el);
+    metricsRow.appendChild(c3.el);
+    metricsRow.appendChild(c4.el);
+    metricsRow.appendChild(c5.el);
+    wrap.appendChild(metricsRow);
+
+    function tickNum(el) { el.classList.remove('mon-num-tick'); void el.offsetWidth; el.classList.add('mon-num-tick'); }
+    function shiftSpark(spark) {
+        for (var si = 0; si < 4; si++) {
+            spark.bars[si].style.height = spark.bars[si + 1].style.height;
+        }
+        spark.bars[4].style.height = monRand(25, 100) + '%';
+    }
+
+    monSafeInterval(function() {
+        activeUsers = Math.max(80, activeUsers + monRand(-5, 5));
+        c1.numEl.textContent = activeUsers.toLocaleString();
+        tickNum(c1.numEl);
+        shiftSpark(c1.spark);
+    }, 3000);
+
+    monSafeInterval(function() {
+        pageViews += monRand(1, 5);
+        c2.numEl.textContent = pageViews.toLocaleString();
+        tickNum(c2.numEl);
+        shiftSpark(c2.spark);
+    }, 2000);
+
+    monSafeInterval(function() {
+        avgResp = monRand(18, 35);
+        c3.numEl.textContent = avgResp + 'ms';
+        var respColor = avgResp < 30 ? '#3fb950' : '#f0b429';
+        c3.numEl.style.color = respColor;
+        c3.trendEl.style.color = respColor;
+        c3.trendEl.textContent = avgResp < 30 ? '↓ fast' : '↑ slow';
+        tickNum(c3.numEl);
+        shiftSpark(c3.spark);
+    }, 2500);
+
+    monSafeInterval(function() {
+        var lastDigit = monRand(95, 99);
+        uptime = parseFloat('99.' + lastDigit);
+        c4.numEl.textContent = uptime.toFixed(2) + '%';
+        shiftSpark(c4.spark);
+    }, 5000);
+
+    monSafeInterval(function() {
+        if (Math.random() < 0.3) {
+            deploys += 1;
+            c5.numEl.textContent = deploys.toString();
+            tickNum(c5.numEl);
+            c5.trendEl.textContent = '↑ ' + (deploys - 12);
+        }
+        shiftSpark(c5.spark);
+    }, 7000);
+
+    // ── ROW 2: Services (left) + Resource Gauges (right) ──
+    var row2 = monEl('div', 'display:grid;grid-template-columns:1.6fr 1fr;gap:12px;');
+
+    var servicesWrap = monEl('div', 'background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.06);transition:box-shadow 0.3s ease;');
+    _monSections['Services'] = servicesWrap;
+    var servicesTitle = monEl('div', 'font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:12px;', '⬡ Services');
+    servicesWrap.appendChild(servicesTitle);
+
+    var servicesGrid = monEl('div', 'display:grid;grid-template-columns:1fr 1fr;gap:8px;');
+    var services = [
+        { name: 'Frontend', uptime: '99.99', latency: 8, incident: 'Never' },
+        { name: 'API Server', uptime: '99.97', latency: 12, incident: '3d ago' },
+        { name: 'Redis Cache', uptime: '100.00', latency: 2, incident: 'Never' },
+        { name: 'Kubernetes', uptime: '99.98', latency: 15, incident: '7d ago' },
+        { name: 'CI/CD Pipeline', uptime: '99.95', latency: 45, incident: '1d ago' },
+        { name: 'DNS / CDN', uptime: '100.00', latency: 4, incident: 'Never' }
+    ];
+
+    var serviceCards = [];
+    services.forEach(function(svc) {
+        var card = monEl('div', 'background:rgba(255,255,255,0.03);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:6px;');
+        var top = monEl('div', 'display:flex;align-items:center;gap:8px;');
+        var dot = monEl('div', 'width:8px;height:8px;border-radius:50%;background:#3fb950;flex-shrink:0;');
+        var name = monEl('span', 'font-size:13px;font-weight:600;color:#e6edf3;flex:1;', svc.name);
+        var latEl = monEl('span', 'font-size:10px;color:#8b949e;font-family:"SF Mono",monospace;', svc.latency + 'ms');
+        top.appendChild(dot);
+        top.appendChild(name);
+        top.appendChild(latEl);
+        var mid = monEl('div', 'display:flex;justify-content:space-between;align-items:center;');
+        var uptimeLabel = monEl('span', 'font-size:11px;color:#8b949e;', svc.uptime + '% uptime');
+        var checked = monEl('span', 'font-size:10px;color:#484f58;', monTimeStr());
+        mid.appendChild(uptimeLabel);
+        mid.appendChild(checked);
+        var incRow = monEl('div', 'font-size:10px;color:#484f58;');
+        incRow.textContent = 'Last incident: ' + svc.incident;
+        card.appendChild(top);
+        card.appendChild(mid);
+        card.appendChild(incRow);
+        servicesGrid.appendChild(card);
+        serviceCards.push({ el: card, dot: dot, checked: checked, latEl: latEl, name: svc.name, baseLat: svc.latency });
+    });
+
+    servicesWrap.appendChild(servicesGrid);
+    row2.appendChild(servicesWrap);
+
+    var degradedIdx = -1;
+    monSafeInterval(function() {
+        serviceCards.forEach(function(sc) {
+            sc.checked.textContent = monTimeStr();
+            sc.latEl.textContent = Math.max(1, sc.baseLat + monRand(-3, 3)) + 'ms';
+        });
+        if (degradedIdx >= 0) {
+            serviceCards[degradedIdx].dot.style.background = '#3fb950';
+            degradedIdx = -1;
+        }
+        if (Math.random() < 0.15) {
+            degradedIdx = monRand(0, serviceCards.length - 1);
+            serviceCards[degradedIdx].dot.style.background = '#f0b429';
+            setTimeout(function() {
+                if (degradedIdx >= 0 && serviceCards[degradedIdx]) {
+                    serviceCards[degradedIdx].dot.style.background = '#3fb950';
+                    degradedIdx = -1;
+                }
+            }, 8000);
+        }
+    }, 5000);
+
+    // Resource Gauges
+    var gaugesWrap = monEl('div', 'background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;gap:14px;');
+    var gaugesTitle = monEl('div', 'font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:4px;', '📈 Resources');
+    gaugesWrap.appendChild(gaugesTitle);
+
+    var cpuPct = 34, memPct = 62, diskPct = 47, netMbps = 34;
+
+    function monGauge(label, pct, color, unit) {
+        var row = monEl('div', 'display:flex;flex-direction:column;gap:6px;');
+        var top = monEl('div', 'display:flex;justify-content:space-between;align-items:center;');
+        var lbl = monEl('span', 'font-size:12px;color:#8b949e;', label);
+        var val = monEl('span', 'font-size:13px;font-weight:700;color:#e6edf3;');
+        val.textContent = pct + (unit || '%');
+        top.appendChild(lbl);
+        top.appendChild(val);
+        var track = monEl('div', 'height:10px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;position:relative;');
+        var fill = monEl('div', 'height:100%;border-radius:5px;transition:width 0.6s ease;width:' + pct + '%;position:relative;');
+        fill.style.background = 'linear-gradient(90deg,' + color + ',' + color + 'cc)';
+        fill.style.boxShadow = '0 0 8px ' + color + '44';
+        track.appendChild(fill);
+        row.appendChild(top);
+        row.appendChild(track);
+        return { el: row, fill: fill, val: val, unit: unit || '%', setColor: function(c) { fill.style.background = 'linear-gradient(90deg,' + c + ',' + c + 'cc)'; fill.style.boxShadow = '0 0 8px ' + c + '44'; } };
+    }
+
+    var gCpu = monGauge('CPU', cpuPct, '#3fb950');
+    var gMem = monGauge('Memory', memPct, '#f0b429');
+    var gDisk = monGauge('Disk', diskPct, '#3fb950');
+    var gNet = monGauge('Network I/O', netMbps, '#58a6ff', ' Mbps');
+    gaugesWrap.appendChild(gCpu.el);
+    gaugesWrap.appendChild(gMem.el);
+    gaugesWrap.appendChild(gDisk.el);
+    gaugesWrap.appendChild(gNet.el);
+    row2.appendChild(gaugesWrap);
+    wrap.appendChild(row2);
+
+    monSafeInterval(function() {
+        cpuPct = Math.min(95, Math.max(15, cpuPct + monRand(-8, 8)));
+        gCpu.fill.style.width = cpuPct + '%';
+        gCpu.val.textContent = cpuPct + '%';
+        var cpuColor = cpuPct > 75 ? '#f85149' : cpuPct > 50 ? '#f0b429' : '#3fb950';
+        gCpu.setColor(cpuColor);
+    }, 3000);
+
+    monSafeInterval(function() {
+        memPct = Math.min(92, Math.max(40, memPct + monRand(-5, 5)));
+        gMem.fill.style.width = memPct + '%';
+        gMem.val.textContent = memPct + '%';
+        var memColor = memPct > 80 ? '#f85149' : memPct > 55 ? '#f0b429' : '#3fb950';
+        gMem.setColor(memColor);
+    }, 3500);
+
+    monSafeInterval(function() {
+        diskPct = Math.min(89, diskPct + monRand(0, 1));
+        gDisk.fill.style.width = diskPct + '%';
+        gDisk.val.textContent = diskPct + '%';
+        var diskColor = diskPct > 75 ? '#f85149' : diskPct > 55 ? '#f0b429' : '#3fb950';
+        gDisk.setColor(diskColor);
+    }, 8000);
+
+    monSafeInterval(function() {
+        netMbps = Math.min(95, Math.max(10, netMbps + monRand(-8, 8)));
+        gNet.fill.style.width = netMbps + '%';
+        gNet.val.textContent = netMbps + ' Mbps';
+        var netColor = netMbps > 75 ? '#f85149' : netMbps > 50 ? '#f0b429' : '#58a6ff';
+        gNet.setColor(netColor);
+    }, 2500);
+
+    // ── ROW 2.5: Request Distribution ──
+    var distWrap = monEl('div', 'background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.06);');
+    var distTitle = monEl('div', 'font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:12px;', '🌐 Request Distribution');
+    distWrap.appendChild(distTitle);
+
+    var distSources = [
+        { label: 'Direct', pct: 42, color: '#58a6ff' },
+        { label: 'Search', pct: 28, color: '#3fb950' },
+        { label: 'Social', pct: 18, color: '#a371f7' },
+        { label: 'Referral', pct: 12, color: '#f0883e' }
+    ];
+
+    var distTrack = monEl('div', 'display:flex;height:28px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.05);');
+    var distFills = [];
+    distSources.forEach(function(src) {
+        var seg = monEl('div', 'height:100%;transition:width 1.2s cubic-bezier(0.4,0,0.2,1);width:0%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;');
+        seg.style.background = src.color;
+        seg.textContent = src.label + ' ' + src.pct + '%';
+        distTrack.appendChild(seg);
+        distFills.push({ el: seg, target: src.pct });
+    });
+    distWrap.appendChild(distTrack);
+
+    var distLegend = monEl('div', 'display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;');
+    distSources.forEach(function(src) {
+        var item = monEl('div', 'display:flex;align-items:center;gap:5px;');
+        var dot = monEl('div', 'width:8px;height:8px;border-radius:2px;background:' + src.color + ';');
+        var lbl = monEl('span', 'font-size:11px;color:#8b949e;', src.label + ' — ' + src.pct + '%');
+        item.appendChild(dot);
+        item.appendChild(lbl);
+        distLegend.appendChild(item);
+    });
+    distWrap.appendChild(distLegend);
+    wrap.appendChild(distWrap);
+
+    setTimeout(function() {
+        distFills.forEach(function(f) { f.el.style.width = f.target + '%'; });
+    }, 100);
+
+    // ── ROW 3: Response Chart (left) + Event Log (right) ──
+    var row3 = monEl('div', 'display:grid;grid-template-columns:1fr 1fr;gap:12px;');
+
+    var chartWrap = monEl('div', 'background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.06);');
+    var chartTitle = monEl('div', 'font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:12px;', '📉 Response Time (ms)');
+    chartWrap.appendChild(chartTitle);
+
+    var chartArea = monEl('div', 'display:flex;align-items:flex-end;gap:2px;height:100px;position:relative;overflow:hidden;');
+
+    var slaLine = monEl('div', 'position:absolute;left:0;right:0;border-top:2px dashed rgba(240,180,41,0.5);z-index:1;pointer-events:none;');
+    slaLine.style.bottom = 'calc(20px + ' + ((30 / 60) * 100) + '%)';
+    var slaLabel = monEl('span', 'position:absolute;right:0;top:-14px;font-size:9px;color:#f0b429;font-weight:600;', 'SLA 30ms');
+    slaLine.appendChild(slaLabel);
+    chartArea.appendChild(slaLine);
+
+    var chartLabels = monEl('div', 'display:flex;gap:2px;justify-content:space-between;margin-top:6px;');
+
+    var chartBars = [];
+    var chartData = [];
+    for (var bi = 0; bi < 12; bi++) {
+        var v = monRand(20, 50);
+        chartData.push(v);
+        var bar = monEl('div', 'flex:1;border-radius:4px 4px 0 0;transition:height 0.4s ease,background 0.4s ease;min-width:0;');
+        bar.style.height = Math.max(4, (v / 60) * 100) + '%';
+        bar.style.background = v < 30 ? '#238636' : '#9e6a03';
+        bar.title = v + 'ms';
+        chartBars.push(bar);
+        chartArea.appendChild(bar);
+
+        var lbl = monEl('span', 'font-size:9px;color:#484f58;text-align:center;flex:1;');
+        var now = new Date();
+        now.setSeconds(now.getSeconds() - (11 - bi) * 3);
+        lbl.textContent = now.toLocaleTimeString('en-US', { hour12: false, minute: '2-digit', second: '2-digit' });
+        chartLabels.appendChild(lbl);
+    }
+
+    chartWrap.appendChild(chartArea);
+    chartWrap.appendChild(chartLabels);
+
+    var chartStats = monEl('div', 'display:flex;justify-content:space-around;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06);');
+    var statMin = monEl('span', 'font-size:11px;color:#3fb950;', 'Min: 20ms');
+    var statAvg = monEl('span', 'font-size:11px;color:#8b949e;', 'Avg: 32ms');
+    var statMax = monEl('span', 'font-size:11px;color:#f0b429;', 'Max: 50ms');
+    chartStats.appendChild(statMin);
+    chartStats.appendChild(statAvg);
+    chartStats.appendChild(statMax);
+    chartWrap.appendChild(chartStats);
+
+    row3.appendChild(chartWrap);
+
+    function updateChartStats() {
+        var mn = 999, mx = 0, sum = 0;
+        for (var k = 0; k < chartData.length; k++) {
+            if (chartData[k] < mn) mn = chartData[k];
+            if (chartData[k] > mx) mx = chartData[k];
+            sum += chartData[k];
+        }
+        statMin.textContent = 'Min: ' + mn + 'ms';
+        statAvg.textContent = 'Avg: ' + Math.round(sum / chartData.length) + 'ms';
+        statMax.textContent = 'Max: ' + mx + 'ms';
+    }
+    updateChartStats();
+
+    monSafeInterval(function() {
+        chartData.shift();
+        var nv = monRand(20, 50);
+        chartData.push(nv);
+        for (var i = 0; i < 12; i++) {
+            chartBars[i].style.height = Math.max(4, (chartData[i] / 60) * 100) + '%';
+            chartBars[i].style.background = chartData[i] < 30 ? '#238636' : '#9e6a03';
+            chartBars[i].title = chartData[i] + 'ms';
+        }
+        chartLabels.innerHTML = '';
+        for (var j = 0; j < 12; j++) {
+            var lbl2 = monEl('span', 'font-size:9px;color:#484f58;text-align:center;flex:1;');
+            var t = new Date();
+            t.setSeconds(t.getSeconds() - (11 - j) * 3);
+            lbl2.textContent = t.toLocaleTimeString('en-US', { hour12: false, minute: '2-digit', second: '2-digit' });
+            chartLabels.appendChild(lbl2);
+        }
+        updateChartStats();
+    }, 3000);
+
+    // Event Log
+    var logWrap = monEl('div', 'background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;transition:box-shadow 0.3s ease;');
+    _monSections['Logs'] = logWrap;
+    var logTitle = monEl('div', 'font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:10px;', '📋 Event Log');
+    logWrap.appendChild(logTitle);
+
+    var logList = monEl('div', 'flex:1;overflow-y:auto;max-height:200px;display:flex;flex-direction:column;gap:4px;');
+    logWrap.appendChild(logList);
+
+    var eventTemplates = [
+        '✅ Deploy v2.1.{v} succeeded — production',
+        '🔄 Certificate renewed — devos-tls ({d} days)',
+        '📦 Cache cleared — redis-master',
+        '⚡ Auto-scaled workers {a}→{b} (queue: {q})',
+        '🔒 Security scan passed — 0 vulnerabilities',
+        '📊 Backup completed — {s}GB compressed',
+        '🚀 Pipeline #{p} completed in {m}m {ss}s',
+        '✅ Health check passed — all endpoints',
+        '⎈ Pod devos-worker-{x} restarted (OOMKilled → Running)',
+        '🔄 ArgoCD sync completed — devos-api',
+        '🛡️ WAF blocked {w} malicious requests',
+        '📈 Horizontal pod autoscaler adjusted replicas to {r}',
+        '🔑 Secret rotation completed — vault-kv-v2',
+        '💾 Database vacuum completed — 12ms',
+        '⚠️ Error rate spike detected on /api/v2 — auto-scaled',
+        '⚠️ Service degraded — Redis latency > 50ms'
+    ];
+
+    function monGenEvent() {
+        var tpl = eventTemplates[monRand(0, eventTemplates.length - 1)];
+        return tpl
+            .replace('{v}', monRand(1, 9))
+            .replace('{d}', monRand(30, 89))
+            .replace('{a}', monRand(2, 3))
+            .replace('{b}', monRand(4, 6))
+            .replace('{q}', monRand(80, 250))
+            .replace('{s}', (monRand(15, 40) / 10).toFixed(1))
+            .replace('{p}', monRand(800, 999))
+            .replace('{m}', monRand(2, 7))
+            .replace('{ss}', monRand(10, 59))
+            .replace('{x}', Math.random().toString(36).substring(2, 7))
+            .replace('{w}', monRand(3, 47))
+            .replace('{r}', monRand(3, 8));
+    }
+
+    function monLogSeverity(text) {
+        var lower = text.toLowerCase();
+        if (lower.indexOf('error') !== -1 || lower.indexOf('restarted') !== -1) return '#f85149';
+        if (lower.indexOf('scaled') !== -1 || lower.indexOf('degraded') !== -1 || lower.indexOf('spike') !== -1) return '#f0b429';
+        return '#3fb950';
+    }
+
+    function monAddLogEntry(text) {
+        var borderColor = monLogSeverity(text);
+        var entry = monEl('div', 'display:flex;align-items:flex-start;gap:8px;padding:5px 8px;border-radius:6px;background:rgba(255,255,255,0.02);font-size:12px;line-height:1.4;flex-shrink:0;border-left:3px solid ' + borderColor + ';transition:background 0.2s ease;cursor:default;');
+        entry.onmouseenter = function() { this.style.background = 'rgba(255,255,255,0.05)'; };
+        entry.onmouseleave = function() { this.style.background = 'rgba(255,255,255,0.02)'; };
+        var time = monEl('span', 'color:#484f58;font-size:11px;white-space:nowrap;flex-shrink:0;font-family:"SF Mono",monospace;', monTimeStr());
+        var msg = monEl('span', 'color:#c9d1d9;', text);
+        entry.appendChild(time);
+        entry.appendChild(msg);
+        if (logList.firstChild) logList.insertBefore(entry, logList.firstChild);
+        else logList.appendChild(entry);
+        while (logList.children.length > 30) logList.removeChild(logList.lastChild);
+    }
+
+    var seedEvents = [
+        '✅ Deploy v2.1.4 succeeded — production',
+        '🔄 Certificate renewed — devos-tls (89 days)',
+        '📦 Cache cleared — redis-master',
+        '⚡ Auto-scaled workers 2→3 (queue: 150)',
+        '🔒 Security scan passed — 0 vulnerabilities',
+        '📊 Backup completed — 2.4GB compressed',
+        '🚀 Pipeline #847 completed in 3m 42s',
+        '✅ Health check passed — all endpoints'
+    ];
+    seedEvents.reverse().forEach(function(ev) { monAddLogEntry(ev); });
+
+    monSafeInterval(function() { monAddLogEntry(monGenEvent()); }, 5000);
+
+    row3.appendChild(logWrap);
+    wrap.appendChild(row3);
+
+    // ── ROW 4: Geographic Visitors ──
+    var geoWrap = monEl('div', 'background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.06);');
+    var geoTitle = monEl('div', 'font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:12px;', '🗺️ Geographic Visitors');
+    geoWrap.appendChild(geoTitle);
+
+    var geoGrid = monEl('div', 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;');
+    var geoData = [
+        { flag: '🇮🇳', name: 'India', visits: 847 },
+        { flag: '🇺🇸', name: 'United States', visits: 234 },
+        { flag: '🇬🇧', name: 'UK', visits: 89 },
+        { flag: '🇩🇪', name: 'Germany', visits: 67 },
+        { flag: '🇨🇦', name: 'Canada', visits: 45 },
+        { flag: '🇦🇺', name: 'Australia', visits: 23 }
+    ];
+
+    var geoCards = [];
+    geoData.forEach(function(g) {
+        var card = monEl('div', 'background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;display:flex;align-items:center;gap:10px;');
+        var flag = monEl('span', 'font-size:22px;', g.flag);
+        var info = monEl('div', 'display:flex;flex-direction:column;gap:2px;');
+        var nm = monEl('span', 'font-size:12px;font-weight:600;color:#e6edf3;', g.name);
+        var ct = monEl('span', 'font-size:11px;color:#8b949e;');
+        ct.textContent = g.visits.toLocaleString() + ' visits';
+        info.appendChild(nm);
+        info.appendChild(ct);
+        card.appendChild(flag);
+        card.appendChild(info);
+        geoGrid.appendChild(card);
+        geoCards.push({ ct: ct, visits: g.visits });
+    });
+    geoWrap.appendChild(geoGrid);
+    wrap.appendChild(geoWrap);
+
+    monSafeInterval(function() {
+        geoCards.forEach(function(gc) {
+            gc.visits += monRand(0, 3);
+            gc.ct.textContent = gc.visits.toLocaleString() + ' visits';
+        });
+    }, 4000);
+
+    // ── ROW 5: Tech Stack Health ──
+    var techWrap = monEl('div', 'background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.06);');
+    var techTitle = monEl('div', 'font-size:13px;font-weight:700;color:#e6edf3;margin-bottom:12px;', '🛠️ Tech Stack Health');
+    techWrap.appendChild(techTitle);
+
+    var techRow = monEl('div', 'display:flex;flex-wrap:wrap;gap:8px;');
+    var techItems = ['Kubernetes', 'Terraform', 'GitHub Actions', 'Azure', 'Docker', 'ArgoCD', 'Redis', 'Dynatrace'];
+    var techPills = [];
+
+    techItems.forEach(function(name) {
+        var pill = monEl('span', 'display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(63,185,80,0.12);color:#3fb950;border:1px solid rgba(63,185,80,0.2);transition:all 0.4s ease;');
+        pill.textContent = name + ' ✓';
+        techRow.appendChild(pill);
+        techPills.push(pill);
+    });
+    techWrap.appendChild(techRow);
+    wrap.appendChild(techWrap);
+
+    monSafeInterval(function() {
+        var idx = monRand(0, techPills.length - 1);
+        var p = techPills[idx];
+        p.style.background = 'rgba(240,180,41,0.15)';
+        p.style.color = '#f0b429';
+        p.style.borderColor = 'rgba(240,180,41,0.3)';
+        p.textContent = techItems[idx] + ' ⟳';
+        setTimeout(function() {
+            p.style.background = 'rgba(63,185,80,0.12)';
+            p.style.color = '#3fb950';
+            p.style.borderColor = 'rgba(63,185,80,0.2)';
+            p.textContent = techItems[idx] + ' ✓';
+        }, 3000);
+    }, 6000);
+}

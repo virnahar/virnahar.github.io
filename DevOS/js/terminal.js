@@ -190,16 +190,264 @@ function initInteractiveTerminal() {
         'The best time to write tests was before the deploy. The second best time is now.'
     ];
 
+    function _scrollTerminal() {
+        var el = document.querySelector('#terminal-window .window-content');
+        if (el) el.scrollTop = el.scrollHeight;
+        var jqTerm = document.querySelector('#interactive-terminal');
+        if (jqTerm) jqTerm.scrollTop = jqTerm.scrollHeight;
+        var scroller = document.querySelector('.terminal-scroller');
+        if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    }
+
+    function _animateLines(term, lines, delay, done) {
+        var i = 0;
+        function next() {
+            if (i < lines.length) {
+                term.echo(lines[i]);
+                try { term.scroll_to_bottom(); } catch(e) {}
+                _scrollTerminal();
+                i++;
+                setTimeout(next, delay || 40);
+            } else {
+                try { term.scroll_to_bottom(); } catch(e) {}
+                _scrollTerminal();
+                if (done) done();
+            }
+        }
+        next();
+    }
+
+    var _logPool = {
+        api: [
+            '[[;#00ff00;]INFO]  [devos-api] GET /api/v1/health 200 2ms',
+            '[[;#00ff00;]INFO]  [devos-api] GET /api/v1/users 200 45ms',
+            '[[;#00ff00;]INFO]  [devos-api] POST /api/v1/deploy 201 1204ms',
+            '[[;#ffff00;]WARN]  [devos-api] Slow query detected: 850ms on /api/v1/metrics',
+            '[[;#00ff00;]INFO]  [devos-api] WebSocket connected: client_42',
+            '[[;#00ff00;]INFO]  [devos-api] Cache HIT ratio: 94.2%',
+            '[[;#00ff00;]INFO]  [devos-api] GET /api/v1/projects 200 12ms',
+            '[[;#ffff00;]WARN]  [devos-api] Rate limit approaching: 480/500 req/min',
+            '[[;#00ff00;]INFO]  [devos-api] Background job completed: cleanup_stale_sessions',
+            '[[;#00ff00;]INFO]  [devos-api] Healthcheck passed ✓'
+        ],
+        frontend: [
+            '[[;#00ffff;]INFO]  [webpack] Compiled successfully in 342ms',
+            '[[;#00ffff;]INFO]  [next.js] Ready on http://localhost:3000',
+            '[[;#00ffff;]INFO]  [next.js] GET / 200 in 18ms',
+            '[[;#00ffff;]INFO]  [next.js] GET /projects 200 in 24ms',
+            '[[;#ffff00;]WARN]  [next.js] Image optimization: 2 images not cached',
+            '[[;#00ffff;]INFO]  [next.js] GET /resume 200 in 15ms',
+            '[[;#00ffff;]INFO]  [hmr] Hot module replacement active',
+            '[[;#00ffff;]INFO]  [next.js] Static page generated: /about'
+        ],
+        k8s: [
+            '[[;#00ff00;]INFO]  [kube-scheduler] Successfully assigned devos/api-pod to vir-node-2',
+            '[[;#00ff00;]INFO]  [kubelet] Container devos-api started',
+            '[[;#00ff00;]INFO]  [kube-proxy] Syncing iptables rules',
+            '[[;#ffff00;]WARN]  [kubelet] Pod devos-worker memory usage at 82%',
+            '[[;#00ff00;]INFO]  [keda] Scaling devos-worker from 2 to 3 replicas (queue depth: 150)',
+            '[[;#00ff00;]INFO]  [argocd] Application devos-api synced successfully',
+            '[[;#00ff00;]INFO]  [cert-manager] Certificate devos-tls renewed, expires in 89 days',
+            '[[;#ff0000;]ERROR] [kubelet] Liveness probe failed for devos-cache: connection refused',
+            '[[;#00ff00;]INFO]  [kubelet] Container devos-cache restarted (attempt 1/3)',
+            '[[;#00ff00;]INFO]  [kubelet] Liveness probe succeeded for devos-cache ✓',
+            '[[;#00ff00;]INFO]  [ingress] Updated Traefik routes for devos-frontend',
+            '[[;#00ff00;]INFO]  [helm] Release devos-api upgraded to chart v2.1.1'
+        ],
+        nginx: [
+            '[[;#888;]10.0.42.5 - - "GET / HTTP/2.0" 200 4523 "-" "Mozilla/5.0"]',
+            '[[;#888;]10.0.42.8 - - "GET /api/health HTTP/2.0" 200 15 "-" "kube-probe/1.28"]',
+            '[[;#888;]10.0.42.12 - - "GET /assets/style.css HTTP/2.0" 304 0]',
+            '[[;#888;]10.0.42.15 - - "POST /api/v1/deploy HTTP/2.0" 201 234]',
+            '[[;#ffff00;]10.0.42.99 - - "GET /admin HTTP/2.0" 403 128 — blocked]',
+            '[[;#888;]10.0.42.3 - - "GET /favicon.ico HTTP/2.0" 200 1150]'
+        ]
+    };
+
+    function _streamLogs(term, pool, count, interval) {
+        count = count || 20;
+        interval = interval || 300;
+        var i = 0;
+        var streaming = true;
+        term.echo('[[;#888;]Streaming logs... (press any key to stop)]');
+        term.echo('');
+        function nextLog() {
+            if (!streaming || i >= count) {
+                term.echo('');
+                term.echo('[[;#888;]--- Log stream ended (' + i + ' lines) ---]');
+                document.removeEventListener('keydown', stopStream);
+                return;
+            }
+            var now = new Date();
+            var ts = '[[;#555;]' + now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0') + ']';
+            var line = pool[Math.floor(Math.random() * pool.length)];
+            term.echo(ts + ' ' + line);
+            try { term.scroll_to_bottom(); } catch(e) {}
+            _scrollTerminal();
+            i++;
+            setTimeout(nextLog, interval + Math.random() * 200 - 100);
+        }
+        function stopStream() {
+            streaming = false;
+            document.removeEventListener('keydown', stopStream);
+        }
+        setTimeout(function() {
+            document.addEventListener('keydown', stopStream);
+        }, 500);
+        nextLog();
+    }
+
+    var _helpCategories = {
+        linux: {
+            title: '🐧 Linux / Unix Commands',
+            color: '#00ffff',
+            commands: [
+                { cmd: 'top / htop', desc: 'Live process monitor (auto-refreshes 4x)' },
+                { cmd: 'ps', desc: 'Running process list' },
+                { cmd: 'cat <file>', desc: 'Print file (resume.txt, skills.txt, .bashrc, .env, todo.txt)' },
+                { cmd: 'find / -name', desc: 'Search filesystem (animated skill scan)' },
+                { cmd: 'grep <pattern>', desc: 'Search text in virtual files' },
+                { cmd: 'uname -a', desc: 'System info' },
+                { cmd: 'hostname', desc: 'Machine hostname' },
+                { cmd: 'pwd', desc: 'Print working directory' },
+                { cmd: 'echo <text>', desc: 'Echo text back' },
+                { cmd: 'history', desc: 'Last 15 commands' },
+                { cmd: 'df -h', desc: 'Disk usage (creative stats)' },
+                { cmd: 'free -h', desc: 'Memory info' },
+                { cmd: 'ifconfig', desc: 'Network interfaces' },
+                { cmd: 'ping <host>', desc: 'Ping with animated latency' },
+                { cmd: 'curl <url>', desc: 'Fetch URL content' },
+                { cmd: 'lsb_release', desc: 'OS release info' }
+            ]
+        },
+        devops: {
+            title: '⎈ DevOps Tools',
+            color: '#00ff00',
+            commands: [
+                { cmd: 'docker ps', desc: 'Running containers' },
+                { cmd: 'docker images', desc: 'Available images' },
+                { cmd: 'docker logs <name>', desc: '🔴 LIVE streaming container logs' },
+                { cmd: 'kubectl get pods', desc: 'Kubernetes pods status' },
+                { cmd: 'kubectl get nodes', desc: 'Cluster nodes' },
+                { cmd: 'kubectl get svc', desc: 'Services & endpoints' },
+                { cmd: 'kubectl logs <pod>', desc: '🔴 LIVE streaming pod logs' },
+                { cmd: 'helm list', desc: 'Deployed Helm releases' },
+                { cmd: 'terraform plan', desc: 'Animated infra plan' },
+                { cmd: 'terraform version', desc: 'TF version + providers' },
+                { cmd: 'git log', desc: 'Commit history' },
+                { cmd: 'git status', desc: 'Working tree status' },
+                { cmd: 'tail -f <logfile>', desc: '🔴 LIVE tail any log file' }
+            ]
+        },
+        brew: {
+            title: '🍺 Package Managers',
+            color: '#ffff00',
+            commands: [
+                { cmd: 'brew install <pkg>', desc: 'Install with animated progress' },
+                { cmd: 'brew upgrade', desc: 'Upgrade all packages' },
+                { cmd: 'pip install <pkg>', desc: 'Python package install' },
+                { cmd: 'npm install', desc: 'Node.js dependencies' }
+            ]
+        },
+        fun: {
+            title: '🎉 Fun & Easter Eggs',
+            color: '#ff00ff',
+            commands: [
+                { cmd: 'matrix', desc: 'Enter the DevOps Matrix' },
+                { cmd: 'neofetch', desc: 'System info with ASCII art' },
+                { cmd: 'cowsay <msg>', desc: 'ASCII cow says your message' },
+                { cmd: 'sl', desc: 'Steam locomotive (typo penalty!)' },
+                { cmd: 'fortune', desc: 'Random DevOps wisdom' },
+                { cmd: 'coffee', desc: 'Get your caffeine fix' },
+                { cmd: 'motivate', desc: 'DevOps motivation' },
+                { cmd: 'joke', desc: 'Random programming joke' },
+                { cmd: 'vim', desc: 'Good luck escaping...' },
+                { cmd: 'sudo rm -rf /', desc: 'Try it. I dare you.' },
+                { cmd: 'exit', desc: 'There is no escape.' },
+                { cmd: 'man <cmd>', desc: 'Manual page for any command' }
+            ]
+        },
+        games: {
+            title: '🎮 Terminal Games',
+            color: '#ff6b9d',
+            commands: [
+                { cmd: 'tictactoe', desc: 'Tic-tac-toe vs minimax AI' },
+                { cmd: 'kubegame', desc: 'Kubernetes chaos incident game' },
+                { cmd: 'typingtest', desc: 'DevOps typing speed test' }
+            ]
+        },
+        info: {
+            title: '📋 Portfolio Info',
+            color: '#0af',
+            commands: [
+                { cmd: 'whoami', desc: 'Who am I (typing effect)' },
+                { cmd: 'about', desc: 'Full bio with career highlights' },
+                { cmd: 'resume', desc: 'Brief text resume' },
+                { cmd: 'experience', desc: 'Work history' },
+                { cmd: 'skills', desc: 'Technical skills' },
+                { cmd: 'certifications', desc: '14+ certs list' },
+                { cmd: 'projects', desc: 'Open source & tools' },
+                { cmd: 'education', desc: 'Degree info' },
+                { cmd: 'contact', desc: 'GitHub, LinkedIn links' },
+                { cmd: 'github / linkedin', desc: 'Open in new tab' },
+                { cmd: 'date', desc: 'Current date & time' },
+                { cmd: 'uptime', desc: 'Page session uptime' }
+            ]
+        }
+    };
+
     var commands = {
-        help: function() {
-            this.echo('[[;#ffff00;]Available commands:]');
-            this.echo('  help, whoami, about, ls, cd, experience, skills, certifications, projects, education, clear, joke');
-            this.echo('');
-            this.echo('[[;#00ff00;]🎮 Fun commands:]');
-            this.echo('  kubernetes, terraform, devops, coffee, motivate, matrix, neofetch, typingtest, tictactoe, kubegame');
-            this.echo('');
-            this.echo('[[;#00ffff;]🆕 V2 commands:]');
-            this.echo('  resume, contact, github, linkedin, date, uptime, fortune, cowsay <msg>, sl');
+        help: function(topic) {
+            var term = this;
+
+            if (topic && _helpCategories[topic]) {
+                var cat = _helpCategories[topic];
+                var n = cat.commands.length;
+                var bar = '█'.repeat(n) + '░'.repeat(Math.max(0, 16 - n));
+                var lines = [
+                    '',
+                    '  [[;' + cat.color + ';]┌─────────────────────────────────────────────────┐]',
+                    '  [[;' + cat.color + ';]│] ' + cat.title.padEnd(46) + '[[;' + cat.color + ';]│]',
+                    '  [[;' + cat.color + ';]│] [[;#888;]' + n + ' commands] [[;' + cat.color + ';]' + bar + ']' + ' '.repeat(Math.max(0, 30 - n)) + '[[;' + cat.color + ';]│]',
+                    '  [[;' + cat.color + ';]└─────────────────────────────────────────────────┘]',
+                    ''
+                ];
+                cat.commands.forEach(function(c) {
+                    lines.push('  [[;' + cat.color + ';]›] [[;#fff;]' + c.cmd.padEnd(22) + '] [[;#666;]' + c.desc + ']');
+                });
+                lines.push('');
+                lines.push('  [[;#555;]Tip: Type any command directly. Tab for autocomplete.]');
+                lines.push('');
+                _animateLines(term, lines, 30);
+                return;
+            }
+
+            if (topic) {
+                term.echo('[[;#ff6b6b;]✗ Unknown topic:] ' + topic);
+                term.echo('[[;#888;]  Available: linux, devops, brew, fun, games, info]');
+                return;
+            }
+
+            var lines = [
+                '',
+                '  [[;#fff;]╔═══════════════════════════════════════════════════╗]',
+                '  [[;#fff;]║]  [[;#ffff00;]💻 DevOS Terminal]       [[;#888;]v2.0 • 50+ commands]  [[;#fff;]║]',
+                '  [[;#fff;]╚═══════════════════════════════════════════════════╝]',
+                '',
+                '  [[;#00ffff;]▸ help linux]    🐧  [[;#888;]16 cmds] [[;#00ffff;]████████████████][[;#333;]░░░░]  [[;#555;]top ps grep ping df...]',
+                '  [[;#00ff00;]▸ help devops]   ⎈   [[;#888;]13 cmds] [[;#00ff00;]█████████████][[;#333;]░░░░░░░]  [[;#555;]docker kubectl helm tf...]',
+                '  [[;#ffff00;]▸ help brew]     🍺  [[;#888;] 4 cmds] [[;#ffff00;]████][[;#333;]░░░░░░░░░░░░░░░░]  [[;#555;]brew pip npm...]',
+                '  [[;#ff00ff;]▸ help fun]      🎉  [[;#888;]12 cmds] [[;#ff00ff;]████████████][[;#333;]░░░░░░░░]  [[;#555;]matrix vim sudo cowsay...]',
+                '  [[;#ff6b9d;]▸ help games]    🎮  [[;#888;] 3 cmds] [[;#ff6b9d;]███][[;#333;]░░░░░░░░░░░░░░░░░]  [[;#555;]tictactoe kubegame...]',
+                '  [[;#0af;]▸ help info]     📋  [[;#888;]12 cmds] [[;#0af;]████████████][[;#333;]░░░░░░░░]  [[;#555;]whoami about resume...]',
+                '',
+                '  [[;#444;]───────────────────────────────────────────────────]',
+                '  [[;#888;]⌨  Tab] autocomplete  [[;#888;]↑↓] history  [[;#888;]Esc] clear line',
+                '  [[;#888;]Try:] [[;#fff;]docker ps] [[;#888;]•] [[;#fff;]kubectl get pods] [[;#888;]•] [[;#fff;]terraform plan]',
+                '  [[;#888;]New:] [[;#fff;]docker logs] [[;#888;]•] [[;#fff;]kubectl logs] [[;#888;]•] [[;#fff;]tail -f]',
+                ''
+            ];
+            _animateLines(term, lines, 45);
         },
         whoami: function() {
             var term = this;
@@ -286,11 +534,38 @@ function initInteractiveTerminal() {
             this.echo('[[;#ffff00;]• Pods are like DevOps haiku - small & beautiful]');
             this.echo('[[;#ff00ff;]• "It worked on my machine" → Docker & K8s were born]');
         },
-        terraform: function() {
-            this.echo('[[;#00ff00;]🏗️  Terraform Wisdom:]');
-            this.echo('[[;#00ffff;]• "terraform destroy" - 2 most powerful words]');
-            this.echo('[[;#ffff00;]• Infrastructure as Code = Git for servers]');
-            this.echo('[[;#ff00ff;]• Plan before apply, or prepare to cry!]');
+        terraform: function(subcmd) {
+            if (subcmd === 'plan') {
+                var term = this;
+                var lines = [
+                    '[[;#ffffff;]Refreshing Terraform state in-memory prior to plan...]',
+                    '',
+                    '[[;#00ff00;]+] azurerm_kubernetes_cluster.aks',
+                    '[[;#00ff00;]+] azurerm_container_registry.acr',
+                    '[[;#00ff00;]+] azurerm_log_analytics_workspace.logs',
+                    '[[;#ffff00;]~] azurerm_resource_group.rg',
+                    '',
+                    '[[;#ffffff;]Plan:] [[;#00ff00;]3 to add], [[;#ffff00;]1 to change], [[;#ff0000;]0 to destroy].',
+                    '',
+                    '[[;#888;]───────────────────────────────────────────]',
+                    '[[;#00ff00;]✓ Plan complete! Run `terraform apply` to execute.]'
+                ];
+                var i = 0;
+                function show() {
+                    if (i < lines.length) { term.echo(lines[i]); i++; setTimeout(show, 200); }
+                }
+                show();
+            } else if (subcmd === 'version') {
+                this.echo('Terraform v1.7.4');
+                this.echo('on linux_arm64');
+                this.echo('+ provider registry.terraform.io/hashicorp/azurerm v3.85.0');
+                this.echo('+ provider registry.terraform.io/hashicorp/helm v2.12.1');
+            } else {
+                this.echo('[[;#00ff00;]🏗️  Terraform Wisdom:]');
+                this.echo('[[;#00ffff;]• "terraform destroy" - 2 most powerful words]');
+                this.echo('[[;#ffff00;]• Infrastructure as Code = Git for servers]');
+                this.echo('[[;#ff00ff;]• Plan before apply, or prepare to cry!]');
+            }
         },
         devops: function() {
             this.echo('[[;#00ff00;]💡 DevOps Wisdom:]');
@@ -777,6 +1052,432 @@ function initInteractiveTerminal() {
                 setTimeout(showFrame, 350);
             }
             showFrame();
+        },
+
+        // --- Linux Basics ---
+        top: function() {
+            var term = this;
+            var procs = [
+                { pid: '1', user: 'root', cpu: '0.1', mem: '0.3', cmd: 'systemd' },
+                { pid: '42', user: 'vir', cpu: '12.4', mem: '8.2', cmd: 'kubectl proxy' },
+                { pid: '128', user: 'vir', cpu: '8.7', mem: '15.1', cmd: 'terraform plan' },
+                { pid: '256', user: 'docker', cpu: '6.3', mem: '12.4', cmd: 'dockerd' },
+                { pid: '314', user: 'vir', cpu: '4.2', mem: '3.8', cmd: 'node devos-server' },
+                { pid: '512', user: 'vir', cpu: '3.1', mem: '5.6', cmd: 'helm upgrade --install' },
+                { pid: '666', user: 'vir', cpu: '2.8', mem: '4.2', cmd: 'argocd app sync' },
+                { pid: '789', user: 'vir', cpu: '1.5', mem: '2.1', cmd: 'dynatrace-agent' },
+                { pid: '1024', user: 'redis', cpu: '0.9', mem: '1.8', cmd: 'redis-server *:6379' },
+                { pid: '2048', user: 'vir', cpu: '0.4', mem: '0.7', cmd: 'sonarqube-scanner' }
+            ];
+            var running = true;
+            var timer = null;
+            function render() {
+                if (!running) return;
+                term.clear();
+                var now = new Date();
+                var cpuTotal = (35 + Math.random() * 15).toFixed(1);
+                var memUsed = (5500 + Math.random() * 800).toFixed(0);
+                term.echo('[[;#00ff00;]top - ' + now.toLocaleTimeString() + ' up ' + Math.floor((Date.now() - _devosPageLoadTime) / 60000) + ' min,  1 user,  load average: ' + (Math.random() * 0.3 + 0.3).toFixed(2) + ', ' + (Math.random() * 0.2 + 0.3).toFixed(2) + ', ' + (Math.random() * 0.15 + 0.3).toFixed(2) + ']');
+                term.echo('[[;#00ff00;]Tasks:] [[;#fff;]10 total,] [[;#00ff00;]10 running,] [[;#fff;]0 sleeping]');
+                term.echo('[[;#00ff00;]%Cpu(s):] [[;#fff;]' + cpuTotal + ' us,  2.1 sy,  0.0 ni, ' + (100 - parseFloat(cpuTotal) - 2.1).toFixed(1) + ' id,  0.3 wa]');
+                term.echo('[[;#00ff00;]MiB Mem:] [[;#fff;]16384.0 total,  ' + (16384 - parseInt(memUsed)).toFixed(0) + '.0 free,  ' + memUsed + '.0 used,  2120.0 buff/cache]');
+                term.echo('');
+                term.echo('[[;#00ffff;]  PID USER      %CPU  %MEM  COMMAND]');
+                procs.sort(function(a, b) { return parseFloat(b.cpu) - parseFloat(a.cpu); });
+                procs.forEach(function(p) {
+                    p.cpu = Math.max(0.1, parseFloat(p.cpu) + (Math.random() - 0.5) * 3).toFixed(1);
+                    p.mem = Math.max(0.1, parseFloat(p.mem) + (Math.random() - 0.5) * 0.5).toFixed(1);
+                    var cpuColor = parseFloat(p.cpu) > 8 ? '#ff6b6b' : parseFloat(p.cpu) > 4 ? '#ffff00' : '#fff';
+                    term.echo('  ' + p.pid.padStart(5) + ' ' + p.user.padEnd(10) + '[[;' + cpuColor + ';]' + p.cpu.padStart(5) + ']' + p.mem.padStart(6) + '  ' + p.cmd);
+                });
+                term.echo('');
+                term.echo('[[;#444;]Press [[;#ffff00;]Esc] or [[;#ffff00;]q] to exit — refreshing every 2s]');
+                _scrollTerminal();
+                timer = setTimeout(render, 2000);
+            }
+            function stopTop(e) {
+                if (e.key === 'Escape' || e.key === 'q') {
+                    running = false;
+                    if (timer) clearTimeout(timer);
+                    document.removeEventListener('keydown', stopTop);
+                    term.echo('');
+                    term.echo('[[;#00ff00;]top exited.]');
+                }
+            }
+            document.addEventListener('keydown', stopTop);
+            render();
+        },
+        htop: function() { this.exec('top'); },
+ps: function() {
+    _animateLines(this, [
+        '[[;#00ffff;]  PID TTY          TIME CMD]',
+        '    1 pts/0    00:00:02 bash',
+        '   42 pts/0    00:12:34 kubectl',
+        '  128 pts/0    00:08:45 terraform',
+        '  256 pts/0    00:06:12 dockerd',
+        '  314 pts/0    00:04:23 node',
+        '  512 pts/0    00:03:11 helm',
+        '  666 pts/0    00:02:48 argocd',
+        '  789 pts/0    00:01:33 dynatrace',
+        ' 1024 pts/0    00:00:55 redis-server',
+        ' 9999 pts/0    00:00:00 ps'
+    ], 50);
+},
+        cat: function(file) {
+            var files = {
+                'resume.txt': '[[;#ffffff;]Virendra Kumar]\n[[;#00ffff;]Senior Cloud DevOps Engineer II @ McKinsey & Company]\n12+ years | Azure, Kubernetes, Terraform, CI/CD\n\nKey: 75% faster deploys, $100K+ savings, 14+ certs\nLinks: github.com/virnahar | linkedin.com/in/virnahar',
+                'skills.txt': '[[;#00ff00;]Cloud:] Azure (30+), AWS\n[[;#00ff00;]Containers:] Kubernetes, Docker, Helm, ArgoCD\n[[;#00ff00;]IaC:] Terraform, Ansible\n[[;#00ff00;]CI/CD:] GitHub Actions, Azure DevOps, GitLab CI\n[[;#00ff00;]Data:] Databricks, PostgreSQL, Redis\n[[;#00ff00;]Languages:] Bash, Python, Go, JavaScript',
+                'todo.txt': '[[;#ffff00;]TODO:]\n[x] Build awesome portfolio\n[x] Add 30+ terminal commands\n[x] Impress visitors\n[ ] Take over the world\n[ ] Get 8 hours of sleep',
+                '.bashrc': 'export PS1="\\u@devos:\\w$ "\nexport EDITOR=vim\nexport KUBECONFIG=~/.kube/config\nalias k="kubectl"\nalias tf="terraform"\nalias g="git"\nalias d="docker"\n\n# If you\'re reading this, you\'re a real one 🤝',
+                '.env': '[[;#ff0000;]ERROR: Access denied. Nice try! 🔒]\n\nYour attempt has been logged and reported to... nobody.\nThis is a portfolio, not a real server. 😄'
+            };
+            if (!file) { this.echo('Usage: cat <filename>\n[[;#888;]Available: ' + Object.keys(files).join(', ') + ']'); return; }
+            if (files[file]) { this.echo(files[file]); }
+            else { this.error('cat: ' + file + ': No such file or directory'); }
+        },
+        'find': function(path, flag, pattern) {
+            var term = this;
+            if (!path) { this.echo('Usage: find <path> -name <pattern>'); return; }
+            var results = ['/home/vir/skills/azure.skill', '/home/vir/skills/kubernetes.skill', '/home/vir/skills/terraform.skill', '/home/vir/skills/docker.skill', '/home/vir/skills/python.skill', '/home/vir/skills/github-actions.skill', '/home/vir/skills/helm.skill', '/home/vir/skills/argocd.skill', '/home/vir/certs/az-400.cert', '/home/vir/certs/terraform-associate.cert', '/home/vir/certs/rhcsa.cert', '/home/vir/certs/databricks-architect.cert', '/home/vir/projects/devos-portfolio/', '/home/vir/projects/terraform-modules/', '/home/vir/projects/ai-chat/'];
+            var i = 0;
+            function showNext() {
+                if (i < results.length) {
+                    term.echo('[[;#00ffff;]' + results[i] + ']');
+                    i++;
+                    setTimeout(showNext, 80);
+                } else {
+                    term.echo('\n[[;#888;]' + results.length + ' results found]');
+                }
+            }
+            showNext();
+        },
+        'grep': function(pattern) {
+            if (!pattern) { this.echo('Usage: grep <pattern> [file]'); return; }
+            var matches = [
+                { file: 'resume.txt', line: 'Senior Cloud [[;#ff0000;]DevOps] Engineer with 12+ years' },
+                { file: 'about.md', line: 'Transforming challenges into [[;#ff0000;]opportunities]' },
+                { file: 'skills.yml', line: '  cloud: Azure, AWS, [[;#ff0000;]Kubernetes]' },
+                { file: '.bashrc', line: 'alias k="[[;#ff0000;]kubectl]"' },
+                { file: 'career.log', line: 'McKinsey → Accenture → Mercer → Clavax → [[;#ff0000;]Aannya]' }
+            ];
+            var self = this;
+            matches.forEach(function(m) {
+                self.echo('[[;#ff00ff;]' + m.file + ':] ' + m.line);
+            });
+        },
+        uname: function() { this.echo('DevOS 2.0.0 vir-macbook arm64 Virendra\'s Portfolio Kernel v2'); },
+        hostname: function() { this.echo('devos.virnahar.github.io'); },
+        pwd: function() { this.echo(cwd === root ? '/home/vir' : '/home/vir/' + cwd.replace('~/', '')); },
+        echo: function() { this.echo(Array.from(arguments).join(' ')); },
+        history: function() {
+            var hist = this.history().data();
+            var last = hist.slice(-15);
+            var self = this;
+            last.forEach(function(cmd, i) {
+                self.echo('  ' + String(hist.length - last.length + i + 1).padStart(4) + '  ' + cmd);
+            });
+        },
+df: function() {
+    _animateLines(this, [
+        '[[;#00ffff;]Filesystem      Size  Used Avail Use% Mounted on]',
+        '/dev/skills      ∞    98%   ∞    [[;#00ff00;]98%] /skills',
+        '/dev/experience  12Y  12Y   ∞    [[;#00ff00;] - ] /experience',
+        '/dev/certs       14+  14+   ∞    [[;#00ff00;] - ] /certifications',
+        '/dev/projects    10   10    ∞    [[;#ffff00;] - ] /projects',
+        '/dev/ideas       ∞    42%   ∞    [[;#ffff00;]42%] /ideas',
+        '/dev/coffee      ∞    99%   1%   [[;#ff0000;]99%] /energy  ⚠️  CRITICAL'
+    ], 60);
+},
+        free: function() {
+            this.echo('[[;#00ffff;]              total     used     free   shared  buff/cache]');
+            this.echo('Mem:       16384Mi   5842Mi   8421Mi    512Mi   2120Mi');
+            this.echo('Swap:       8192Mi      0Mi   8192Mi');
+            this.echo('');
+            this.echo('[[;#888;]Certifications:  14+ loaded]');
+            this.echo('[[;#888;]Ideas:           unlimited]');
+            this.echo('[[;#888;]Coffee buffer:   nearly full]');
+        },
+        ifconfig: function() {
+            this.echo('[[;#00ff00;]eth0:] flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500');
+            this.echo('        inet [[;#ffff00;]10.0.42.1]  netmask 255.255.255.0  broadcast 10.0.42.255');
+            this.echo('        inet6 fe80::1  prefixlen 64  scopeid 0x20<link>');
+            this.echo('        ether de:v0:ps:vi:r1:00  txqueuelen 1000');
+            this.echo('        RX packets 12345678  bytes 1.2 GiB');
+            this.echo('        TX packets 87654321  bytes 4.2 GiB');
+            this.echo('');
+            this.echo('[[;#00ff00;]docker0:] flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500');
+            this.echo('        inet [[;#ffff00;]172.17.0.1]  netmask 255.255.0.0');
+        },
+        ping: function(host) {
+            var term = this;
+            host = host || 'virnahar.github.io';
+            term.echo('PING ' + host + ' (185.199.108.153): 56 data bytes');
+            var count = 0;
+            function doPing() {
+                if (count >= 5) {
+                    term.echo('\n--- ' + host + ' ping statistics ---');
+                    term.echo('5 packets transmitted, 5 received, 0% packet loss');
+                    term.echo('rtt min/avg/max = 2.1/4.8/8.3 ms');
+                    return;
+                }
+                var ms = (2 + Math.random() * 8).toFixed(1);
+                term.echo('64 bytes from ' + host + ': icmp_seq=' + count + ' ttl=57 time=[[;#00ff00;]' + ms + ' ms]');
+                count++;
+                setTimeout(doPing, 800);
+            }
+            doPing();
+        },
+        curl: function(url) {
+            if (!url) { this.echo('Usage: curl <url>'); return; }
+            if (url.includes('virnahar')) {
+                this.echo('[[;#00ff00;]<!DOCTYPE html>]');
+                this.echo('[[;#00ffff;]<title>]Virendra Kumar — DevOS[[;#00ffff;]</title>]');
+                this.echo('[[;#888;]<!-- Sr. Cloud DevOps Engineer II @ McKinsey -->]');
+                this.echo('[[;#888;]<!-- 12+ years | Azure | K8s | Terraform -->]');
+                this.echo('[[;#888;]<!-- Built with ❤️ and way too much CSS -->]');
+            } else {
+                this.echo('[[;#888;]HTTP/1.1 200 OK]\n[[;#888;]Content-Type: text/html]\n\n<h1>Hello from ' + url + '</h1>');
+            }
+        },
+        lsb_release: function() {
+            this.echo('Distributor ID: DevOS');
+            this.echo('Description:    Virendra\'s DevOS 2.0');
+            this.echo('Release:        2.0');
+            this.echo('Codename:       virendra');
+        },
+
+        // --- DevOps Commands ---
+tail: function(flag, file) {
+    var term = this;
+    if (flag === '-f' || flag === '-F') {
+        var pool = file && file.includes('nginx') ? _logPool.nginx : file && file.includes('api') ? _logPool.api : _logPool.k8s;
+        _streamLogs(term, pool, 25, 250);
+    } else {
+        term.echo('Usage: tail -f <logfile>');
+        term.echo('[[;#888;]Examples: tail -f /var/log/nginx.log | tail -f /var/log/api.log | tail -f /var/log/k8s.log]');
+    }
+},
+docker: function(subcmd, arg2) {
+    if (subcmd === 'logs') {
+        var container = arg2 || 'devos-api';
+        var pool = container.includes('frontend') ? _logPool.frontend : container.includes('nginx') || container.includes('proxy') ? _logPool.nginx : _logPool.api;
+        this.echo('[[;#00ffff;]Streaming logs for container:] [[;#fff;]' + container + ']');
+        _streamLogs(this, pool, 20, 280);
+        return;
+    }
+    if (subcmd === 'ps') {
+        _animateLines(this, [
+            '[[;#00ffff;]CONTAINER ID   IMAGE                    STATUS          PORTS                    NAMES]',
+            'a1b2c3d4e5f6   devos-frontend:latest    [[;#00ff00;]Up 2 hours]      0.0.0.0:3000->3000/tcp   devos-frontend',
+            'f6e5d4c3b2a1   devos-api:latest         [[;#00ff00;]Up 2 hours]      0.0.0.0:8000->8000/tcp   devos-api',
+            '1a2b3c4d5e6f   redis:7-alpine           [[;#00ff00;]Up 2 hours]      6379/tcp                 devos-redis',
+            '6f5e4d3c2b1a   nginx:1.25-alpine        [[;#00ff00;]Up 2 hours]      0.0.0.0:443->443/tcp     devos-proxy',
+            'abcdef123456   prom/prometheus:latest    [[;#00ff00;]Up 2 hours]      9090/tcp                 devos-monitor'
+        ], 60);
+    } else if (subcmd === 'images') {
+        _animateLines(this, [
+            '[[;#00ffff;]REPOSITORY               TAG       SIZE]',
+            'devos-frontend           latest    142MB',
+            'devos-api                latest    89MB',
+            'redis                    7-alpine  28MB',
+            'nginx                    1.25      42MB',
+            'prom/prometheus          latest    234MB',
+            'grafana/grafana          latest    367MB'
+        ], 60);
+    } else {
+        this.echo('Usage: docker ps | docker images | docker logs <container>');
+    }
+},
+kubectl: function(subcmd, arg2, arg3) {
+    if (subcmd === 'logs') {
+        var pod = arg2 || 'devos-api';
+        this.echo('[[;#00ffff;]Streaming logs for pod:] [[;#fff;]' + pod + ']');
+        _streamLogs(this, _logPool.k8s, 25, 300);
+        return;
+    }
+    if (subcmd === 'get' && arg2 === 'pods') {
+        _animateLines(this, [
+            '[[;#00ffff;]NAME                              READY   STATUS    RESTARTS   AGE]',
+            'devos-api-7b4f9d8c6-x2k9p        1/1     [[;#00ff00;]Running]   0          2h',
+            'devos-frontend-5c8d7f4b2-m3n7q    1/1     [[;#00ff00;]Running]   0          2h',
+            'devos-worker-6a9e3c1d8-p4r8s      1/1     [[;#00ff00;]Running]   0          45m',
+            'redis-master-0                     1/1     [[;#00ff00;]Running]   0          2h',
+            'prometheus-server-0                1/1     [[;#00ff00;]Running]   0          2h'
+        ], 70);
+    } else if (subcmd === 'get' && arg2 === 'nodes') {
+        _animateLines(this, [
+            '[[;#00ffff;]NAME           STATUS   ROLES    AGE   VERSION]',
+            'vir-node-1     [[;#00ff00;]Ready]    master   42d   v1.28.4',
+            'vir-node-2     [[;#00ff00;]Ready]    worker   42d   v1.28.4',
+            'vir-node-3     [[;#00ff00;]Ready]    worker   42d   v1.28.4'
+        ], 80);
+    } else if (subcmd === 'get' && arg2 === 'svc') {
+        _animateLines(this, [
+            '[[;#00ffff;]NAME              TYPE           CLUSTER-IP     EXTERNAL-IP    PORT(S)]',
+            'kubernetes        ClusterIP      10.0.0.1       <none>         443/TCP',
+            'devos-api         LoadBalancer   10.0.42.10     20.42.1.100    8000:31234/TCP',
+            'devos-frontend    LoadBalancer   10.0.42.11     20.42.1.101    3000:31235/TCP',
+            'redis-master      ClusterIP      10.0.42.20     <none>         6379/TCP'
+        ], 70);
+    } else {
+        this.echo('Usage: kubectl get pods | kubectl get nodes | kubectl get svc | kubectl logs <pod>');
+    }
+},
+helm: function(subcmd) {
+    if (subcmd === 'list') {
+        _animateLines(this, [
+            '[[;#00ffff;]NAME            NAMESPACE   REVISION  STATUS    CHART              APP VERSION]',
+            'devos-api       production  12        [[;#00ff00;]deployed]  devos-api-2.1.0    2.1.0',
+            'devos-frontend  production  8         [[;#00ff00;]deployed]  devos-fe-2.0.3     2.0.3',
+            'redis           production  3         [[;#00ff00;]deployed]  redis-18.4.0       7.2.4',
+            'prometheus      monitoring  5         [[;#00ff00;]deployed]  prometheus-25.8.0  2.48.0'
+        ], 70);
+    } else {
+        this.echo('Usage: helm list');
+    }
+},
+git: function(subcmd) {
+    if (subcmd === 'log') {
+        _animateLines(this, [
+            '[[;#ffff00;]commit a1b2c3d] [[;#00ff00;](HEAD -> main, origin/main)]',
+            'Author: Virendra Kumar <virnahar>',
+            'Date:   today',
+            '    [[;#fff;]feat: add 48 terminal commands for real shell feel]',
+            '',
+            '[[;#ffff00;]commit d4e5f6g]',
+            '    [[;#fff;]feat: glassmorphism + macOS Ventura control center]',
+            '',
+            '[[;#ffff00;]commit h7i8j9k]',
+            '    [[;#fff;]feat: code editor with AI chat panel + file browser]',
+            '',
+            '[[;#ffff00;]commit l0m1n2o]',
+            '    [[;#fff;]feat: DevOS V2 — modular JS/CSS architecture]',
+            '',
+            '[[;#ffff00;]commit p3q4r5s]',
+            '    [[;#fff;]init: DevOS V1 — 11,800 lines of pure vanilla madness]'
+        ], 50);
+    } else if (subcmd === 'status') {
+                this.echo('On branch [[;#00ff00;]main]');
+                this.echo('Your branch is up to date with \'origin/main\'.');
+                this.echo('');
+                this.echo('nothing to commit, working tree clean ✨');
+            } else {
+                this.echo('Usage: git log | git status');
+            }
+        },
+
+        // --- Package Managers ---
+        brew: function(subcmd, pkg) {
+            var term = this;
+            if (subcmd === 'install' && pkg) {
+                var steps = [
+                    '==> [[;#00ff00;]Downloading ' + pkg + '...]',
+                    '######################################## 100.0%',
+                    '==> [[;#00ffff;]Installing ' + pkg + '...]',
+                    '==> [[;#00ffff;]Pouring ' + pkg + '--latest.arm64_sonoma.bottle.tar.gz...]',
+                    '🍺  /opt/homebrew/Cellar/' + pkg + '/latest: 42 files, 12.3MB',
+                    '[[;#00ff00;]✓ ' + pkg + ' installed successfully!]'
+                ];
+                var i = 0;
+                function showStep() {
+                    if (i < steps.length) { term.echo(steps[i]); i++; setTimeout(showStep, 400); }
+                }
+                showStep();
+            } else if (subcmd === 'upgrade') {
+                var pkgs = ['terraform 1.7.3 → 1.7.4', 'kubectl 1.28.3 → 1.28.4', 'helm 3.13.2 → 3.14.0', 'argocd 2.9.3 → 2.10.0', 'python 3.12.1 → 3.12.2'];
+                term.echo('==> [[;#00ffff;]Upgrading ' + pkgs.length + ' outdated packages:]');
+                var i = 0;
+                function upgNext() {
+                    if (i < pkgs.length) { term.echo('  [[;#00ff00;]✓] ' + pkgs[i]); i++; setTimeout(upgNext, 300); }
+                    else { term.echo('\n🍺 [[;#00ff00;]All packages upgraded!]'); }
+                }
+                upgNext();
+            } else {
+                term.echo('Usage: brew install <package> | brew upgrade');
+            }
+        },
+        pip: function(subcmd, pkg) {
+            var term = this;
+            if (subcmd === 'install' && pkg) {
+                term.echo('Collecting ' + pkg + '...');
+                setTimeout(function() { term.echo('Downloading ' + pkg + '-latest.whl (4.2 MB)'); }, 300);
+                setTimeout(function() { term.echo('Installing collected packages: ' + pkg); }, 600);
+                setTimeout(function() { term.echo('[[;#00ff00;]Successfully installed ' + pkg + '-latest]'); }, 900);
+            } else {
+                term.echo('Usage: pip install <package>');
+            }
+        },
+        npm: function(subcmd) {
+            var term = this;
+            if (subcmd === 'install') {
+                var steps = ['[[;#888;]npm warn deprecated some-old-pkg@1.0.0]', '[[;#888;]npm warn deprecated another-pkg@2.3.1]'];
+                var i = 0;
+                function npmStep() {
+                    if (i < steps.length) { term.echo(steps[i]); i++; setTimeout(npmStep, 400); }
+                    else {
+                        term.echo('');
+                        term.echo('added [[;#00ff00;]847 packages] in 6.2s');
+                        term.echo('');
+                        term.echo('[[;#ffff00;]147] packages are looking for funding');
+                        term.echo('  run `npm fund` for details');
+                    }
+                }
+                npmStep();
+            } else {
+                term.echo('Usage: npm install');
+            }
+        },
+
+        // --- Easter Eggs ---
+        sudo: function() {
+            this.echo('[[;#ff0000;]Permission denied.] Nice try! 😄');
+            this.echo('[[;#888;]This portfolio is protected by SOC2 compliance... sort of.]');
+            this.echo('[[;#888;]Your attempt has been logged and reported to nobody.]');
+        },
+        vim: function() {
+            this.echo('[[;#00ff00;]~]');
+            this.echo('[[;#00ff00;]~] You\'ve entered vim.');
+            this.echo('[[;#00ff00;]~]');
+            this.echo('[[;#ffff00;]~] Press Escape... just kidding, you\'ll never leave 😈]');
+            this.echo('[[;#00ff00;]~]');
+            this.echo('[[;#888;]~] (Type any command to "escape". You\'re welcome.)]');
+        },
+        nano: function() {
+            this.echo('[[;#ffffff;]  GNU nano 7.2          New Buffer]');
+            this.echo('');
+            this.echo('  Just use vim. Or better yet, VS Code. 😏');
+            this.echo('');
+            this.echo('[[;#000;#ffffff;]  ^X Exit  ^O Write  ^W Search]');
+        },
+        'exit': function() {
+            this.echo('[[;#ffff00;]You can\'t exit DevOS that easily!]');
+            this.echo('[[;#888;]This isn\'t SSH — it\'s a portfolio. Enjoy the ride! 🎢]');
+        },
+        rm: function() {
+            this.echo('[[;#ff0000;]rm: refusing to remove \'/\' — nice try!] 🛡️');
+            this.echo('[[;#888;]DevOS is immutable infrastructure. Everything is cattle, not pets.]');
+        },
+        'apt': function(subcmd) {
+            this.echo('[[;#ffff00;]This is macOS, not Ubuntu!] 🍎');
+            this.echo('[[;#888;]Try: brew install <package>]');
+        },
+        'yum': function() {
+            this.echo('[[;#ffff00;]This is macOS, not CentOS!] 🍎');
+            this.echo('[[;#888;]Try: brew install <package>]');
+        },
+        'man': function(cmd) {
+            if (!cmd) { this.echo('What manual page do you want?\nUsage: man <command>'); return; }
+            this.echo('[[;#ffffff;]' + cmd.toUpperCase() + '(1)] — DevOS Manual');
+            this.echo('');
+            this.echo('[[;#ffff00;]NAME]');
+            this.echo('    ' + cmd + ' — a command in Virendra\'s DevOS terminal');
+            this.echo('');
+            this.echo('[[;#ffff00;]DESCRIPTION]');
+            this.echo('    This is a portfolio terminal, not a real shell.');
+            this.echo('    But we appreciate your thoroughness! 🤓');
+            this.echo('');
+            this.echo('[[;#ffff00;]SEE ALSO]');
+            this.echo('    help(1), about(1), whoami(1)');
         }
     };
 
@@ -787,10 +1488,13 @@ function initInteractiveTerminal() {
         },
         checkArity: false,
         completion: function(string) {
-            return Object.keys(commands);
+            return ['help','whoami','about','ls','cd','experience','skills','certifications','projects','education','clear','joke','kubernetes','terraform','devops','coffee','motivate','matrix','neofetch','typingtest','tictactoe','kubegame','resume','contact','github','linkedin','date','uptime','fortune','cowsay','sl','top','htop','ps','cat','find','grep','uname','hostname','pwd','echo','history','df','free','ifconfig','ping','curl','lsb_release','docker','kubectl','helm','git','brew','pip','npm','sudo','vim','nano','exit','rm','apt','yum','man','tail'];
         },
         onBeforeCommand: function() {
             playClickSound();
+        },
+        onAfterCommand: function() {
+            _scrollTerminal();
         },
         keypress: function() {
             playKeypressSound();
@@ -800,4 +1504,15 @@ function initInteractiveTerminal() {
     term.on('keypress', function() {
         playKeypressSound();
     });
+
+    // Fix mouse wheel scrolling — jQuery Terminal sometimes blocks native scroll
+    setTimeout(function() {
+        var termEl = document.querySelector('#interactive-terminal .terminal');
+        var scroller = document.querySelector('#interactive-terminal .terminal-scroller') || termEl;
+        if (scroller) {
+            scroller.addEventListener('wheel', function(e) {
+                scroller.scrollTop += e.deltaY;
+            }, { passive: true });
+        }
+    }, 500);
 }
