@@ -51,14 +51,20 @@ function performShutdown() {
         if (menuBar) {
             menuBar.style.transition = 'opacity 0.5s ease';
             menuBar.style.opacity = '0';
+            menuBar.style.display = 'none';
         }
+        const desktop = document.getElementById('desktop');
+        if (desktop) desktop.style.display = 'none';
         const expClock = document.getElementById('experience-clock');
         if (expClock) expClock.style.display = 'none';
+        document.body.classList.remove('logged-in');
     }, 300);
 
-    setTimeout(() => {
+    const showGoodbyeScreen = () => {
         shutdownEl.style.display = 'flex';
         shutdownEl.style.opacity = '1';
+        const inner = shutdownEl.querySelector('.shutdown-content');
+        if (inner) inner.style.display = '';
         try {
             const now = audioContext.currentTime;
             const osc = audioContext.createOscillator();
@@ -72,7 +78,51 @@ function performShutdown() {
             osc.start(now);
             osc.stop(now + 0.3);
         } catch (e) {}
-    }, 800);
+    };
+
+    const afterMacbookShutdown = () => {
+        const inner = shutdownEl.querySelector('.shutdown-content');
+        const startup = document.getElementById('startup-screen');
+        function showBlackPowerOff() {
+            shutdownEl.style.display = 'flex';
+            shutdownEl.style.background = '#000';
+            shutdownEl.style.opacity = '1';
+            if (inner) inner.style.display = 'none';
+        }
+        if (startup && startup.style.display !== 'none') {
+            startup.style.transition = 'opacity 1.05s ease';
+            startup.style.opacity = '0';
+            setTimeout(function() {
+                startup.style.display = 'none';
+                startup.style.opacity = '1';
+                startup.style.transition = '';
+                showBlackPowerOff();
+            }, 1050);
+        } else {
+            showBlackPowerOff();
+        }
+        try {
+            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = 480;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.08 * masterVolume, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        } catch (e2) {}
+    };
+
+    setTimeout(() => {
+        if (typeof window._macbookShutdownSequence === 'function') {
+            window._macbookShutdownSequence(afterMacbookShutdown);
+        } else {
+            showGoodbyeScreen();
+        }
+    }, 320);
 }
 
 function beautifulShutdown() {
@@ -81,10 +131,41 @@ function beautifulShutdown() {
 
 // ===== RESTART =====
 function performRestart() {
-    performShutdown();
+    playClickSound();
+    document.querySelectorAll('.window').forEach(w => {
+        w.style.transition = 'opacity 0.5s ease';
+        w.style.opacity = '0';
+    });
     setTimeout(() => {
-        location.reload();
-    }, 3000);
+        document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
+        const dock = document.querySelector('.dock');
+        if (dock) {
+            dock.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            dock.style.opacity = '0';
+            dock.style.transform = 'translateX(-50%) translateY(20px)';
+        }
+        const menuBar = document.getElementById('menu-bar');
+        if (menuBar) {
+            menuBar.style.transition = 'opacity 0.5s ease';
+            menuBar.style.opacity = '0';
+            menuBar.style.display = 'none';
+        }
+        const desktop = document.getElementById('desktop');
+        if (desktop) desktop.style.display = 'none';
+        const expClock = document.getElementById('experience-clock');
+        if (expClock) expClock.style.display = 'none';
+        document.body.classList.remove('logged-in');
+    }, 300);
+
+    setTimeout(() => {
+        if (typeof window._macbookShutdownSequence === 'function') {
+            window._macbookShutdownSequence(() => {
+                location.reload();
+            });
+        } else {
+            location.reload();
+        }
+    }, 320);
 }
 
 // ===== LOG OUT =====
@@ -97,16 +178,25 @@ function performLogout() {
     });
 
     setTimeout(() => {
-        const loginScreen = document.getElementById('login-screen');
         const dock = document.querySelector('.dock');
         const menuBar = document.getElementById('menu-bar');
         const expClock = document.getElementById('experience-clock');
 
-        if (dock) dock.style.display = 'none';
+        if (dock) {
+            dock.style.display = 'none';
+            dock.style.opacity = '1';
+            dock.style.transform = 'translateX(-50%)';
+        }
         if (menuBar) menuBar.style.display = 'none';
         if (expClock) expClock.style.display = 'none';
         document.body.classList.remove('logged-in');
 
+        if (window._macbook3dActive && typeof window._macbookLogoutSequence === 'function' && window._macbookLogoutSequence()) {
+            return;
+        }
+
+        const loginScreen = document.getElementById('login-screen');
+        if (!loginScreen) return;
         loginScreen.style.display = 'flex';
         loginScreen.style.opacity = '0';
         loginScreen.style.transition = 'opacity 0.8s ease';
@@ -258,67 +348,20 @@ function createLoginParticles() {
 
 // ===== STARTUP SEQUENCE =====
 function startupSequence() {
-    const startupScreen = document.getElementById('startup-screen');
-    const loginScreen = document.getElementById('login-screen');
-    const menuBar = document.getElementById('menu-bar');
-    const desktop = document.getElementById('desktop');
+    var loginScreen = document.getElementById('login-screen');
+    var menuBar = document.getElementById('menu-bar');
+    var desktop = document.getElementById('desktop');
 
-    menuBar.style.display = 'none';
-    desktop.style.display = 'none';
-    document.querySelector('.dock').style.display = 'none';
+    // Hide EVERYTHING — 3D MacBook handles the full boot/login/desktop flow
+    if (menuBar) menuBar.style.display = 'none';
+    if (desktop) desktop.style.display = 'none';
+    var dock = document.querySelector('.dock');
+    if (dock) dock.style.display = 'none';
+    // Completely remove login screen — 3D MacBook renders login on its screen
+    if (loginScreen) loginScreen.style.display = 'none';
 
-    loginScreen.style.display = 'flex';
-    loginScreen.style.opacity = '1';
-
-    createLoginParticles();
-
-    playStartupSound();
-
-    const bootLogs = document.getElementById('boot-logs');
-    if (bootLogs) {
-        bootLogs.innerHTML = '';
-        const messages = [
-            '> docker pull virnahar/devos:latest',
-            '  Pulling from virnahar/devos',
-            '  a1b2c3d4: Pulling fs layer',
-            '  e5f6g7h8: Downloading [=====>   ] 42%',
-            '  e5f6g7h8: Downloading [========>] 89%',
-            '  e5f6g7h8: Pull complete',
-            '> Loading Kubernetes clusters...',
-            '  context: aks-production ✓',
-            '  context: aks-staging ✓',
-            '> terraform init',
-            '  Initializing provider plugins...',
-            '  Terraform has been successfully initialized!',
-            '> helm upgrade --install devos ./chart',
-            '  Release "devos" has been upgraded. Happy Helming!',
-            '> Starting DevOS v2.0...',
-            '  ✓ All systems operational'
-        ];
-        let msgIndex = 0;
-        const bootInterval = setInterval(() => {
-            if (msgIndex < messages.length) {
-                const line = document.createElement('div');
-                line.textContent = messages[msgIndex];
-                line.style.opacity = '0';
-                line.style.animation = 'fadeIn 0.3s ease forwards';
-                bootLogs.appendChild(line);
-                bootLogs.scrollTop = bootLogs.scrollHeight;
-                msgIndex++;
-            } else {
-                clearInterval(bootInterval);
-            }
-        }, 200);
-    }
-
-    setTimeout(() => {
-        startupScreen.style.transition = 'opacity 1.2s ease';
-        startupScreen.style.opacity = '0';
-
-        setTimeout(() => {
-            startupScreen.style.display = 'none';
-        }, 1200);
-    }, 3200);
+    // Mark that 3D MacBook is handling everything
+    window._macbook3dActive = true;
 }
 
 // ===== LOGIN HANDLER =====
@@ -363,7 +406,7 @@ function handleLogin() {
             }, 500);
 
             setTimeout(() => {
-                showNotification('Welcome to DevOS!', 'Try the Terminal — type "help" for commands.');
+                showNotification('Welcome to DevOS!', 'Try ⌘/Ctrl+Space for Spotlight. Hand Magic uses a small corner preview only.');
             }, 3000);
             setTimeout(() => {
                 showNotification('Tip', 'Double-click any window title bar to maximize it.');

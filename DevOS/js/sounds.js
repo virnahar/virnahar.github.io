@@ -1,7 +1,7 @@
 // ===== GHOST CURSOR TRAIL =====
 (function() {
     const canvas = document.getElementById('cursor-canvas');
-    if (!canvas || window.innerWidth < 768) return;
+    if (!canvas || window.matchMedia('(max-width: 767px), (pointer: coarse)').matches) return;
     const ctx = canvas.getContext('2d');
     let mouseMoved = false;
     const pointer = { x: 0.5 * window.innerWidth, y: 0.5 * window.innerHeight };
@@ -53,8 +53,51 @@
 // ===== DEVOS AUDIO SYSTEM — Apple-Authentic Web Audio Synthesis =====
 
 let soundEnabled = true;
-let masterVolume = 0.5;
+let masterVolume = 0.42;
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+/** Call after a user gesture so Safari plays audio reliably */
+function resumeDevosAudio() {
+    try {
+        if (audioContext.state === 'suspended') audioContext.resume();
+    } catch (e) {}
+}
+window.resumeDevosAudio = resumeDevosAudio;
+
+let _devosAudioUnlocked = false;
+function unlockDevosAudioOnce() {
+    if (_devosAudioUnlocked) return;
+    _devosAudioUnlocked = true;
+    resumeDevosAudio();
+}
+window.unlockDevosAudioOnce = unlockDevosAudioOnce;
+
+/** Browsers require a user activation for Web Audio; we unlock on the lightest possible signals. */
+(function setupDevosAudioUnlock() {
+    const unlock = function() {
+        unlockDevosAudioOnce();
+    };
+    const opts = { capture: true, passive: true };
+    ['pointerdown', 'touchstart', 'keydown', 'wheel'].forEach(function(ev) {
+        document.addEventListener(ev, unlock, opts);
+    });
+    window.addEventListener('focus', unlock, opts);
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') resumeDevosAudio();
+    });
+
+    window.addEventListener('load', function() {
+        resumeDevosAudio();
+        try {
+            const silent = new Audio(
+                'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=='
+            );
+            silent.volume = 0.0001;
+            const p = silent.play();
+            if (p && p.then) p.then(function() { resumeDevosAudio(); }).catch(function() {});
+        } catch (e) {}
+    });
+})();
 
 function toggleSound() {
     soundEnabled = !soundEnabled;
@@ -99,25 +142,29 @@ function _createReverbImpulse(duration, decay) {
     return buffer;
 }
 
-// ===== CLICK — gentle macOS pop =====
+// ===== CLICK — soft glass tap (quieter attack / longer decay) =====
 function playClickSound() {
     if (!soundEnabled) return;
     try {
+        resumeDevosAudio();
         const now = audioContext.currentTime;
+        const v = masterVolume;
         const osc = audioContext.createOscillator();
         const gain = audioContext.createGain();
         const filter = audioContext.createBiquadFilter();
         osc.connect(filter);
         filter.connect(gain);
         gain.connect(audioContext.destination);
-        osc.frequency.value = 1100;
+        osc.frequency.value = 920;
         osc.type = 'sine';
         filter.type = 'lowpass';
-        filter.frequency.value = 1800;
-        gain.gain.setValueAtTime(0.06 * masterVolume, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        filter.frequency.value = 2400;
+        filter.Q.value = 0.6;
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.045 * v, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
         osc.start(now);
-        osc.stop(now + 0.07);
+        osc.stop(now + 0.12);
     } catch (e) {}
 }
 
@@ -145,16 +192,18 @@ function playMinimizeSound() {
     } catch (e) {}
 }
 
-// ===== STARTUP — warm F-major chord (real Mac chime feel) =====
+// ===== STARTUP — warm F-major stack, softer highs (closer to Mac boot warmth) =====
 function playStartupSound() {
     if (!soundEnabled) return;
+    resumeDevosAudio();
     var notes = [
-        { freq: 174.61, gain: 0.25, type: 'sine' },
-        { freq: 220.00, gain: 0.20, type: 'sine' },
-        { freq: 261.63, gain: 0.22, type: 'sine' },
-        { freq: 349.23, gain: 0.17, type: 'sine' },
-        { freq: 440.00, gain: 0.12, type: 'sine' }
+        { freq: 174.61, gain: 0.22, type: 'sine' },
+        { freq: 220.00, gain: 0.18, type: 'sine' },
+        { freq: 261.63, gain: 0.19, type: 'sine' },
+        { freq: 349.23, gain: 0.14, type: 'sine' },
+        { freq: 440.00, gain: 0.09, type: 'sine' }
     ];
+    var v = masterVolume;
     notes.forEach(function(note, i) {
         try {
             var osc = audioContext.createOscillator();
@@ -166,17 +215,90 @@ function playStartupSound() {
             osc.type = note.type;
             osc.frequency.value = note.freq;
             filter.type = 'lowpass';
-            filter.frequency.value = 3500;
-            filter.Q.value = 0.7;
-            var t = audioContext.currentTime + (i * 0.03);
+            filter.frequency.value = 2800;
+            filter.Q.value = 0.5;
+            var t = audioContext.currentTime + (i * 0.035);
             gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(note.gain * masterVolume, t + 0.25);
-            gain.gain.setValueAtTime(note.gain * masterVolume * 0.9, t + 0.8);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 3.2);
+            gain.gain.linearRampToValueAtTime(note.gain * v, t + 0.32);
+            gain.gain.linearRampToValueAtTime(note.gain * v * 0.88, t + 0.95);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 3.4);
             osc.start(t);
-            osc.stop(t + 3.2);
+            osc.stop(t + 3.5);
         } catch (e) {}
     });
+}
+
+// ===== MACBOOK SLIDE-IN — airy lift (uses same engine as rest of UI) =====
+function playMacbookSlideSound() {
+    if (!soundEnabled) return;
+    try {
+        resumeDevosAudio();
+        var t0 = audioContext.currentTime;
+        var v = masterVolume;
+        var chord = [
+            { f: 329.63, g: 0.05 },
+            { f: 392.0, g: 0.055 },
+            { f: 493.88, g: 0.04 }
+        ];
+        for (var i = 0; i < chord.length; i++) {
+            var o = audioContext.createOscillator();
+            var g = audioContext.createGain();
+            var lp = audioContext.createBiquadFilter();
+            o.type = 'sine';
+            o.frequency.value = chord[i].f;
+            lp.type = 'lowpass';
+            lp.frequency.value = 4200;
+            lp.Q.value = 0.4;
+            o.connect(lp).connect(g).connect(audioContext.destination);
+            var st = t0 + i * 0.045;
+            g.gain.setValueAtTime(0, st);
+            g.gain.linearRampToValueAtTime(chord[i].g * v, st + 0.14);
+            g.gain.exponentialRampToValueAtTime(0.001, st + 1.25);
+            o.start(st);
+            o.stop(st + 1.35);
+        }
+        var dur = 0.38;
+        var noise = audioContext.createBufferSource();
+        noise.buffer = _createNoiseBuffer(dur);
+        var bp = audioContext.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.setValueAtTime(400, t0);
+        bp.frequency.exponentialRampToValueAtTime(1800, t0 + dur);
+        bp.Q.value = 0.7;
+        var ng = audioContext.createGain();
+        ng.gain.setValueAtTime(0, t0);
+        ng.gain.linearRampToValueAtTime(0.028 * v, t0 + 0.04);
+        ng.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+        noise.connect(bp).connect(ng).connect(audioContext.destination);
+        noise.start(t0);
+        noise.stop(t0 + dur);
+    } catch (e) {}
+}
+
+// ===== FACE ID UNLOCK — two soft ascending blips (System sound–like) =====
+function playFaceIDUnlockSound() {
+    if (!soundEnabled) return;
+    try {
+        resumeDevosAudio();
+        var t0 = audioContext.currentTime;
+        var v = masterVolume;
+        [784, 1174.66].forEach(function(freq, i) {
+            var t = t0 + i * 0.09;
+            var o = audioContext.createOscillator();
+            o.type = 'sine';
+            o.frequency.value = freq;
+            var lp = audioContext.createBiquadFilter();
+            lp.type = 'lowpass';
+            lp.frequency.value = 6000;
+            var g = audioContext.createGain();
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.09 * v, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+            o.connect(lp).connect(g).connect(audioContext.destination);
+            o.start(t);
+            o.stop(t + 0.25);
+        });
+    } catch (e) {}
 }
 
 // ===== KEYPRESS — very subtle soft tick =====
@@ -200,6 +322,7 @@ function playKeypressSound() {
 function playNotificationSound() {
     if (!soundEnabled) return;
     try {
+        resumeDevosAudio();
         const now = audioContext.currentTime;
         const vol = masterVolume;
         const tones = [880, 1108.73, 1318.51]; // A5, C#6, E6 — ascending major triad
@@ -211,8 +334,8 @@ function playNotificationSound() {
             osc.frequency.value = freq;
             const g = audioContext.createGain();
             g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(0.12 * vol, t + 0.015);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+            g.gain.linearRampToValueAtTime(0.095 * vol, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
             const lp = audioContext.createBiquadFilter();
             lp.type = 'lowpass';
             lp.frequency.value = 5000;

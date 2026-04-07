@@ -56,17 +56,13 @@
 <body class="mac-cursor" role="application">
     <noscript><div style="position:fixed;inset:0;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;z-index:999999;font-family:-apple-system,sans-serif;text-align:center;padding:40px;"><div><h1 style="font-size:48px;margin-bottom:16px;">🍎</h1><h2>DevOS requires JavaScript</h2><p style="color:#888;margin-top:12px;">Please enable JavaScript to explore Virendra Kumar's interactive portfolio.</p><p style="margin-top:24px;"><a href="https://linkedin.com/in/virnahar" style="color:#007aff;">Visit LinkedIn instead →</a></p></div></div></noscript>
     <canvas class="cursor-canvas" id="cursor-canvas"></canvas>
-    <!-- Startup Screen -->
-    <div class="startup-screen" id="startup-screen" style="z-index: 99999;">
-        <div class="startup-content">
-            <svg class="apple-logo-startup" width="120" height="120" viewBox="0 0 24 24" fill="white">
-                <path d="M18.71,19.5C17.88,20.74 17,21.95 15.66,21.97C14.32,22 13.89,21.18 12.37,21.18C10.84,21.18 10.37,21.95 9.1,22C7.79,22.05 6.8,20.68 5.96,19.47C4.25,17 2.94,12.45 4.7,9.39C5.57,7.87 7.13,6.91 8.82,6.88C10.1,6.86 11.32,7.75 12.11,7.75C12.89,7.75 14.37,6.68 15.92,6.84C16.57,6.87 18.39,7.1 19.56,8.82C19.47,8.88 17.39,10.1 17.41,12.63C17.44,15.65 20.06,16.66 20.09,16.67C20.06,16.74 19.67,18.11 18.71,19.5M13,3.5C13.73,2.67 14.94,2.04 15.94,2C16.07,3.17 15.6,4.35 14.9,5.19C14.21,6.04 13.07,6.7 11.95,6.61C11.8,5.46 12.36,4.26 13,3.5Z"/>
-            </svg>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-            </div>
-            <div class="boot-logs" id="boot-logs" style="margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.5); text-align: left; max-width: 400px; height: 60px; overflow: hidden;"></div>
-        </div>
+    <!-- Startup Screen — Three.js 3D MacBook -->
+    <div id="startup-screen" style="position:fixed;inset:0;z-index:99999;background:#000;">
+        <canvas id="macbook-canvas" style="width:100%;height:100%;display:block;"></canvas>
+        <div id="macbook-hint" style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.3);font-size:12px;font-family:-apple-system,sans-serif;pointer-events:none;animation:blinkHint 2s ease-in-out infinite;">Drag to rotate • Scroll to zoom</div>
+        <!-- Hidden boot elements for JS to read -->
+        <div id="boot-logs" style="display:none;"></div>
+        <div class="progress-bar" style="display:none;"><div class="progress-fill" id="progress-fill"></div></div>
     </div>
 
     <!-- Login Screen - Elegant Design -->
@@ -123,6 +119,16 @@
             <div class="menu-icon" id="sound-toggle-btn" title="Sound On/Off">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="sound-icon">
                     <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/>
+                </svg>
+            </div>
+            <div class="menu-icon" id="gesture-magic-toggle" title="Hand Magic — corner camera preview + hand outline; palm, point, ✌️, 👍, fist, pinch; full palm swipe → shut down" role="button" tabindex="0" aria-pressed="false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M7 11.5V16a2 2 0 002 2h1"/>
+                    <path d="M11 11.5V18"/>
+                    <path d="M15 10.5V16a2 2 0 01-2 2"/>
+                    <path d="M7 11.5c0-1.5 1-2.5 2-2.5s2 1 2 2.5"/>
+                    <path d="M11 11.5c0-1.2.9-2.2 2-2.2s2 1 2 2.2v-1c0-1.5 1-2.5 2-2.5s2 1 2 2.5V14"/>
+                    <circle cx="12" cy="6" r="2.5"/>
                 </svg>
             </div>
             <div class="menu-icon" id="spotlight-btn" title="Spotlight Search (⌘Space)">
@@ -579,6 +585,10 @@
             <div class="cc-toggle-circle" onclick="showMacModal('Focus','Focus mode would silence notifications.','🌙')">
                 <div class="cc-circle-icon">🔕</div>
                 <div class="cc-circle-label">Focus</div>
+            </div>
+            <div class="cc-toggle-circle" onclick="if(typeof toggleGestureMagic==='function')toggleGestureMagic();" title="Camera + hand gestures">
+                <div class="cc-circle-icon">✋</div>
+                <div class="cc-circle-label">Hand Magic</div>
             </div>
         </div>
         <!-- Display -->
@@ -2401,6 +2411,14 @@
     <!-- Sticky Notes on Desktop -->
     <div id="desktop-sticky-notes" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50;"></div>
 
+    <!-- Three.js r126 (global scripts) + GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r126/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://unpkg.com/gsap@3/dist/gsap.min.js"></script>
+    <script src="js/sounds.js"></script>
+    <script src="js/macbook3d.js"></script>
+
     <!-- Dependencies -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery.terminal@2.38.0/js/jquery.terminal.min.js"></script>
@@ -2410,13 +2428,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js" defer></script>
 
     <!-- V2 Modular JavaScript (load order matters) -->
-    <script src="js/sounds.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/startup.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/apps.js"></script>
     <script src="js/terminal.js"></script>
     <script src="js/games.js"></script>
+    <script src="js/gesture-magic.js"></script>
 
     <!-- Service Worker Registration -->
     <script>

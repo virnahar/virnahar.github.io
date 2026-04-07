@@ -3,6 +3,195 @@
 */
 
 /* ============================
+   3D MacBook Boot — Realistic AppGram Style
+   ============================ */
+.macbook-boot {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 60%, #1a1a2e 0%, #0a0a0f 70%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    perspective: 1200px;
+    overflow: hidden;
+    z-index: 99999;
+}
+
+.macbook-scene {
+    transform-style: preserve-3d;
+    transform: rotateX(12deg) rotateY(0deg);
+    transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease;
+}
+
+.macbook-body {
+    transform-style: preserve-3d;
+    position: relative;
+}
+
+/* Lid — the screen half */
+.macbook-lid {
+    width: 520px;
+    height: 340px;
+    transform-origin: bottom center;
+    transform: rotateX(-85deg);
+    transform-style: preserve-3d;
+    animation: lidOpen 2.5s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
+    position: relative;
+}
+
+@keyframes lidOpen {
+    0%   { transform: rotateX(-85deg); }
+    40%  { transform: rotateX(-20deg); }
+    70%  { transform: rotateX(3deg); }
+    85%  { transform: rotateX(-1deg); }
+    100% { transform: rotateX(0deg); }
+}
+
+.macbook-screen {
+    width: 100%;
+    height: 100%;
+    background: #0a0a0a;
+    border-radius: 14px 14px 0 0;
+    border: 10px solid #222;
+    border-bottom: 4px solid #222;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.8), 0 -2px 20px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.macbook-screen::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #1a1a1a;
+    border: 1px solid #333;
+}
+
+.macbook-screen-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    opacity: 0;
+    animation: screenGlow 1s ease 2s forwards;
+}
+
+@keyframes screenGlow {
+    0%   { opacity: 0; filter: brightness(0); }
+    50%  { opacity: 0.5; filter: brightness(1.5); }
+    100% { opacity: 1; filter: brightness(1); }
+}
+
+.macbook-bezel-bottom {
+    height: 6px;
+    background: #1c1c1c;
+    border-radius: 0 0 2px 2px;
+}
+
+/* Base — the keyboard half */
+.macbook-base {
+    width: 560px;
+    height: 14px;
+    background: linear-gradient(180deg, #d4d4d8 0%, #b8b8bc 40%, #a8a8ac 100%);
+    border-radius: 2px 2px 10px 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.15) inset;
+    position: relative;
+}
+
+.macbook-base::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background: #999;
+    border-radius: 0 0 3px 3px;
+}
+
+.macbook-keyboard, .macbook-trackpad { display: none; }
+
+/* Screen glow on surface */
+.macbook-body::after {
+    content: '';
+    position: absolute;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 40px;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    opacity: 0;
+    animation: surfaceGlow 1s ease 2.2s forwards;
+}
+
+@keyframes surfaceGlow {
+    to { opacity: 1; }
+}
+
+/* ZOOM to login — screen expands to fill viewport */
+.macbook-boot.zooming {
+    background: #000;
+    transition: background 0.5s ease;
+}
+
+.macbook-boot.zooming .macbook-scene {
+    transform: rotateX(0deg) scale(5);
+    transition: transform 1.4s cubic-bezier(0.4, 0, 0, 1);
+}
+
+.macbook-boot.zooming .macbook-screen {
+    border-color: #000;
+    border-radius: 0;
+    box-shadow: none;
+    transition: border-color 0.6s ease, border-radius 0.6s ease;
+}
+
+.macbook-boot.zooming .macbook-base,
+.macbook-boot.zooming .macbook-bezel-bottom,
+.macbook-boot.zooming .macbook-body::after,
+.macbook-boot.zooming .macbook-screen::before {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+/* Shutdown — lid closes */
+.macbook-boot.closing .macbook-lid {
+    animation: lidClose 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes lidClose {
+    0%   { transform: rotateX(0deg); }
+    100% { transform: rotateX(-85deg); }
+}
+
+/* Mobile scaling */
+@media (max-width: 768px) {
+    .macbook-lid { width: 340px; height: 220px; }
+    .macbook-base { width: 370px; height: 10px; }
+    .macbook-screen { border-width: 6px; }
+    .macbook-boot.zooming .macbook-scene { transform: rotateX(0deg) scale(7); }
+}
+
+@media (max-width: 480px) {
+    .macbook-lid { width: 260px; height: 170px; }
+    .macbook-base { width: 290px; height: 8px; }
+    .macbook-screen { border-width: 5px; }
+    .macbook-boot.zooming .macbook-scene { transform: rotateX(0deg) scale(10); }
+    .macbook-screen-content .apple-logo-startup { width: 40px; height: 40px; }
+}
+
+/* ============================
    Sleep Overlay (V2)
    ============================ */
 .sleep-overlay {

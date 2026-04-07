@@ -114,6 +114,22 @@ function openWindow(appName) {
     }
 }
 
+/** Frontmost visible window: scroll main content (used by hand-gesture scroll). */
+window.scrollFrontWindowBy = function(deltaY) {
+    if (!deltaY || !isFinite(deltaY)) return;
+    var list = Array.prototype.slice.call(document.querySelectorAll('.window'));
+    var visible = list.filter(function(w) {
+        return w.style.display === 'block' && !w.classList.contains('minimized');
+    });
+    visible.sort(function(a, b) {
+        return (parseInt(getComputedStyle(b).zIndex, 10) || 0) - (parseInt(getComputedStyle(a).zIndex, 10) || 0);
+    });
+    var w = visible[0];
+    if (!w) return;
+    var el = w.querySelector('.window-content') || w;
+    el.scrollTop += deltaY;
+};
+
 // ===== ANIMATE SKILL BARS =====
 function animateSkillBars() {
     const skillFills = document.querySelectorAll('.skill-fill');
@@ -290,7 +306,7 @@ let dragPointerId = null;
 let snapPreview = null;
 
 function dockReservePx() {
-    return window.innerWidth <= 768 ? 100 : 80;
+    return 80;
 }
 
 document.querySelectorAll('.window-titlebar').forEach(titlebar => {
@@ -650,7 +666,7 @@ function showRecentItems() {
 function showMacOSHelp() {
     showMacModal(
         'DevOS Help',
-        `Shortcuts:\n⌘/Ctrl + Space — Spotlight Search\nF3 — Mission Control\nF4 — Launchpad\nEsc — Close active window\nAlt + W/M/N — Close / Minimize / New window\n\nHighlights:\n• 10+ interactive apps with real functionality\n• Interactive terminal with 15+ commands\n• 7 games, 7 wallpapers, dark mode\n• Dynamic menu bar, genie minimize, dock zoom\n\nBuilt by Virendra Kumar — github.com/virnahar`,
+        `Shortcuts:\n⌘/Ctrl + Space — Spotlight Search\nF3 — Mission Control\nF4 — Launchpad\nEsc — Close active window\nAlt + W/M/N — Close / Minimize / New window\n\nHand Magic:\nMenu bar (hand icon) or Control Center. Corner preview only — camera + hand outline; desktop stays clear. Palm still → Resume; point → scroll / hold → Terminal; ✌️ → Contact; 👍 → Projects; fist → Finder; pinch → Trash; full palm swipe → Shut Down (strict).\n\nHighlights:\n• 10+ interactive apps with real functionality\n• Interactive terminal with 15+ commands\n• 7 games, 7 wallpapers, dark mode\n• Dynamic menu bar, genie minimize, dock zoom\n\nBuilt by Virendra Kumar — github.com/virnahar`,
         '📖'
     );
 }
@@ -1116,7 +1132,6 @@ window.addEventListener('load', () => {
         }
 
         dock.addEventListener('pointermove', (e) => {
-            if (window.innerWidth < 768) return;
             updateDockMagnify(e.clientX);
         });
 
@@ -1155,7 +1170,7 @@ function emptyTrashAnimation() {
     const icons = document.querySelectorAll('.desktop-icon');
     const widgets = document.querySelectorAll('.desktop-widget');
     const dock = document.querySelector('.dock');
-    const originalDockTransform = dock ? dock.style.transform || 'translateX(-50%)' : '';
+    const originalDockTransform = 'translateX(-50%)';
     const allElements = [...icons, ...widgets];
 
     allElements.forEach((element, index) => {
@@ -1253,7 +1268,6 @@ document.querySelectorAll('.desktop-widget').forEach(widget => {
     widget.style.touchAction = 'none';
 
     function applyTilt(e) {
-        if (window.innerWidth < 768) return;
         const rect = widget.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
@@ -1508,8 +1522,7 @@ window.addEventListener('load', function() {
         function positionIcons() {
             centerX = desktop.offsetWidth / 2;
             centerY = desktop.offsetHeight / 2;
-            var isMobile = window.innerWidth < 768;
-            radius = Math.min(centerX, centerY) * (isMobile ? 0.55 : 0.65);
+            radius = Math.min(centerX, centerY) * 0.64;
             if (radius < 80) radius = 80;
             if (radius > 300) radius = 300;
 
