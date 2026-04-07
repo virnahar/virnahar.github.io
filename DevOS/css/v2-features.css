@@ -1136,11 +1136,28 @@ body.dark-mode .window {
 /* ============================
    Mobile Responsive — V2 Features
    ============================ */
-@media (max-width: 768px) {
-    /* Orbit → smaller radius handled by JS, but icons need to be smaller */
+@media (max-width: 768px), (max-width: 1024px) and (pointer: coarse) {
+    /* No fixed widgets — they block the whole screen on phones */
+    .desktop-widget,
+    #experience-clock,
+    #timeline-widget,
+    #skills-widget {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    /* Center Launchpad apple: tap-friendly on touch */
+    #desktop-apple-logo {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+
     .desktop-icon {
         width: 64px !important;
         padding: 4px !important;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
     }
     .desktop-icon-img svg,
     .desktop-icon-img img {

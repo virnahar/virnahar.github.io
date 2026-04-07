@@ -4,4 +4,4 @@ Allow: /
 Disallow: /node_modules/
 Disallow: /.git/
 
-Sitemap: https://virnahar.github.io/sitemap.xml
+Sitemap: https://virnahar.github.io/DevOs/sitemap.xml

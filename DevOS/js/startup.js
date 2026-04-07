@@ -15,7 +15,13 @@ function showMacModal(title, message, icon = 'ℹ️') {
     playClickSound();
 }
 
+document.getElementById('mac-modal-overlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeMacModal();
+});
+
 function closeMacModal() {
+    const okBtn = document.getElementById('mac-modal-ok');
+    if (okBtn) okBtn.onclick = function() { closeMacModal(); };
     const overlay = document.getElementById('mac-modal-overlay');
     overlay.style.transition = 'opacity 0.2s ease';
     overlay.style.opacity = '0';
@@ -28,11 +34,21 @@ function closeMacModal() {
     playClickSound();
 }
 
-// ===== SHUTDOWN =====
-function performShutdown() {
-    playClickSound();
-    const shutdownEl = document.getElementById('shutdown-screen');
-    if (!shutdownEl) return;
+// ===== SHUTDOWN / RESTART — shared chrome hide + same MacBook 3D + same overlay handoff =====
+
+function hideSessionChromeForMacbookPower() {
+    if (typeof closeSpotlight === 'function') closeSpotlight();
+    if (typeof closeLaunchpad === 'function') closeLaunchpad();
+    if (typeof closeMissionControl === 'function') closeMissionControl();
+
+    const macModal = document.getElementById('mac-modal-overlay');
+    if (macModal && macModal.style.display === 'flex') {
+        closeMacModal();
+    }
+    const controlCenter = document.getElementById('control-center');
+    if (controlCenter && controlCenter.style.display === 'block') {
+        controlCenter.style.display = 'none';
+    }
 
     document.querySelectorAll('.window').forEach(w => {
         w.style.transition = 'opacity 0.5s ease';
@@ -40,7 +56,7 @@ function performShutdown() {
     });
 
     setTimeout(() => {
-        document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
+        document.querySelectorAll('.window').forEach(w => { w.style.display = 'none'; });
         const dock = document.querySelector('.dock');
         if (dock) {
             dock.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
@@ -55,72 +71,145 @@ function performShutdown() {
         }
         const desktop = document.getElementById('desktop');
         if (desktop) desktop.style.display = 'none';
-        const expClock = document.getElementById('experience-clock');
-        if (expClock) expClock.style.display = 'none';
+        document.querySelectorAll('.desktop-widget').forEach(w => { w.style.display = 'none'; });
         document.body.classList.remove('logged-in');
     }, 300);
+}
 
-    const showGoodbyeScreen = () => {
-        shutdownEl.style.display = 'flex';
-        shutdownEl.style.opacity = '1';
-        const inner = shutdownEl.querySelector('.shutdown-content');
-        if (inner) inner.style.display = '';
-        try {
-            const now = audioContext.currentTime;
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
-            osc.frequency.value = 600;
-            osc.type = 'sine';
-            gain.gain.setValueAtTime(0.12 * masterVolume, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-        } catch (e) {}
-    };
+function playMacbookPowerHandoffChime() {
+    try {
+        const now = audioContext.currentTime;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = 480;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.08 * masterVolume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+    } catch (e) { /* ignore */ }
+}
 
-    const afterMacbookShutdown = () => {
-        const inner = shutdownEl.querySelector('.shutdown-content');
-        const startup = document.getElementById('startup-screen');
-        function showBlackPowerOff() {
-            shutdownEl.style.display = 'flex';
-            shutdownEl.style.background = '#000';
-            shutdownEl.style.opacity = '1';
-            if (inner) inner.style.display = 'none';
+/**
+ * After _macbookShutdownSequence: black #shutdown-screen under boot overlay, fade startup, then goodbye or reload.
+ * Restart uses the same path as shutdown so the laptop-close 3D and overlay transition always match.
+ */
+function afterMacbookPowerSequenceComplete(mode) {
+    const shutdownEl = document.getElementById('shutdown-screen');
+    if (!shutdownEl) {
+        if (mode === 'restart') location.reload();
+        return;
+    }
+
+    const inner = shutdownEl.querySelector('.shutdown-content');
+    const startup = document.getElementById('startup-screen');
+    const titleEl = shutdownEl.querySelector('.shutdown-text');
+    const msgEl = shutdownEl.querySelector('.shutdown-message');
+    const creditEl = shutdownEl.querySelector('.shutdown-credit');
+
+    if (mode === 'restart') {
+        if (titleEl) titleEl.textContent = 'Restarting…';
+        if (msgEl) msgEl.textContent = 'Relaunching DevOS…';
+        if (creditEl) creditEl.style.display = 'none';
+    } else {
+        if (titleEl) titleEl.textContent = 'Goodbye!';
+        if (msgEl) msgEl.textContent = 'Thank you for visiting';
+        if (creditEl) creditEl.style.display = '';
+    }
+
+    shutdownEl.classList.add('shutdown-layer-under-boot');
+    shutdownEl.style.display = 'flex';
+    shutdownEl.style.background = '#000000';
+    shutdownEl.style.opacity = '1';
+    if (inner) {
+        inner.style.opacity = '0';
+        inner.style.visibility = 'hidden';
+    }
+
+    playMacbookPowerHandoffChime();
+
+    function revealEndScreen() {
+        shutdownEl.classList.remove('shutdown-layer-under-boot');
+        shutdownEl.style.background = '';
+        if (inner) {
+            inner.style.visibility = '';
+            inner.style.opacity = '1';
+            inner.style.display = '';
+            inner.style.animation = 'none';
+            void inner.offsetWidth;
+            inner.style.animation = '';
         }
-        if (startup && startup.style.display !== 'none') {
-            startup.style.transition = 'opacity 1.05s ease';
-            startup.style.opacity = '0';
-            setTimeout(function() {
-                startup.style.display = 'none';
-                startup.style.opacity = '1';
-                startup.style.transition = '';
-                showBlackPowerOff();
-            }, 1050);
-        } else {
-            showBlackPowerOff();
+    }
+
+    if (startup && startup.style.display !== 'none') {
+        startup.style.transition = 'opacity 0.85s ease';
+        startup.style.opacity = '0';
+        setTimeout(function() {
+            startup.style.display = 'none';
+            startup.style.opacity = '1';
+            startup.style.transition = '';
+            revealEndScreen();
+            if (mode === 'restart') {
+                setTimeout(() => location.reload(), 750);
+            }
+        }, 880);
+    } else {
+        revealEndScreen();
+        if (mode === 'restart') {
+            setTimeout(() => location.reload(), 750);
         }
-        try {
-            const now = audioContext.currentTime;
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
-            osc.frequency.value = 480;
-            osc.type = 'sine';
-            gain.gain.setValueAtTime(0.08 * masterVolume, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-            osc.start(now);
-            osc.stop(now + 0.25);
-        } catch (e2) {}
-    };
+    }
+}
+
+function showGoodbyeScreenFallback() {
+    const shutdownEl = document.getElementById('shutdown-screen');
+    if (!shutdownEl) return;
+    shutdownEl.classList.remove('shutdown-layer-under-boot');
+    shutdownEl.style.display = 'flex';
+    shutdownEl.style.opacity = '1';
+    shutdownEl.style.background = '';
+    const inner = shutdownEl.querySelector('.shutdown-content');
+    if (inner) {
+        inner.style.visibility = '';
+        inner.style.opacity = '1';
+        inner.style.display = '';
+    }
+    const titleEl = shutdownEl.querySelector('.shutdown-text');
+    const msgEl = shutdownEl.querySelector('.shutdown-message');
+    const creditEl = shutdownEl.querySelector('.shutdown-credit');
+    if (titleEl) titleEl.textContent = 'Goodbye!';
+    if (msgEl) msgEl.textContent = 'Thank you for visiting';
+    if (creditEl) creditEl.style.display = '';
+    try {
+        const now = audioContext.currentTime;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = 600;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.12 * masterVolume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    } catch (e) { /* ignore */ }
+}
+
+// ===== SHUTDOWN =====
+function performShutdown() {
+    playClickSound();
+    const shutdownEl = document.getElementById('shutdown-screen');
+    if (!shutdownEl) return;
+
+    hideSessionChromeForMacbookPower();
 
     setTimeout(() => {
         if (typeof window._macbookShutdownSequence === 'function') {
-            window._macbookShutdownSequence(afterMacbookShutdown);
+            window._macbookShutdownSequence(() => afterMacbookPowerSequenceComplete('shutdown'));
         } else {
-            showGoodbyeScreen();
+            showGoodbyeScreenFallback();
         }
     }, 320);
 }
@@ -132,36 +221,11 @@ function beautifulShutdown() {
 // ===== RESTART =====
 function performRestart() {
     playClickSound();
-    document.querySelectorAll('.window').forEach(w => {
-        w.style.transition = 'opacity 0.5s ease';
-        w.style.opacity = '0';
-    });
-    setTimeout(() => {
-        document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
-        const dock = document.querySelector('.dock');
-        if (dock) {
-            dock.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            dock.style.opacity = '0';
-            dock.style.transform = 'translateX(-50%) translateY(20px)';
-        }
-        const menuBar = document.getElementById('menu-bar');
-        if (menuBar) {
-            menuBar.style.transition = 'opacity 0.5s ease';
-            menuBar.style.opacity = '0';
-            menuBar.style.display = 'none';
-        }
-        const desktop = document.getElementById('desktop');
-        if (desktop) desktop.style.display = 'none';
-        const expClock = document.getElementById('experience-clock');
-        if (expClock) expClock.style.display = 'none';
-        document.body.classList.remove('logged-in');
-    }, 300);
+    hideSessionChromeForMacbookPower();
 
     setTimeout(() => {
         if (typeof window._macbookShutdownSequence === 'function') {
-            window._macbookShutdownSequence(() => {
-                location.reload();
-            });
+            window._macbookShutdownSequence(() => afterMacbookPowerSequenceComplete('restart'));
         } else {
             location.reload();
         }
@@ -287,6 +351,10 @@ function performSleep() {
         document.addEventListener('mousemove', wakeOnMove);
     }, 1500);
 }
+
+window.performShutdown = performShutdown;
+window.performRestart = performRestart;
+window.performSleep = performSleep;
 
 // ===== NOTIFICATION QUEUE =====
 const notificationQueue = [];
@@ -433,8 +501,13 @@ document.getElementById('login-password')?.addEventListener('click', () => {
 });
 
 document.getElementById('power-btn')?.addEventListener('click', () => {
-    if (confirm('Are you sure you want to restart?')) {
-        location.reload();
+    showMacModal('Restart', 'Are you sure you want to restart?', '🔄');
+    const ok = document.getElementById('mac-modal-ok');
+    if (ok) {
+        ok.onclick = () => {
+            closeMacModal();
+            setTimeout(() => location.reload(), 300);
+        };
     }
 });
 

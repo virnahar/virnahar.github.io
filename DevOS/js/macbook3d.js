@@ -33,6 +33,8 @@
     var zoomLookTarget = new THREE.Vector3(0, 10.74, -0.36);
     var bootSequenceStarted = false;
     var zoomRedrawSkip = 0;
+    /** When true and user is on login with a live camera stream, auto-start Face ID once. */
+    var autoFaceLoginArmed = true;
 
     // ── Three.js objects ──
     var scene, camera, renderer, orbit, lightHolder;
@@ -41,6 +43,19 @@
     var videoEl = null;
     var videoStream = null;
     var videoInterval = null;
+    /** Reused for Face ID when camera permission already granted (instant preview, one prompt). */
+    var faceIDSharedVideo = null;
+    var faceIDSharedStream = null;
+    var faceIDVideoListenersBound = false;
+    /** Laptop screen mesh for UV hit-testing (login clicks). */
+    var laptopScreenMesh = null;
+    var loginRaycaster = null;
+    var loginPointerNdc = null;
+
+    var LOGIN_TEX_W = 1024;
+    var LOGIN_TEX_H = 680;
+    /** No-camera login: single “open desktop” button (texture px). */
+    var LOGIN_HIT_OPEN_DESKTOP = { x0: 300, y0: 312, x1: 724, y1: 398 };
 
     // Apple logo SVG path for canvas drawing
     var applePath = new Path2D('M15.57,13.41c0.03,2.67,2.34,3.56,2.37,3.57c-0.02,0.06-0.37,1.27-1.22,2.51c-0.73,1.07-1.49,2.14-2.68,2.16c-1.18,0.02-1.55-0.7-2.9-0.7c-1.35,0-1.76,0.68-2.87,0.72c-1.15,0.04-2.03-1.16-2.77-2.23c-1.51-2.18-2.66-6.16-1.11-8.85c0.77-1.34,2.14-2.18,3.63-2.2c1.13-0.02,2.21,0.76,2.9,0.76c0.69,0,1.99-0.94,3.35-0.8c0.57,0.02,2.18,0.23,3.21,1.74C17.5,10.16,15.55,11.22,15.57,13.41M13.15,5.56c0.61-0.74,1.02-1.77,0.91-2.8c-0.88,0.04-1.95,0.59-2.58,1.33c-0.57,0.66-1.07,1.71-0.93,2.72C11.59,6.88,12.54,6.3,13.15,5.56');
@@ -120,7 +135,7 @@
         sTex = new THREE.CanvasTexture(sCanvas);
         sTex.flipY = false;
 
-        sMat = new THREE.MeshBasicMaterial({ map: sTex, transparent: true, opacity: 0, side: THREE.BackSide });
+        sMat = new THREE.MeshBasicMaterial({ map: sTex, transparent: true, opacity: 0, side: THREE.DoubleSide });
 
         window.addEventListener('resize', onResize);
     }
@@ -169,10 +184,10 @@
         });
 
         // Screen mesh
-        var screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(29.4, 20), sMat);
-        screenMesh.position.set(0, 10.5, -0.11);
-        screenMesh.rotation.set(Math.PI, 0, 0);
-        lidGroup.add(screenMesh);
+        laptopScreenMesh = new THREE.Mesh(new THREE.PlaneGeometry(29.4, 20), sMat);
+        laptopScreenMesh.position.set(0, 10.5, -0.11);
+        laptopScreenMesh.rotation.set(Math.PI, 0, 0);
+        lidGroup.add(laptopScreenMesh);
 
         // Subtle screen glow — intensity 0.3 only
         screenLight = new THREE.PointLight(0xffffff, 0, 20);
@@ -204,6 +219,147 @@
     function clearScreen() {
         sCtx.fillStyle = '#000';
         sCtx.fillRect(0, 0, 1024, 680);
+    }
+
+    function faceStreamLive() {
+        return !!(faceIDSharedStream && faceIDSharedStream.getTracks().some(function(t) { return t.readyState === 'live'; }));
+    }
+
+    function ensureLoginRaycaster() {
+        if (!loginRaycaster) {
+            loginRaycaster = new THREE.Raycaster();
+            loginPointerNdc = new THREE.Vector2();
+        }
+    }
+
+    /** Map viewport click to 1024×680 login texture coords, or null if not on laptop screen. */
+    function loginPointerToTex(clientX, clientY) {
+        if (!laptopScreenMesh || !camera) return null;
+        ensureLoginRaycaster();
+        var rect = canvasEl.getBoundingClientRect();
+        var w = rect.width || 1;
+        var h = rect.height || 1;
+        loginPointerNdc.x = ((clientX - rect.left) / w) * 2 - 1;
+        loginPointerNdc.y = -((clientY - rect.top) / h) * 2 + 1;
+        loginRaycaster.setFromCamera(loginPointerNdc, camera);
+        var hits = loginRaycaster.intersectObject(laptopScreenMesh, false);
+        if (!hits.length) return null;
+        var uv = hits[0].uv;
+        if (!uv) return null;
+        var tx = uv.x * LOGIN_TEX_W;
+        var ty = (1 - uv.y) * LOGIN_TEX_H;
+        return { x: tx, y: ty };
+    }
+
+    function loginHitInRect(tx, ty, r) {
+        return tx >= r.x0 && tx <= r.x1 && ty >= r.y0 && ty <= r.y1;
+    }
+
+    function getActiveFaceVideoEl() {
+        if (videoEl && videoEl.srcObject) return videoEl;
+        if (faceIDSharedVideo && faceIDSharedVideo.srcObject) return faceIDSharedVideo;
+        return null;
+    }
+
+    /**
+     * Circular mirrored camera preview (shared by login + Face ID flows).
+     * @param {object} opts scanLine (bool), outerGlowPhase (number, optional radians for breathing ring)
+     */
+    function drawCircularMirrorVideo(ctx, vid, cx, cy, radius, opts) {
+        opts = opts || {};
+        var D = radius * 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.clip();
+        var vw = vid ? vid.videoWidth : 0;
+        var vh = vid ? vid.videoHeight : 0;
+        var hasFrame = vid && vw > 0 && vh > 0 && (vid.readyState >= 2 || (vid.readyState >= 1 && vid.currentTime > 0));
+        if (hasFrame) {
+            var sx;
+            var sy;
+            var sw;
+            var sh;
+            if (vw >= vh) {
+                sh = vh;
+                sw = vh;
+                sx = (vw - sw) / 2;
+                sy = 0;
+            } else {
+                sw = vw;
+                sh = vw;
+                sx = 0;
+                sy = (vh - sh) / 2;
+            }
+            try {
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.scale(-1, 1);
+                ctx.drawImage(vid, sx, sy, sw, sh, -radius, -radius, D, D);
+                ctx.restore();
+                var vig = ctx.createRadialGradient(cx, cy, radius * 0.25, cx, cy, radius);
+                vig.addColorStop(0, 'rgba(0,0,0,0)');
+                vig.addColorStop(0.78, 'rgba(0,0,0,0)');
+                vig.addColorStop(1, 'rgba(0,0,0,0.28)');
+                ctx.fillStyle = vig;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.fill();
+            } catch (drawErr) {
+                hasFrame = false;
+            }
+        }
+        if (!hasFrame) {
+            var gWait = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+            gWait.addColorStop(0, '#1a1a22');
+            gWait.addColorStop(1, '#050508');
+            ctx.fillStyle = gWait;
+            ctx.fillRect(cx - radius, cy - radius, D, D);
+            ctx.fillStyle = 'rgba(255,255,255,0.28)';
+            ctx.font = '13px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Starting camera…', cx, cy);
+        }
+        ctx.restore();
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius - 1, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(0,149,255,0.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (opts.outerGlowPhase != null) {
+            var g = 0.35 + 0.25 * Math.sin(opts.outerGlowPhase);
+            ctx.strokeStyle = 'rgba(100,200,255,' + g + ')';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = 'rgba(80,180,255,0.5)';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius + 4, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        if (opts.scanLine) {
+            var scanPhase = (typeof performance !== 'undefined' ? performance.now() : Date.now()) * 0.0012;
+            var scanT = (Math.sin(scanPhase) * 0.5 + 0.5);
+            var scanY = cy - radius + scanT * (radius * 2);
+            ctx.strokeStyle = 'rgba(0,122,255,0.35)';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = 'rgba(0,149,255,0.4)';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            var halfChord = Math.sqrt(Math.max(0, radius * radius - (scanY - cy) * (scanY - cy)));
+            ctx.moveTo(cx - halfChord, scanY);
+            ctx.lineTo(cx + halfChord, scanY);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
     }
 
     function drawApple(x, y, scale, color) {
@@ -320,48 +476,42 @@
         sCtx.save();
         sCtx.shadowColor = 'rgba(255,255,255,0.35)';
         sCtx.shadowBlur = 30;
-        drawApple(512, 140, 3.2, '#fff');
+        drawApple(512, 130, 3.1, '#fff');
         sCtx.restore();
 
         // Name
         sCtx.fillStyle = '#fff';
         sCtx.font = 'bold 26px Arial';
         sCtx.textAlign = 'center';
-        sCtx.fillText('Virendra Kumar', 512, 268);
+        sCtx.fillText('Virendra Kumar', 512, 248);
 
         // Subtitle
         sCtx.fillStyle = '#888';
         sCtx.font = '13px Arial';
-        sCtx.fillText("Virendra's DevOs", 512, 294);
+        sCtx.fillText("Virendra's DevOs", 512, 278);
 
-        // "Click to Enter" button (normalizedY ~0.42–0.52)
-        sCtx.fillStyle = 'rgba(255,255,255,0.08)';
-        sCtx.fillRect(412, 325, 200, 34);
-        sCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+        sCtx.fillStyle = 'rgba(255,255,255,0.12)';
+        sCtx.fillRect(312, 318, 400, 56);
+        sCtx.strokeStyle = 'rgba(255,255,255,0.22)';
         sCtx.lineWidth = 1;
-        sCtx.strokeRect(412, 325, 200, 34);
-        sCtx.fillStyle = '#aaa';
-        sCtx.font = '13px Arial';
-        sCtx.fillText('Click to Enter', 512, 347);
+        sCtx.strokeRect(312, 318, 400, 56);
+        sCtx.fillStyle = '#eee';
+        sCtx.font = '600 15px -apple-system, BlinkMacSystemFont, sans-serif';
+        sCtx.fillText('Open DevOS', 512, 352);
 
-        // Face ID button (normalizedY ~0.52–0.62)
-        sCtx.fillStyle = 'rgba(0,122,255,0.7)';
-        sCtx.fillRect(442, 378, 140, 28);
-        sCtx.fillStyle = '#fff';
-        sCtx.font = 'bold 11px Arial';
-        sCtx.fillText('Face ID Login', 512, 396);
-
-        // Camera denied retry message
         if (showRetry) {
-            sCtx.fillStyle = 'rgba(255,100,100,0.6)';
+            sCtx.fillStyle = 'rgba(255,120,120,0.75)';
             sCtx.font = '11px Arial';
-            sCtx.fillText('Camera unavailable', 512, 440);
+            sCtx.fillText('Camera unavailable — use button or Enter below', 512, 398);
+        } else {
+            sCtx.fillStyle = 'rgba(255,255,255,0.35)';
+            sCtx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+            sCtx.fillText('Allow camera in your browser to sign in with Face ID automatically', 512, 398);
         }
 
-        // Hint
-        sCtx.fillStyle = 'rgba(255,255,255,0.15)';
-        sCtx.font = '10px Arial';
-        sCtx.fillText('Enter key = direct login', 512, 475);
+        sCtx.fillStyle = 'rgba(255,255,255,0.2)';
+        sCtx.font = '11px Arial';
+        sCtx.fillText('Enter key also opens the desktop', 512, 432);
 
         sTex.needsUpdate = true;
     }
@@ -416,98 +566,21 @@
         sCtx.fillText('Camera', 524, 12);
         sCtx.restore();
 
-        // Circular camera — center crop, mirror around circle center (fixes half-circle bug)
         var cx = 512;
         var cy = 312;
         var radius = 128;
-        var D = radius * 2;
-
-        sCtx.save();
-        sCtx.beginPath();
-        sCtx.arc(cx, cy, radius, 0, Math.PI * 2);
-        sCtx.clip();
-
-        var vw = videoEl ? videoEl.videoWidth : 0;
-        var vh = videoEl ? videoEl.videoHeight : 0;
-        var hasFrame = videoEl && vw > 0 && vh > 0 && (videoEl.readyState >= 2 || (videoEl.readyState >= 1 && videoEl.currentTime > 0));
-        if (hasFrame) {
-            var sx;
-            var sy;
-            var sw;
-            var sh;
-            if (vw >= vh) {
-                sh = vh;
-                sw = vh;
-                sx = (vw - sw) / 2;
-                sy = 0;
-            } else {
-                sw = vw;
-                sh = vw;
-                sx = 0;
-                sy = (vh - sh) / 2;
-            }
-            try {
-                sCtx.save();
-                sCtx.translate(cx, cy);
-                sCtx.scale(-1, 1);
-                sCtx.drawImage(videoEl, sx, sy, sw, sh, -radius, -radius, D, D);
-                sCtx.restore();
-                var vig = sCtx.createRadialGradient(cx, cy, radius * 0.25, cx, cy, radius);
-                vig.addColorStop(0, 'rgba(0,0,0,0)');
-                vig.addColorStop(0.78, 'rgba(0,0,0,0)');
-                vig.addColorStop(1, 'rgba(0,0,0,0.28)');
-                sCtx.fillStyle = vig;
-                sCtx.beginPath();
-                sCtx.arc(cx, cy, radius, 0, Math.PI * 2);
-                sCtx.fill();
-            } catch (drawErr) {
-                hasFrame = false;
-            }
-        }
-        if (!hasFrame) {
-            var gWait = sCtx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-            gWait.addColorStop(0, '#1a1a22');
-            gWait.addColorStop(1, '#050508');
-            sCtx.fillStyle = gWait;
-            sCtx.fillRect(cx - radius, cy - radius, D, D);
-            sCtx.fillStyle = 'rgba(255,255,255,0.28)';
-            sCtx.font = '13px -apple-system, BlinkMacSystemFont, sans-serif';
-            sCtx.textAlign = 'center';
-            sCtx.fillText('Starting camera…', cx, cy);
-        }
-        sCtx.restore();
-
-        sCtx.strokeStyle = 'rgba(255,255,255,0.22)';
-        sCtx.lineWidth = 3;
-        sCtx.beginPath();
-        sCtx.arc(cx, cy, radius - 1, 0, Math.PI * 2);
-        sCtx.stroke();
-        sCtx.strokeStyle = 'rgba(0,149,255,0.55)';
-        sCtx.lineWidth = 2;
-        sCtx.beginPath();
-        sCtx.arc(cx, cy, radius, 0, Math.PI * 2);
-        sCtx.stroke();
-
-        // Scanning line — smooth motion via sin for ease-in-out feel
-        var scanPhase = (typeof performance !== 'undefined' ? performance.now() : Date.now()) * 0.0012;
-        var scanT = (Math.sin(scanPhase) * 0.5 + 0.5);
-        var scanY = cy - radius + scanT * (radius * 2);
-        sCtx.strokeStyle = 'rgba(0,122,255,0.35)';
-        sCtx.lineWidth = 2;
-        sCtx.shadowColor = 'rgba(0,149,255,0.4)';
-        sCtx.shadowBlur = 6;
-        sCtx.beginPath();
-        var halfChord = Math.sqrt(Math.max(0, radius * radius - (scanY - cy) * (scanY - cy)));
-        sCtx.moveTo(cx - halfChord, scanY);
-        sCtx.lineTo(cx + halfChord, scanY);
-        sCtx.stroke();
-        sCtx.shadowBlur = 0;
+        var vidFace = getActiveFaceVideoEl();
+        drawCircularMirrorVideo(sCtx, vidFace, cx, cy, radius, { scanLine: true });
 
         // Status text
         sCtx.fillStyle = '#fff';
         sCtx.font = 'bold 14px Arial';
         sCtx.textAlign = 'center';
-        sCtx.fillText('Verifying Face ID...', 512, 480);
+        sCtx.fillText('Verifying Face ID...', 512, 468);
+
+        sCtx.fillStyle = 'rgba(255,255,255,0.38)';
+        sCtx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+        sCtx.fillText('Enter — skip and open desktop', 512, 508);
 
         sTex.needsUpdate = true;
     }
@@ -777,10 +850,100 @@
                     onComplete: function() {
                         phase = 'login';
                         loginClickEnabled = true;
+                        autoFaceLoginArmed = true;
+                        setTimeout(preloadFaceCameraWhenPermitted, 350);
                     }
                 });
             }
         });
+    }
+
+    function ensureSharedFaceVideo() {
+        if (!faceIDSharedVideo) {
+            faceIDSharedVideo = document.createElement('video');
+            faceIDSharedVideo.setAttribute('playsinline', '');
+            faceIDSharedVideo.setAttribute('webkit-playsinline', 'true');
+            faceIDSharedVideo.setAttribute('autoplay', '');
+            faceIDSharedVideo.muted = true;
+            faceIDSharedVideo.playsInline = true;
+            faceIDSharedVideo.setAttribute('aria-hidden', 'true');
+            faceIDSharedVideo.style.cssText = 'position:fixed!important;left:0!important;top:0!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;z-index:-1!important;object-fit:cover;';
+            try {
+                document.body.appendChild(faceIDSharedVideo);
+            } catch (e) {}
+        }
+        return faceIDSharedVideo;
+    }
+
+    function releaseFacePreloadOnly() {
+        if (faceIDSharedStream) {
+            try {
+                faceIDSharedStream.getTracks().forEach(function(t) { t.stop(); });
+            } catch (e) {}
+            faceIDSharedStream = null;
+        }
+        if (faceIDSharedVideo) {
+            try {
+                faceIDSharedVideo.srcObject = null;
+            } catch (e2) {}
+        }
+    }
+
+    function preloadFaceCameraWhenPermitted() {
+        if (phase !== 'login' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+        if (faceIDSharedStream && faceIDSharedStream.getTracks().some(function(t) { return t.readyState === 'live'; })) return;
+        function tryGet() {
+            if (phase !== 'login') return;
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
+                .then(function(stream) {
+                    if (phase !== 'login') {
+                        stream.getTracks().forEach(function(t) { t.stop(); });
+                        return;
+                    }
+                    faceIDSharedStream = stream;
+                    var v = ensureSharedFaceVideo();
+                    v.srcObject = stream;
+                    v.play().catch(function() {});
+                })
+                .catch(function() {});
+        }
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'camera' }).then(function(p) {
+                if (p.state === 'granted') tryGet();
+                p.addEventListener('change', function() {
+                    if (p.state === 'granted' && phase === 'login' && (!faceIDSharedStream || !faceIDSharedStream.getTracks().some(function(t) { return t.readyState === 'live'; }))) {
+                        tryGet();
+                    }
+                });
+            }).catch(function() {
+                setTimeout(function() {
+                    if (phase === 'login') tryGet();
+                }, 600);
+            });
+        } else {
+            setTimeout(function() {
+                if (phase === 'login') tryGet();
+            }, 600);
+        }
+    }
+
+    function stopFaceIDTimersOnly() {
+        if (faceIDRafId != null) {
+            cancelAnimationFrame(faceIDRafId);
+            faceIDRafId = null;
+        }
+        if (faceIDVerifyTimer) {
+            clearTimeout(faceIDVerifyTimer);
+            faceIDVerifyTimer = null;
+        }
+        if (videoInterval) {
+            clearInterval(videoInterval);
+            videoInterval = null;
+        }
+        if (faceIDFallbackInterval) {
+            clearInterval(faceIDFallbackInterval);
+            faceIDFallbackInterval = null;
+        }
     }
 
     // =========================================================================
@@ -809,13 +972,16 @@
         pointerDown = null;
         if (dist > 12 || dt > 900) return;
 
+        var tex = loginPointerToTex(e.clientX, e.clientY);
+        if (tex && loginHitInRect(tex.x, tex.y, LOGIN_HIT_OPEN_DESKTOP)) {
+            directLogin();
+            return;
+        }
+
         var rect = canvasEl.getBoundingClientRect();
         var ny = (e.clientY - rect.top) / rect.height;
-
-        if (ny >= 0.42 && ny < 0.52) {
+        if (ny >= 0.44 && ny < 0.58) {
             directLogin();
-        } else if (ny >= 0.52 && ny < 0.62) {
-            faceIDLogin();
         }
     });
 
@@ -824,7 +990,10 @@
     });
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && phase === 'login' && loginClickEnabled) {
+        if (e.key !== 'Enter') return;
+        if (phase === 'facelogin') {
+            directLogin();
+        } else if (phase === 'login' && loginClickEnabled) {
             directLogin();
         }
     });
@@ -834,7 +1003,12 @@
     // =========================================================================
 
     function directLogin() {
-        if (phase !== 'login') return;
+        if (phase !== 'login' && phase !== 'facelogin') return;
+        autoFaceLoginArmed = false;
+        if (phase === 'facelogin') {
+            stopFaceIDTimersOnly();
+        }
+        stopCamera();
         phase = 'transitioning';
         loginClickEnabled = false;
 
@@ -859,9 +1033,30 @@
 
     function faceIDLogin() {
         if (phase !== 'login') return;
-        stopCamera();
+        stopFaceIDTimersOnly();
+
+        var hasLive = faceIDSharedStream && faceIDSharedStream.getTracks().some(function(t) { return t.readyState === 'live'; });
+        if (!hasLive) {
+            releaseFacePreloadOnly();
+            if (videoEl && videoEl !== faceIDSharedVideo) {
+                try {
+                    if (videoStream) videoStream.getTracks().forEach(function(t) { t.stop(); });
+                } catch (e0) {}
+                try {
+                    if (videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
+                } catch (e1) {}
+                videoEl = null;
+                videoStream = null;
+            }
+        }
+
         phase = 'facelogin';
         loginClickEnabled = false;
+
+        if (hasLive) {
+            onCameraGranted(faceIDSharedStream);
+            return;
+        }
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             onCameraDenied();
@@ -888,15 +1083,16 @@
         }
         setTimeout(function() {
             if (phase === 'facelogin') attempt(0);
-        }, 240);
+        }, 100);
     }
 
     function faceIDFrameLoop() {
         if (phase !== 'facelogin') return;
         drawFaceIDScreen();
-        if (videoEl && videoEl.paused) {
+        var v = getActiveFaceVideoEl();
+        if (v && v.paused) {
             try {
-                videoEl.play();
+                v.play();
             } catch (pe) {}
         }
         faceIDRafId = requestAnimationFrame(faceIDFrameLoop);
@@ -914,34 +1110,27 @@
             setTimeout(function() {
                 showDesktopAndZoom();
             }, 800);
-        }, 3000);
+        }, 2200);
     }
 
     function onCameraGranted(stream) {
         var myTok = ++faceIDPlayToken;
         videoStream = stream;
-        videoEl = document.createElement('video');
+        faceIDSharedStream = stream;
+        videoEl = ensureSharedFaceVideo();
         videoEl.srcObject = stream;
-        videoEl.setAttribute('playsinline', '');
-        videoEl.setAttribute('webkit-playsinline', 'true');
-        videoEl.setAttribute('autoplay', '');
-        videoEl.setAttribute('muted', '');
-        videoEl.muted = true;
-        videoEl.playsInline = true;
-        videoEl.style.cssText = 'position:fixed;right:0;bottom:0;width:1280px;height:720px;opacity:0.02;pointer-events:none;z-index:1;object-fit:cover;';
-        try {
-            document.body.appendChild(videoEl);
-        } catch (appendErr) {}
 
         if (faceIDFallbackInterval) {
             clearInterval(faceIDFallbackInterval);
             faceIDFallbackInterval = null;
         }
         faceIDFallbackInterval = setInterval(function() {
-            if (phase !== 'facelogin' || faceIDPlayToken !== myTok || !videoEl) return;
-            if (videoEl.paused) {
+            if (phase !== 'facelogin' || faceIDPlayToken !== myTok) return;
+            var v = getActiveFaceVideoEl();
+            if (!v) return;
+            if (v.paused) {
                 try {
-                    videoEl.play();
+                    v.play();
                 } catch (pe) {}
             }
             drawFaceIDScreen();
@@ -955,7 +1144,8 @@
             } catch (e0) {}
             var attemptPlay = function(n) {
                 if (faceIDFlowStarted || faceIDPlayToken !== myTok || phase !== 'facelogin') return;
-                var pr = videoEl.play();
+                var vPlay = getActiveFaceVideoEl();
+                var pr = vPlay ? vPlay.play() : null;
                 if (pr && typeof pr.then === 'function') {
                     pr.then(function() {
                         if (faceIDFlowStarted || faceIDPlayToken !== myTok) return;
@@ -974,67 +1164,49 @@
             attemptPlay(0);
         }
 
-        videoEl.addEventListener('loadedmetadata', function meta() {
+        function hookMeta() {
             if (faceIDPlayToken !== myTok) return;
             drawFaceIDScreen();
             beginFaceIDFlow();
-        });
-        videoEl.addEventListener('loadeddata', function ld() {
-            beginFaceIDFlow();
-        });
-        videoEl.addEventListener('playing', function pl() {
-            beginFaceIDFlow();
-        });
-        videoEl.addEventListener('canplay', function cp() {
-            beginFaceIDFlow();
-        });
-        videoEl.addEventListener('canplaythrough', function cpt() {
-            beginFaceIDFlow();
-        });
+        }
+        videoEl.onloadedmetadata = hookMeta;
+        videoEl.onloadeddata = function() { beginFaceIDFlow(); };
+        videoEl.onplaying = function() { beginFaceIDFlow(); };
+        videoEl.oncanplay = function() { beginFaceIDFlow(); };
+        videoEl.oncanplaythrough = function() { beginFaceIDFlow(); };
 
         setTimeout(function() {
             if (faceIDPlayToken === myTok && phase === 'facelogin') beginFaceIDFlow();
         }, 50);
         setTimeout(function() {
             if (faceIDPlayToken === myTok && phase === 'facelogin') beginFaceIDFlow();
-        }, 350);
+        }, 200);
         setTimeout(function() {
             if (faceIDPlayToken === myTok && phase === 'facelogin') beginFaceIDFlow();
-        }, 900);
+        }, 600);
     }
 
     function onCameraDenied() {
         stopCamera();
+        autoFaceLoginArmed = true;
         drawLoginScreen(true);
         phase = 'login';
         loginClickEnabled = true;
     }
 
     function stopCamera() {
-        if (faceIDRafId != null) {
-            cancelAnimationFrame(faceIDRafId);
-            faceIDRafId = null;
-        }
-        if (faceIDVerifyTimer) {
-            clearTimeout(faceIDVerifyTimer);
-            faceIDVerifyTimer = null;
-        }
-        if (videoInterval) {
-            clearInterval(videoInterval);
-            videoInterval = null;
-        }
-        if (faceIDFallbackInterval) {
-            clearInterval(faceIDFallbackInterval);
-            faceIDFallbackInterval = null;
-        }
+        stopFaceIDTimersOnly();
         if (videoStream) {
-            videoStream.getTracks().forEach(function(t) { t.stop(); });
+            try {
+                videoStream.getTracks().forEach(function(t) { t.stop(); });
+            } catch (e) {}
             videoStream = null;
         }
-        if (videoEl && videoEl.parentNode) {
+        faceIDSharedStream = null;
+        if (faceIDSharedVideo) {
             try {
-                videoEl.parentNode.removeChild(videoEl);
-            } catch (remErr) {}
+                faceIDSharedVideo.srcObject = null;
+            } catch (e2) {}
         }
         videoEl = null;
     }
@@ -1233,7 +1405,7 @@
             localStorage.setItem('devos-welcomed', 'true');
             setTimeout(function() {
                 if (typeof showNotification === 'function') {
-                    showNotification('Welcome to DevOS!', 'Try ⌘/Ctrl+Space for Spotlight. Hand Magic (menu bar) uses a corner preview only — palm, point, ✌️, 👍, fist, pinch.');
+                    showNotification('Welcome to DevOS!', 'Try ⌘/Ctrl+Space for Spotlight. Hand Magic: palm About Me, point scroll, ✌️ Contact, 👍 Terminal, 👎 Trash, ✊ Sleep, 👌 Restart, palm swipe Shut Down.');
                 }
             }, 1650);
         }
@@ -1267,6 +1439,10 @@
         }
         orbit.update();
         if (lightHolder) lightHolder.quaternion.copy(camera.quaternion);
+        if (phase === 'login' && loginClickEnabled && faceStreamLive() && autoFaceLoginArmed) {
+            autoFaceLoginArmed = false;
+            faceIDLogin();
+        }
         renderer.render(scene, camera);
     }
 
@@ -1312,7 +1488,9 @@
             onComplete: function() {
                 phase = 'login';
                 loginClickEnabled = true;
+                autoFaceLoginArmed = true;
                 if (orbit) orbit.enabled = true;
+                setTimeout(preloadFaceCameraWhenPermitted, 350);
             }
         });
     }
@@ -1411,6 +1589,13 @@
         phase = 'shutdown_anim';
         if (orbit) orbit.enabled = false;
 
+        drawGoodbyeScreen();
+        if (renderer && scene && camera) {
+            try {
+                renderer.render(scene, camera);
+            } catch (eR) {}
+        }
+
         startRenderLoop();
 
         var tl = gsap.timeline({
@@ -1448,6 +1633,11 @@
             gsap.to(sMat, { opacity: 0.96, duration: 0.5 });
             gsap.to(screenLight, { intensity: 0.32, duration: 0.5 });
             drawGoodbyeScreen();
+            if (renderer && scene && camera) {
+                try {
+                    renderer.render(scene, camera);
+                } catch (eG) {}
+            }
         }, null, 0.95)
         .to({ _hold: 0 }, { _hold: 1, duration: 2.65 })
         .to(sMat, { opacity: 0, duration: 0.65, ease: 'power2.in' })
@@ -1470,6 +1660,10 @@
     };
 
     window._macbookRestart = function() {
+        if (typeof window.performRestart === 'function') {
+            window.performRestart();
+            return;
+        }
         window._macbookShutdownSequence(function() {
             window.location.reload();
         });

@@ -1,7 +1,7 @@
 /**
  * Hand Magic — PiP-only: clear camera + skeleton overlay. Desktop stays unobstructed.
- * Gestures (portfolio set): palm still → Resume | point → scroll / hold → Terminal |
- * ✌️ → Contact | 👍 → Projects | fist → Finder | pinch → Trash | palm swipe → Shut Down
+ * Gestures: palm still → About Me (Resume) | point → scroll | ✌️ → Contact | 👍 → Terminal |
+ * 👎 → Trash | ✊ → Sleep | 👌 → Restart | palm swipe → Shut Down
  */
 (function() {
     'use strict';
@@ -12,12 +12,15 @@
     var camUtils = null;
     var mpCamera = null;
     var lastGestureFire = {};
-    var GESTURE_COOLDOWN_MS = { default: 2200, pinch_snap: 8000, index_terminal: 2800, palm_swipe_shutdown: 22000 };
+    var GESTURE_COOLDOWN_MS = { default: 2200, ok_sign: 10000, thumbs_down: 5500, fist: 4200, palm_swipe_shutdown: 16000 };
 
-    var root, videoEl, pipWrap, pipInner, previewVideo, pipCanvas, pipCtx, pipLabel, liveGestureEl;
+    var root, videoEl, pipWrap, pipInner, previewVideo, pipParticleCanvas, pipParticleCtx, pipCanvas, pipCtx, pipLabel, liveGestureEl;
     var PIP_BASE_W = 280;
     var PIP_BASE_H = 210;
     var pipDpr = 1;
+    var gmParticles = [];
+    var GM_PARTICLE_MAX = 240;
+    var lastGestureAnchorPip = { x: 140, y: 105 };
 
     var rawGesture = 'none';
     var stableGesture = 'none';
@@ -26,8 +29,6 @@
     var pinchSnap = { armClose: false, closeStarted: 0 };
     var prevIndexTipY = null;
     var indexPoseScrolled = false;
-    var indexQuietForTerminal = 0;
-    var indexTerminalOpened = false;
     var filteredLandmarks = null;
     var drawLandmarks = null;
     var rafId = null;
@@ -42,12 +43,13 @@
     /** Single-line UI copy */
     var GESTURE_LABEL = {
         none: 'No hand detected',
-        open_palm: 'Open palm → Resume',
-        index_finger: 'Point — scroll or hold → Terminal',
-        fist: 'Fist → Finder',
+        open_palm: 'Open palm (still) → About Me',
+        index_finger: 'Point — scroll',
+        fist: 'Fist → Sleep',
         peace: 'Peace → Contact',
-        thumbs_up: 'Thumbs up → Projects',
-        pinch_snap: 'Pinch → Trash',
+        thumbs_up: 'Thumbs up → Terminal',
+        thumbs_down: 'Thumbs down → Trash',
+        ok_sign: 'OK sign → Restart',
         palm_swipe_shutdown: 'Palm swipe → Shut Down'
     };
 
@@ -91,7 +93,7 @@
     }
 
     /**
-     * Small set, ordered to reduce conflicts: 👍 → ✌️ → palm → point → fist
+     * Ordered to reduce conflicts: OK → 👍/👎 → ✌️ → palm → point → fist
      */
     function detectGesture(lm) {
         var pc = getPalmCenter(lm);
@@ -112,8 +114,18 @@
         var d48 = dist(lm[4], lm[8]);
         var d812 = dist(lm[8], lm[12]);
 
+        var thumbIdxClose = d48 > sc * 0.05 && d48 < sc * 0.118;
+        var indexCurledForOk = !idxS;
+        var midTipUp = lm[12].y < lm[10].y - sc * 0.018;
+        if (thumbIdxClose && indexCurledForOk && midS && ringF && pnkF && midTipUp) {
+            return { gesture: 'ok_sign', anchor: pc, confidence: 0.86, sc: sc };
+        }
+
         var thumbsUp = lm[4].y < lm[3].y - sc * 0.014 && idxF && midF && ringF && pnkF && dist(lm[4], w) > dist(lm[2], w) * 0.95 && d48 > sc * 0.2;
         if (thumbsUp) return { gesture: 'thumbs_up', anchor: lm[4], confidence: 0.88, sc: sc };
+
+        var thumbsDown = lm[4].y > lm[3].y + sc * 0.012 && lm[4].y > lm[8].y + sc * 0.008 && idxF && midF && ringF && pnkF && dist(lm[4], w) > dist(lm[2], w) * 0.88;
+        if (thumbsDown) return { gesture: 'thumbs_down', anchor: lm[4], confidence: 0.85, sc: sc };
 
         if (idxS && midS && ringF && pnkF && thumbF) {
             return { gesture: 'peace', anchor: pc, confidence: 0.9, sc: sc };
@@ -124,9 +136,79 @@
 
         if (idxS && !midS && ringF && pnkF && thumbF) return { gesture: 'index_finger', anchor: lm[8], confidence: 0.92, sc: sc };
 
-        var fistG = !idxS && midF && ringF && pnkF && dist(lm[8], pc) < sc * 0.24 && dist(lm[12], pc) < sc * 0.22;
+        var fistG = !idxS && midF && ringF && pnkF && dist(lm[8], pc) < sc * 0.24 && dist(lm[12], pc) < sc * 0.22 && dist(lm[4], pc) < sc * 0.36;
         if (fistG) return { gesture: 'fist', anchor: pc, confidence: 0.9, sc: sc };
         return { gesture: 'none', anchor: pc, confidence: 0.2, sc: sc };
+    }
+
+    function burstGestureParticles(gestureKey, ax, ay) {
+        var hues = { peace: 285, thumbs_up: 42, thumbs_down: 8, open_palm: 195, fist: 265, ok_sign: 155, palm_swipe_shutdown: 218 };
+        var h = hues[gestureKey] != null ? hues[gestureKey] : 200;
+        var n = 48;
+        var i;
+        for (i = 0; i < n && gmParticles.length < GM_PARTICLE_MAX; i++) {
+            var ang = Math.random() * Math.PI * 2;
+            var sp = 1.2 + Math.random() * 4.2;
+            gmParticles.push({
+                x: ax + (Math.random() - 0.5) * 14,
+                y: ay + (Math.random() - 0.5) * 14,
+                vx: Math.cos(ang) * sp,
+                vy: Math.sin(ang) * sp - 0.4,
+                life: 0.55 + Math.random() * 0.65,
+                r: 1.4 + Math.random() * 3.2,
+                hue: h + (Math.random() - 0.5) * 40
+            });
+        }
+    }
+
+    function spawnTrailParticles(lm, cw, ch) {
+        if (gmParticles.length >= GM_PARTICLE_MAX || Math.random() > 0.42) return;
+        var ids = [4, 8, 12, 16, 20, 5, 9, 13];
+        var id = ids[(Math.random() * ids.length) | 0];
+        var p = lm[id];
+        var x = (1 - p.x) * cw + (Math.random() - 0.5) * 8;
+        var y = p.y * ch + (Math.random() - 0.5) * 8;
+        gmParticles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 1.1,
+            vy: -0.35 - Math.random() * 0.9,
+            life: 0.35 + Math.random() * 0.45,
+            r: 0.9 + Math.random() * 2.2,
+            hue: 175 + Math.random() * 85
+        });
+    }
+
+    function tickGestureParticles() {
+        var i;
+        for (i = gmParticles.length - 1; i >= 0; i--) {
+            var p = gmParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy -= 0.028;
+            p.vx *= 0.985;
+            p.life -= 0.017;
+            if (p.life <= 0) gmParticles.splice(i, 1);
+        }
+    }
+
+    function drawGestureParticles(ctx) {
+        if (!ctx || gmParticles.length === 0) return;
+        var i;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (i = 0; i < gmParticles.length; i++) {
+            var p = gmParticles[i];
+            var a = Math.min(1, p.life * 1.85);
+            ctx.fillStyle = 'hsla(' + p.hue + ',92%,68%,' + a + ')';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'hsla(' + p.hue + ',85%,55%,0.55)';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
     }
 
     function fireDiscrete(g) {
@@ -134,20 +216,24 @@
         var now = performance.now();
         if (now - (lastGestureFire[g] || 0) < cd) return false;
         lastGestureFire[g] = now;
+        burstGestureParticles(g, lastGestureAnchorPip.x, lastGestureAnchorPip.y);
         try {
             if (typeof unlockDevosAudioOnce === 'function') unlockDevosAudioOnce();
             if (typeof playClickSound === 'function') playClickSound();
         } catch (e) {}
         if (g === 'open_palm' && typeof openWindow === 'function') openWindow('resume');
         if (g === 'peace' && typeof openWindow === 'function') openWindow('contact');
-        if (g === 'thumbs_up' && typeof openWindow === 'function') openWindow('projects');
-        if (g === 'fist' && typeof openWindow === 'function') openWindow('finder');
-        if (g === 'index_terminal' && typeof openWindow === 'function') openWindow('terminal');
-        if (g === 'pinch_snap' && typeof emptyTrashAnimation === 'function') emptyTrashAnimation();
+        if (g === 'thumbs_up' && typeof openWindow === 'function') openWindow('terminal');
+        if (g === 'thumbs_down' && typeof emptyTrashAnimation === 'function') emptyTrashAnimation();
+        if (g === 'fist' && typeof window.performSleep === 'function') window.performSleep();
+        if (g === 'ok_sign' && typeof window.performRestart === 'function') {
+            if (typeof showNotification === 'function') showNotification('Hand Magic', 'OK — restarting…');
+            window.performRestart();
+        }
         return true;
     }
 
-    /** Clean skeleton: single soft stroke + joints (PiP only) */
+    /** Skeleton + soft bloom (PiP); particles render on layer below. */
     function drawHandOverlay(c, lm, cw, ch) {
         if (!lm || !c) return;
         function tc(p) {
@@ -156,14 +242,26 @@
         c.save();
         c.lineCap = 'round';
         c.lineJoin = 'round';
-        var lineCol = 'rgba(120, 200, 255, 0.92)';
-        var jointFill = 'rgba(200, 235, 255, 0.95)';
-        var jointRing = 'rgba(80, 160, 255, 0.55)';
+        var lineCol = 'rgba(120, 200, 255, 0.94)';
+        var jointFill = 'rgba(210, 245, 255, 0.97)';
+        var jointRing = 'rgba(80, 160, 255, 0.6)';
         var h;
-        c.shadowBlur = 6;
-        c.shadowColor = 'rgba(60, 140, 255, 0.45)';
+        c.strokeStyle = 'rgba(100, 180, 255, 0.35)';
+        c.lineWidth = 5;
+        c.shadowBlur = 14;
+        c.shadowColor = 'rgba(80, 200, 255, 0.5)';
+        for (h = 0; h < HAND_CONNECTIONS.length; h++) {
+            var ga = HAND_CONNECTIONS[h][0], gb = HAND_CONNECTIONS[h][1];
+            var q1 = tc(lm[ga]), q2 = tc(lm[gb]);
+            c.beginPath();
+            c.moveTo(q1.x, q1.y);
+            c.lineTo(q2.x, q2.y);
+            c.stroke();
+        }
+        c.shadowBlur = 8;
+        c.shadowColor = 'rgba(60, 140, 255, 0.4)';
         c.strokeStyle = lineCol;
-        c.lineWidth = 2.25;
+        c.lineWidth = 2.35;
         for (h = 0; h < HAND_CONNECTIONS.length; h++) {
             var a = HAND_CONNECTIONS[h][0], b = HAND_CONNECTIONS[h][1];
             var p1 = tc(lm[a]), p2 = tc(lm[b]);
@@ -176,6 +274,10 @@
         var tips = [4, 8, 12, 16, 20];
         for (h = 0; h < tips.length; h++) {
             var p = tc(lm[tips[h]]);
+            c.beginPath();
+            c.arc(p.x, p.y, 6.5, 0, Math.PI * 2);
+            c.fillStyle = 'rgba(140, 220, 255, 0.25)';
+            c.fill();
             c.beginPath();
             c.arc(p.x, p.y, 5, 0, Math.PI * 2);
             c.fillStyle = jointFill;
@@ -196,6 +298,12 @@
     function loop() {
         if (!active) return;
         rafId = requestAnimationFrame(loop);
+        if (pipParticleCtx && pipParticleCanvas) {
+            if (handVisible && drawLandmarks) spawnTrailParticles(drawLandmarks, PIP_BASE_W, PIP_BASE_H);
+            tickGestureParticles();
+            pipParticleCtx.clearRect(0, 0, PIP_BASE_W, PIP_BASE_H);
+            drawGestureParticles(pipParticleCtx);
+        }
         if (pipCtx && pipCanvas) {
             pipCtx.clearRect(0, 0, PIP_BASE_W, PIP_BASE_H);
             if (handVisible && drawLandmarks) drawHandOverlay(pipCtx, drawLandmarks, PIP_BASE_W, PIP_BASE_H);
@@ -216,28 +324,13 @@
             var d48 = dist(lm[4], lm[8]);
             var nowT = performance.now();
 
-            var midFoldPinch = fingerFolded(lm, 10, 12, pc, sc * 0.24);
-            var ringFoldPinch = fingerFolded(lm, 14, 16, pc, sc * 0.24);
-            var pinchPose = midFoldPinch && ringFoldPinch;
-            if (pinchPose && d48 < sc * 0.072) {
-                if (!pinchSnap.armClose) {
-                    pinchSnap.closeStarted = nowT;
-                    pinchSnap.armClose = true;
-                }
-            } else if (pinchSnap.armClose && pinchPose && d48 > sc * 0.36) {
-                var heldOk = pinchSnap.closeStarted && (nowT - pinchSnap.closeStarted > 140) && (nowT - pinchSnap.closeStarted < 950);
-                if (heldOk) fireDiscrete('pinch_snap');
-                pinchSnap.armClose = false;
-                pinchSnap.closeStarted = 0;
-            } else if (d48 > sc * 0.14 || !midFoldPinch) {
-                pinchSnap.armClose = false;
-                pinchSnap.closeStarted = 0;
-            }
+            lastGestureAnchorPip.x = (1 - d.anchor.x) * PIP_BASE_W;
+            lastGestureAnchorPip.y = d.anchor.y * PIP_BASE_H;
 
             if (d.gesture === rawGesture) gestureFrames++;
             else { rawGesture = d.gesture; gestureFrames = 1; }
 
-            if (gestureFrames >= 5 && stableGesture !== d.gesture) {
+            if (gestureFrames >= 4 && stableGesture !== d.gesture) {
                 stableGesture = d.gesture;
                 if (stableGesture === 'open_palm') {
                     openPalmResumeWaiting = true;
@@ -248,11 +341,13 @@
                     fireDiscrete('peace');
                 } else if (stableGesture === 'thumbs_up') {
                     fireDiscrete('thumbs_up');
+                } else if (stableGesture === 'thumbs_down') {
+                    fireDiscrete('thumbs_down');
+                } else if (stableGesture === 'ok_sign') {
+                    fireDiscrete('ok_sign');
                 } else if (stableGesture === 'index_finger') {
                     prevIndexTipY = null;
                     indexPoseScrolled = false;
-                    indexQuietForTerminal = 0;
-                    indexTerminalOpened = false;
                 } else if (stableGesture === 'fist') {
                     fireDiscrete('fist');
                 }
@@ -284,12 +379,13 @@
                     var t0 = recent[0].t;
                     var t1 = recent[recent.length - 1].t;
                     var dtWin = t1 - t0;
-                    if (dtWin >= 430 && dtWin <= 900 && spanX > 0.39 && spanY < 0.155 && minX < 0.39 && maxX > 0.61) {
+                    if (dtWin >= 360 && dtWin <= 1100 && spanX > 0.30 && spanY < 0.18 && minX < 0.42 && maxX > 0.58) {
                         var cdSwipe = GESTURE_COOLDOWN_MS.palm_swipe_shutdown;
                         if (nowT - (lastGestureFire.palm_swipe_shutdown || 0) >= cdSwipe) {
                             lastGestureFire.palm_swipe_shutdown = nowT;
                             openPalmResumeWaiting = false;
                             palmOpenSamples = [];
+                            burstGestureParticles('palm_swipe_shutdown', lastGestureAnchorPip.x, lastGestureAnchorPip.y);
                             try {
                                 if (typeof unlockDevosAudioOnce === 'function') unlockDevosAudioOnce();
                                 if (typeof playClickSound === 'function') playClickSound();
@@ -309,7 +405,7 @@
                     else openPalmStillFrames = 0;
                 }
                 lastPalmPcForStill = { x: pc.x, y: pc.y };
-                if (openPalmResumeWaiting && openPalmStillFrames >= 14) {
+                if (openPalmResumeWaiting && openPalmStillFrames >= 11) {
                     fireDiscrete('open_palm');
                     openPalmResumeWaiting = false;
                 }
@@ -322,20 +418,11 @@
                     if (Math.abs(dy) > 0.0036) {
                         indexPoseScrolled = true;
                         if (typeof window.scrollFrontWindowBy === 'function') {
-                            window.scrollFrontWindowBy(dy * 175);
+                            window.scrollFrontWindowBy(-dy * 185);
                         }
                     }
                 }
                 prevIndexTipY = tip.y;
-                if (!indexPoseScrolled) {
-                    indexQuietForTerminal++;
-                    if (indexQuietForTerminal > 16 && !indexTerminalOpened) {
-                        indexTerminalOpened = true;
-                        fireDiscrete('index_terminal');
-                    }
-                } else {
-                    indexQuietForTerminal = 0;
-                }
             }
         } else {
             handVisible = false;
@@ -347,8 +434,6 @@
             pinchSnap.closeStarted = 0;
             prevIndexTipY = null;
             indexPoseScrolled = false;
-            indexQuietForTerminal = 0;
-            indexTerminalOpened = false;
             openPalmResumeWaiting = false;
             openPalmStillFrames = 0;
             lastPalmPcForStill = null;
@@ -360,11 +445,20 @@
     function resizePip() {
         pipDpr = Math.min(window.devicePixelRatio || 1, 2);
         if (!pipCanvas || !pipCtx) return;
-        pipCanvas.width = Math.round(PIP_BASE_W * pipDpr);
-        pipCanvas.height = Math.round(PIP_BASE_H * pipDpr);
+        var bw = Math.round(PIP_BASE_W * pipDpr);
+        var bh = Math.round(PIP_BASE_H * pipDpr);
+        pipCanvas.width = bw;
+        pipCanvas.height = bh;
         pipCanvas.style.width = PIP_BASE_W + 'px';
         pipCanvas.style.height = PIP_BASE_H + 'px';
         pipCtx.setTransform(pipDpr, 0, 0, pipDpr, 0, 0);
+        if (pipParticleCanvas && pipParticleCtx) {
+            pipParticleCanvas.width = bw;
+            pipParticleCanvas.height = bh;
+            pipParticleCanvas.style.width = PIP_BASE_W + 'px';
+            pipParticleCanvas.style.height = PIP_BASE_H + 'px';
+            pipParticleCtx.setTransform(pipDpr, 0, 0, pipDpr, 0, 0);
+        }
     }
 
     function layoutPipForViewport() {
@@ -418,7 +512,7 @@
         tour.id = 'gesture-guide-tour';
         tour.setAttribute('role', 'dialog');
         tour.setAttribute('aria-label', 'Hand gesture guide');
-        tour.innerHTML = '<div class="gm-tour-card"><div class="gm-tour-head"><h2>Hand Magic</h2><p>Only the <strong>corner preview</strong> shows your camera and hand outline. The desktop stays clear. Hold each pose briefly so it locks in.</p></div><div class="gm-tour-scroll"><div class="gm-tour-row"><span>✋</span><div><strong>Open palm</strong> (still) — Resume</div></div><div class="gm-tour-row"><span>↔️</span><div><strong>Full palm swipe</strong> — Shut Down (strict, 22s cooldown)</div></div><div class="gm-tour-row"><span>☝️</span><div><strong>Point</strong> — scroll · hold still — Terminal</div></div><div class="gm-tour-row"><span>✌️</span><div><strong>Peace</strong> — Contact</div></div><div class="gm-tour-row"><span>👍</span><div><strong>Thumbs up</strong> — Projects</div></div><div class="gm-tour-row"><span>✊</span><div><strong>Fist</strong> — Finder</div></div><div class="gm-tour-row"><span>💥</span><div><strong>Pinch</strong> hold → open — Trash</div></div></div><div class="gm-tour-foot"><span class="gm-tour-count">Ready when you are</span><button type="button" class="gm-tour-skip" id="gm-tour-dismiss">Got it</button></div></div>';
+        tour.innerHTML = '<div class="gm-tour-card"><div class="gm-tour-head"><h2>Hand Magic</h2><p>Only the <strong>corner preview</strong> shows your camera and hand outline. The desktop stays clear. Hold each pose briefly so it locks in.</p></div><div class="gm-tour-scroll"><div class="gm-tour-row"><span>✋</span><div><strong>Open palm</strong> (hold still) — About Me</div></div><div class="gm-tour-row"><span>↔️</span><div><strong>Horizontal palm swipe</strong> — Shut Down</div></div><div class="gm-tour-row"><span>☝️</span><div><strong>Point</strong> — scroll the front window</div></div><div class="gm-tour-row"><span>✌️</span><div><strong>Peace</strong> — Contact</div></div><div class="gm-tour-row"><span>👍</span><div><strong>Thumbs up</strong> — Terminal</div></div><div class="gm-tour-row"><span>👎</span><div><strong>Thumbs down</strong> — Trash</div></div><div class="gm-tour-row"><span>✊</span><div><strong>Fist</strong> — Sleep</div></div><div class="gm-tour-row"><span>👌</span><div><strong>OK</strong> (thumb + index circle, other fingers up) — Restart</div></div></div><div class="gm-tour-foot"><span class="gm-tour-count">Ready when you are</span><button type="button" class="gm-tour-skip" id="gm-tour-dismiss">Got it</button></div></div>';
         document.body.appendChild(tour);
         var dismiss = document.getElementById('gm-tour-dismiss');
         if (dismiss) dismiss.addEventListener('click', function() { removeGestureTour(); });
@@ -457,11 +551,16 @@
         previewVideo.muted = true;
         previewVideo.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:1;filter:saturate(1.05) contrast(1.04);';
 
+        pipParticleCanvas = document.createElement('canvas');
+        pipParticleCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;';
+        pipParticleCtx = pipParticleCanvas.getContext('2d', { alpha: true, desynchronized: true });
+
         pipCanvas = document.createElement('canvas');
-        pipCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
+        pipCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;';
         pipCtx = pipCanvas.getContext('2d', { alpha: true, desynchronized: true });
 
         pipInner.appendChild(previewVideo);
+        pipInner.appendChild(pipParticleCanvas);
         pipInner.appendChild(pipCanvas);
 
         pipLabel = document.createElement('div');
@@ -567,8 +666,7 @@
         palmOpenSamples = [];
         prevIndexTipY = null;
         indexPoseScrolled = false;
-        indexQuietForTerminal = 0;
-        indexTerminalOpened = false;
+        gmParticles.length = 0;
         if (rafId) cancelAnimationFrame(rafId);
         rafId = null;
         if (mpCamera) {

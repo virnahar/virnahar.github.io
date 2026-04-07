@@ -363,7 +363,7 @@ function initInteractiveTerminal() {
                 { cmd: 'joke', desc: 'Random programming joke' },
                 { cmd: 'vim', desc: 'Good luck escaping...' },
                 { cmd: 'sudo rm -rf /', desc: 'Try it. I dare you.' },
-                { cmd: 'exit', desc: 'There is no escape.' },
+                { cmd: 'exit / quit', desc: 'Close the Terminal window' },
                 { cmd: 'man <cmd>', desc: 'Manual page for any command' }
             ]
         },
@@ -1450,8 +1450,16 @@ git: function(subcmd) {
             this.echo('[[;#000;#ffffff;]  ^X Exit  ^O Write  ^W Search]');
         },
         'exit': function() {
-            this.echo('[[;#ffff00;]You can\'t exit DevOS that easily!]');
-            this.echo('[[;#888;]This isn\'t SSH — it\'s a portfolio. Enjoy the ride! 🎢]');
+            this.echo('[[;#888;]Closing Terminal…]');
+            if (typeof window.closeTerminalWindowFromShell === 'function') {
+                window.closeTerminalWindowFromShell();
+            }
+        },
+        'quit': function() {
+            this.echo('[[;#888;]Closing Terminal…]');
+            if (typeof window.closeTerminalWindowFromShell === 'function') {
+                window.closeTerminalWindowFromShell();
+            }
         },
         rm: function() {
             this.echo('[[;#ff0000;]rm: refusing to remove \'/\' — nice try!] 🛡️');
@@ -1488,7 +1496,7 @@ git: function(subcmd) {
         },
         checkArity: false,
         completion: function(string) {
-            return ['help','whoami','about','ls','cd','experience','skills','certifications','projects','education','clear','joke','kubernetes','terraform','devops','coffee','motivate','matrix','neofetch','typingtest','tictactoe','kubegame','resume','contact','github','linkedin','date','uptime','fortune','cowsay','sl','top','htop','ps','cat','find','grep','uname','hostname','pwd','echo','history','df','free','ifconfig','ping','curl','lsb_release','docker','kubectl','helm','git','brew','pip','npm','sudo','vim','nano','exit','rm','apt','yum','man','tail'];
+            return ['help','whoami','about','ls','cd','experience','skills','certifications','projects','education','clear','joke','kubernetes','terraform','devops','coffee','motivate','matrix','neofetch','typingtest','tictactoe','kubegame','resume','contact','github','linkedin','date','uptime','fortune','cowsay','sl','top','htop','ps','cat','find','grep','uname','hostname','pwd','echo','history','df','free','ifconfig','ping','curl','lsb_release','docker','kubectl','helm','git','brew','pip','npm','sudo','vim','nano','exit','quit','rm','apt','yum','man','tail'];
         },
         onBeforeCommand: function() {
             playClickSound();

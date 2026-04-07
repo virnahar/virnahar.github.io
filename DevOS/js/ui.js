@@ -126,6 +126,15 @@ window.scrollFrontWindowBy = function(deltaY) {
     });
     var w = visible[0];
     if (!w) return;
+    if (w.id === 'terminal-window' || w.classList.contains('terminal-window')) {
+        var termScroll = w.querySelector('#interactive-terminal .terminal-scroller') ||
+            w.querySelector('#interactive-terminal .terminal') ||
+            w.querySelector('#interactive-terminal');
+        if (termScroll) {
+            termScroll.scrollTop += deltaY;
+            return;
+        }
+    }
     var el = w.querySelector('.window-content') || w;
     el.scrollTop += deltaY;
 };
@@ -600,6 +609,15 @@ document.querySelectorAll('.menu-dropdown-item').forEach(item => {
     });
 });
 
+/** Close Terminal from in-shell `exit` / `quit` (same animation as red dot). */
+window.closeTerminalWindowFromShell = function() {
+    const tw = document.getElementById('terminal-window');
+    if (!tw || tw.classList.contains('minimizing')) return;
+    tw.classList.remove('minimized');
+    if (tw.style.display === 'none') return;
+    _closeWindowAnimated(tw);
+};
+
 // Shared close animation helper
 function _closeWindowAnimated(win) {
     win.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
@@ -666,7 +684,7 @@ function showRecentItems() {
 function showMacOSHelp() {
     showMacModal(
         'DevOS Help',
-        `Shortcuts:\n⌘/Ctrl + Space — Spotlight Search\nF3 — Mission Control\nF4 — Launchpad\nEsc — Close active window\nAlt + W/M/N — Close / Minimize / New window\n\nHand Magic:\nMenu bar (hand icon) or Control Center. Corner preview only — camera + hand outline; desktop stays clear. Palm still → Resume; point → scroll / hold → Terminal; ✌️ → Contact; 👍 → Projects; fist → Finder; pinch → Trash; full palm swipe → Shut Down (strict).\n\nHighlights:\n• 10+ interactive apps with real functionality\n• Interactive terminal with 15+ commands\n• 7 games, 7 wallpapers, dark mode\n• Dynamic menu bar, genie minimize, dock zoom\n\nBuilt by Virendra Kumar — github.com/virnahar`,
+        `Shortcuts:\n⌘/Ctrl + Space — Spotlight Search\nF3 — Mission Control\nF4 — Launchpad\nEsc — Dismiss dialog or close active window (not Terminal; use exit or quit there)\nAlt + W/M/N — Close / Minimize / New window\n\nPhone & tablet:\n• Desktop icons orbit like on desktop (tap to open apps)\n• Floating widgets are hidden so the wallpaper and icons stay clear\n• Use the Dock and Launchpad (center Apple) for quick access\n\nHand Magic:\nMenu bar (hand icon) or Control Center. Corner preview only — camera + hand outline; desktop stays clear. Palm still → Resume; point → scroll / hold → Terminal; ✌️ → Contact; 👍 → Projects; fist → Finder; pinch → Trash; full palm swipe → Shut Down (strict).\n\nHighlights:\n• 10+ interactive apps with real functionality\n• Interactive terminal with 15+ commands\n• 7 games, 7 wallpapers, dark mode\n• Dynamic menu bar, genie minimize, dock zoom\n\nBuilt by Virendra Kumar — github.com/virnahar`,
         '📖'
     );
 }
@@ -674,7 +692,7 @@ function showMacOSHelp() {
 function showKeyboardShortcuts() {
     showMacModal(
         'Keyboard Shortcuts',
-        `⌘/Ctrl + Space — Spotlight Search\nF3 — Mission Control\nF4 — Launchpad\nEsc — Close active window\nAlt + W — Close window\nAlt + M — Minimize window\nAlt + N — New window (Finder)\nCtrl + Shift + Q — Shut Down\nDouble-click title bar — Maximize/Restore\n\nSpotlight Navigation:\nArrow Up/Down — Navigate results\nEnter — Open selected item`,
+        `⌘/Ctrl + Space — Spotlight Search\nF3 — Mission Control\nF4 — Launchpad\nEsc — Dismiss dialog or close active window (Terminal: type exit or quit)\nAlt + W — Close window\nAlt + M — Minimize window\nAlt + N — New window (Finder)\nCtrl + Shift + Q — Shut Down\nDouble-click title bar — Maximize/Restore\n\nPhone / tablet: icons orbit automatically; tap Dock, Launchpad, or any icon.\n\nSpotlight Navigation:\nArrow Up/Down — Navigate results\nEnter — Open selected item`,
         '⌨️'
     );
 }
@@ -976,8 +994,16 @@ document.addEventListener('keydown', (e) => {
         return false;
     }
 
-    // Escape: close active window, then modals
+    // Escape: dismiss Mac modal first (restart/shutdown/etc.), then overlays, then windows (not Terminal)
     if (e.key === 'Escape') {
+        const macOverlay = document.getElementById('mac-modal-overlay');
+        if (macOverlay && macOverlay.style.display === 'flex') {
+            e.preventDefault();
+            e.stopPropagation();
+            closeMacModal();
+            return false;
+        }
+
         const launchpad = document.getElementById('launchpad');
         if (launchpad && launchpad.style.display === 'flex') { closeLaunchpad(); return; }
 
@@ -988,6 +1014,10 @@ document.addEventListener('keydown', (e) => {
         if (controlCenter && controlCenter.style.display === 'block') { controlCenter.style.display = 'none'; return; }
 
         if (activeWindow && activeWindow.style.display === 'block') {
+            if (activeWindow.id === 'terminal-window' || activeWindow.classList.contains('terminal-window')) {
+                return;
+            }
+            e.preventDefault();
             _closeWindowAnimated(activeWindow);
             return false;
         }
@@ -1515,16 +1545,40 @@ window.addEventListener('load', function() {
         appleLogo.addEventListener('click', function() { openLaunchpad(); });
 
         var count = icons.length;
-        var radius = Math.min(centerX, centerY) * 0.65;
         var angle = 0;
-        var speed = 0.0008;
+        var radius = 120;
+
+        function orbitIsNarrowPhone() {
+            return typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+        }
+        function orbitIsTouchTablet() {
+            return (
+                typeof window.matchMedia === 'function' &&
+                window.matchMedia('(max-width: 1024px) and (pointer: coarse)').matches
+            );
+        }
+        function currentOrbitSpeed() {
+            if (orbitIsNarrowPhone() || orbitIsTouchTablet()) return 0.00115;
+            return 0.0008;
+        }
 
         function positionIcons() {
             centerX = desktop.offsetWidth / 2;
             centerY = desktop.offsetHeight / 2;
-            radius = Math.min(centerX, centerY) * 0.64;
-            if (radius < 80) radius = 80;
-            if (radius > 300) radius = 300;
+            var base = Math.min(centerX, centerY);
+            if (orbitIsNarrowPhone()) {
+                radius = base * 0.52;
+                if (radius < 68) radius = 68;
+                if (radius > 195) radius = 195;
+            } else if (orbitIsTouchTablet()) {
+                radius = base * 0.58;
+                if (radius < 76) radius = 76;
+                if (radius > 260) radius = 260;
+            } else {
+                radius = base * 0.64;
+                if (radius < 80) radius = 80;
+                if (radius > 300) radius = 300;
+            }
 
             for (var i = 0; i < count; i++) {
                 var a = angle + (i / count) * Math.PI * 2;
@@ -1536,7 +1590,7 @@ window.addEventListener('load', function() {
         }
 
         function animate() {
-            angle += speed;
+            angle += currentOrbitSpeed();
             positionIcons();
             requestAnimationFrame(animate);
         }

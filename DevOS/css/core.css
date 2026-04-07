@@ -3650,6 +3650,11 @@ body.dark-mode .quiz-option {
     z-index: 999999;
 }
 
+/* Below #startup-screen (99999) while fading boot overlay → avoids desktop flash */
+.shutdown-screen.shutdown-layer-under-boot {
+    z-index: 99990;
+}
+
 .shutdown-content {
     text-align: center;
     animation: shutdownFadeIn 1s ease;
@@ -4727,6 +4732,7 @@ body:not(.dark-mode) .bento-role {
         flex-shrink: 0;
     }
 
+    /* Icon grid / scroll: v2-features.css (narrow + touch tablets) */
     .desktop {
         bottom: 60px;
         padding: 12px;
@@ -4736,28 +4742,6 @@ body:not(.dark-mode) .bento-role {
 
     .desktop-icon {
         padding: 4px;
-    }
-
-    /* Widgets: same floating cards as desktop; narrow screens get full usable width */
-    .desktop-widget {
-        right: 12px !important;
-        left: auto !important;
-        min-width: auto;
-        max-width: min(360px, calc(100vw - 20px));
-        padding: 16px;
-        transform: none;
-    }
-    
-    .experience-clock {
-        top: 50px !important;
-    }
-
-    .timeline-widget {
-        top: 260px !important;
-    }
-
-    .skills-widget {
-        top: 480px !important;
     }
 
     .live-clock-grid {
@@ -4867,19 +4851,6 @@ body:not(.dark-mode) .bento-role {
 }
 
 @media (max-width: 480px) {
-    .experience-clock {
-        min-width: auto;
-        top: 45px !important;
-    }
-
-    .timeline-widget {
-        top: 240px !important;
-    }
-
-    .skills-widget {
-        top: 450px !important;
-    }
-
     .live-clock-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 3px;
