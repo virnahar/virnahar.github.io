@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ITR JSON vs AIS JSON: Key Differences for Indian Taxpayers</title>
+    <meta name="description" content="Learn the difference between ITR JSON and AIS JSON, why mismatches happen, and how salaried Indian taxpayers can reconcile data before filing." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://virnahar.github.io/tax-story/guides/itr-json-vs-ais-json.html" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="ITR JSON vs AIS JSON: Key Differences for Indian Taxpayers" />
+    <meta property="og:description" content="A practical guide to reconcile ITR JSON and AIS JSON before filing." />
+    <meta property="og:url" content="https://virnahar.github.io/tax-story/guides/itr-json-vs-ais-json.html" />
+    <meta property="og:image" content="https://virnahar.github.io/tax-story/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ITR JSON vs AIS JSON: Key Differences for Indian Taxpayers" />
+    <meta name="twitter:description" content="Understand ITR vs AIS data and reduce mismatch risk before filing." />
+    <meta name="twitter:image" content="https://virnahar.github.io/tax-story/og-image.png" />
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0f0f11;
+        color: #ececf0;
+        line-height: 1.6;
+      }
+      main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+      a { color: #d4af37; }
+      h1, h2 { line-height: 1.25; }
+      .muted { color: #b8b8bf; }
+      .box {
+        border: 1px solid rgba(212, 175, 55, 0.25);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        padding: 14px;
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "ITR JSON vs AIS JSON: Key Differences for Indian Taxpayers",
+        "description": "A practical guide to understand and reconcile ITR JSON and AIS JSON before filing.",
+        "author": { "@type": "Person", "name": "Virendra Kumar" },
+        "publisher": { "@type": "Organization", "name": "Tax Story" },
+        "mainEntityOfPage": "https://virnahar.github.io/tax-story/guides/itr-json-vs-ais-json.html"
+      }
+    </script>
+  </head>
+  <body>
+    <main>
+      <p><a href="../index.html">Back to Tax Story</a></p>
+      <h1>ITR JSON vs AIS JSON: what is the difference?</h1>
+      <p class="muted">For Indian salaried taxpayers, both files matter. They are related, but they are not the same source of truth.</p>
+
+      <h2>What ITR JSON represents</h2>
+      <p>ITR JSON is your return data: income heads, deductions, tax liability, and values you (or your preparer) submitted while filing.</p>
+
+      <h2>What AIS JSON represents</h2>
+      <p>AIS JSON is an information statement from reporting entities. It can include salary, interest, dividends, securities transactions, rent, and TDS/TCS traces reported against your PAN.</p>
+
+      <h2>Why mismatch happens</h2>
+      <ul>
+        <li>Different timing between transaction date, report date, and filing date.</li>
+        <li>Wrong mapping of AIS categories into ITR schedules.</li>
+        <li>Small interest/dividend entries missed in return preparation.</li>
+        <li>Name/PAN reporting errors by source institutions.</li>
+      </ul>
+
+      <h2>What to reconcile first</h2>
+      <div class="box">
+        <ol>
+          <li>TDS totals and major salary lines.</li>
+          <li>Interest and dividend entries across all accounts.</li>
+          <li>Capital gains and broker statement alignment.</li>
+          <li>Any large amount that appears in AIS but not in ITR.</li>
+        </ol>
+      </div>
+
+      <h2>Use Tax Story for faster review</h2>
+      <p>Upload ITR JSON/XML and AIS JSON in <a href="../index.html">Tax Story</a> to see mismatches, compare regimes, and build a clean review trail before filing or revising.</p>
+    </main>
+  </body>
+</html>

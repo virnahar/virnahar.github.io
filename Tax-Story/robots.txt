@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://virnahar.github.io/tax-story/sitemap.xml
