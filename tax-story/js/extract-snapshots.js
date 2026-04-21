@@ -126,6 +126,7 @@ export function extractItrSnapshot(parsed) {
   const assessmentYear = structured?.assessmentYear ?? undefined;
   const firstName = structured?.firstName ?? '';
   const surName = structured?.surName ?? '';
+  const pan = structured?.pan ?? '';
   const employerName = structured?.employerName ?? '';
   const city = structured?.city ?? '';
 
@@ -219,34 +220,13 @@ export function extractItrSnapshot(parsed) {
     assessmentYear: assessmentYear ?? undefined,
     firstName,
     surName,
+    pan,
     employerName,
     city,
     hasData,
   };
 }
 
-/**
- * AIS information codes (portal categories) — maps to ItrSnapshot heads.
- * @type {Record<string, string>}
- */
-const AIS_CATEGORY_MAP = {
-  // Salary
-  SFT004: 'salary', ITR_SALARY: 'salary',
-  // Interest
-  SFT001: 'interestSavings', SFT002: 'interestFD', SFT003: 'interestFD',
-  // Dividend
-  SFT005: 'dividend', SFT006: 'dividend',
-  // MF capital gains
-  SFT011: 'capitalGainsMF', SFT012: 'capitalGainsMF',
-  // Listed equity capital gains
-  SFT015: 'capitalGainsEquity', SFT016: 'capitalGainsEquity',
-  // Property
-  SFT008: 'rent', SFT009: 'rent',
-  // Business / professional
-  SFT010: 'business',
-  // TDS / TCS
-  TDS: 'tds', TCS: 'tcs',
-};
 
 /**
  * Categorize an AIS transaction line from its text blob.

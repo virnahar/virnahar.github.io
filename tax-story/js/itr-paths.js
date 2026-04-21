@@ -398,6 +398,7 @@ export function extractItrStructured(parsed) {
     assessmentYear: /** @type {string|null} */ (null),
     firstName: /** @type {string} */ (''),
     surName: /** @type {string} */ (''),
+    pan: /** @type {string} */ (''),
     employerName: /** @type {string} */ (''),
     city: /** @type {string} */ (''),
     deductions: {
@@ -544,6 +545,7 @@ export function extractItrStructured(parsed) {
     // ─── Personal info ───────────────────────────────────────────────────────
     out.firstName = firstString(parsed, PATHS.firstName);
     out.surName = firstString(parsed, PATHS.surName);
+    out.pan = firstString(parsed, PATHS.pan);
     out.employerName = extractEmployerName(parsed);
     out.city = firstString(parsed, PATHS.city);
 

@@ -1,1302 +1,1025 @@
 /**
  * Tax Story — premium client-only PDF export.
  *
- * Pipeline:
- *   1. Collect metadata (taxpayer name, FY range, chapter offsets, safe-break offsets).
- *   2. Rasterise <main> with html2canvas-pro at up to 3× DPI, preserving the dark theme.
- *   3. Paginate the tall canvas into A4 slices that align with chapter/card boundaries.
- *   4. Insert a cover page and a table of contents at the front; apply a per-page footer.
- *   5. Save the file.
+ * Structured mode (default): pure jsPDF vector drawing — no screenshot.
+ * Detailed mode (legacy):    html2canvas-pro rasterise + paginate.
  *
- * Progress updates are dispatched on `document` as `pdf-export-progress` CustomEvents so the
- * Alpine shell can show a toast without importing anything from this module.
+ * Y-coordinate model (prevents text overlap):
+ *   - y always = TOP of the next element to draw
+ *   - Text baseline = y + topPad + (fontSize * 0.72)
+ *   - After each element: y += elementHeight
+ *   - No negative y offsets anywhere
  *
- * jsPDF note: standard fonts (Helvetica) do not ship a ₹ glyph. Any rupee text drawn via jsPDF
- * is replaced with "Rs.". ₹ inside the rasterised body capture is preserved (it is part of the
- * image pixels, not a font call).
- *
- * @param {HTMLElement} root
- * @param {{
- *   title?: string,
- *   taxpayerName?: string,
- *   subtitle?: string,
- *   detailMode?: 'structured' | 'detailed' | 'compact',
- *   qualityMode?: 'high' | 'balanced',
- *   reportData?: any
- * }} opts
- *   - `title`         – filename stem (default "Tax-Story"); also used as the cover heading.
- *   - `taxpayerName`  – optional; if absent we look up `.hero-greeting strong`.
- *   - `subtitle`      – optional; overrides the auto "Prepared for …" subtitle.
- * @returns {Promise<boolean>} true on success, false on failure (user has been alerted).
+ * PDF structure (structured mode):
+ *   1. Cover page        — personalised: name, PAN, company, income, taxes
+ *   2. Executive Summary — KPI grid + regime recommendation + actions
+ *   3. Income Overview   — year-on-year comparative table
+ *   4. Regime Analysis   — full old vs new breakdown + action table
+ *   5. Review Items      — ITR vs AIS reconciliation (severity-coded)
+ *   6. Insights          — TIS/AIS insight deck
+ *   7. Anomaly Timeline  — risk flag table
+ *   8. Uploaded Files    — file manifest
  */
 
-const SAFE_BREAK_SELECTOR =
-  '.chapter, .review-card, .insight-card, .intel-card, .chart-shell, .comparative-table-card';
+/** Mask first 5 chars of a PAN (ABCDE1234F → XXXXX1234F). */
+function maskPan(pan) {
+  if (!pan || pan.length < 5) return pan;
+  return 'XXXXX' + pan.slice(5);
+}
 
-const GOLD = '#d4af37';
-const MUTED = '#71717a';
-const COVER_BG = '#0f0f11';
+// ── Colour tokens ──────────────────────────────────────────────────────────────
+const C = {
+  coverBg:      [13,  15,  21],
+  pageBg:       [245, 239, 224],   // warm cream — prints cleanly
+  sectionBg:    [233, 226, 208],   // slightly deeper page-header band
+  ink:          [18,  18,  26],    // primary text
+  inkMed:       [58,  58,  72],    // secondary
+  inkMuted:     [118, 112, 98],    // labels/captions
+  gold:         [184, 146, 26],    // gold on light bg
+  goldCover:    [212, 175, 55],    // gold on dark cover
+  teal:         [26,  107, 92],
+  tealCover:    [94,  173, 154],
+  rule:         [218, 210, 190],
+  cardBg:       [255, 252, 245],
+  tableHdr:     [38,  32,  8],     // near-black table header
+  tableHdrTxt:  [240, 234, 210],
+  tableAlt:     [250, 245, 232],
+  badgeRed:     [185, 28,  28],
+  badgeAmber:   [175, 82,  9],
+  badgeGreen:   [4,   118, 85],
+  badgeBlue:    [37,  99,  235],
+};
 
-function getJsPdfConstructor() {
+// ── Font metrics (Helvetica in jsPDF, units = pt) ──────────────────────────────
+// Text baseline ≈ y_top + topPad + fontSize × 0.72
+// Total text-line height ≈ fontSize × 1.22
+const BL = 0.72;  // baseline factor
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function emit(phase, pct) {
+  try {
+    document.dispatchEvent(new CustomEvent('pdf-export-progress', { detail: { phase, pct } }));
+  } catch { /* never crash export */ }
+}
+
+function px(str) {
+  return String(str ?? '').replace(/\u20B9/g, 'Rs.');
+}
+
+function fmtInr(n) {
+  if (n == null || !Number.isFinite(n)) return '\u2014';
+  const abs = Math.abs(n);
+  if (abs >= 10000000) return `Rs.${(n / 10000000).toFixed(2)} Cr`;
+  if (abs >= 100000)   return `Rs.${(n / 100000).toFixed(2)} L`;
+  return `Rs.${Math.round(n).toLocaleString('en-IN')}`;
+}
+
+function getJsPDF() {
   const j = window.jspdf;
   if (j && typeof j.jsPDF === 'function') return j.jsPDF;
   if (typeof window.jsPDF === 'function') return window.jsPDF;
   return null;
 }
 
-function emit(phase, pct) {
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  const n = parseInt(h, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function severityStyle(level) {
+  const s = String(level || '').toLowerCase();
+  if (s === 'review') return { badge: C.badgeRed,   label: 'REVIEW' };
+  if (s === 'watch')  return { badge: C.badgeAmber, label: 'WATCH'  };
+  if (s === 'ok')     return { badge: C.badgeGreen, label: 'OK'     };
+  return                     { badge: C.badgeBlue,  label: 'INFO'   };
+}
+
+// Approximate height of a jsPDF text block (lines × lineHeight)
+function measH(pdf, lines, fontSize) {
+  const arr = Array.isArray(lines) ? lines : [String(lines ?? '')];
+  const lh = fontSize * 1.22;
+  return arr.length * lh;
+}
+
+// ── Page builder factory ───────────────────────────────────────────────────────
+function makeCtx(pdf, pW, pH, margin = 48) {
+  const HDR_H    = 36;   // page header strip height
+  const FTR_H    = 28;   // footer reserve
+  const cW       = pW - margin * 2;
+  let y          = HDR_H + 18;
+  let secIdx     = 0;
+  const isoDate  = new Date().toISOString().slice(0, 10);
+
+  const set = {
+    fill: (c) => pdf.setFillColor(c[0], c[1], c[2]),
+    draw: (c) => pdf.setDrawColor(c[0], c[1], c[2]),
+    text: (c) => pdf.setTextColor(c[0], c[1], c[2]),
+    font: (st, sz) => { pdf.setFont('helvetica', st); pdf.setFontSize(sz); },
+    lw:   (w) => pdf.setLineWidth(w),
+  };
+
+  function _pageHdr() {
+    set.fill(C.pageBg); pdf.rect(0, 0, pW, pH, 'F');
+    set.fill(C.sectionBg); pdf.rect(0, 0, pW, HDR_H, 'F');
+    set.lw(0.5); set.draw(C.gold);
+    pdf.line(0, HDR_H, pW, HDR_H);
+    set.font('bold', 8); set.text(C.gold);
+    pdf.text('Rs.  TAX STORY', margin, HDR_H - 10);
+    set.font('normal', 7); set.text(C.inkMuted);
+    pdf.text(isoDate, pW - margin, HDR_H - 10, { align: 'right' });
+  }
+
+  function newPage() {
+    pdf.addPage();
+    _pageHdr();
+    y = HDR_H + 18;
+  }
+
+  function ensure(need) {
+    if (y + need <= pH - FTR_H - 4) return;
+    newPage();
+  }
+
+  // ── Section header ──
+  // Total height consumed: 58pt
+  function section(title) {
+    secIdx++;
+    ensure(60);
+    const y0 = y;
+    // Eyebrow
+    set.font('bold', 7.5); set.text(C.gold);
+    pdf.text(`${String(secIdx).padStart(2, '0')}  —  ${title.toUpperCase()}`, margin, y0 + 10);
+    // Gold left bar
+    set.fill(C.gold);
+    pdf.rect(margin, y0 + 16, 3, 24, 'F');
+    // Title text (baseline = y0 + 16 + 24*0.65 = y0 + 31.6)
+    set.font('bold', 18); set.text(C.ink);
+    pdf.text(px(title), margin + 10, y0 + 33);
+    // Underrule
+    set.lw(0.4); set.draw(C.rule);
+    pdf.line(margin, y0 + 44, pW - margin, y0 + 44);
+    y = y0 + 58;
+  }
+
+  // ── Sub-heading ──  (~26pt)
+  function h2(title) {
+    ensure(28);
+    const y0 = y;
+    set.font('bold', 10.5); set.text(C.inkMed);
+    pdf.text(px(title), margin, y0 + 10.5 * BL + 2);
+    set.lw(0.3); set.draw(C.rule);
+    pdf.line(margin, y0 + 14, pW - margin, y0 + 14);
+    y = y0 + 24;
+  }
+
+  // ── Key-value row ── (each line ~14pt)
+  function kv(label, value) {
+    const valW   = cW - 130;
+    const lines  = pdf.splitTextToSize(px(String(value ?? '\u2014')), valW);
+    const lh     = 9 * 1.22;
+    const h      = Math.max(14, lines.length * lh + 4);
+    ensure(h);
+    const y0 = y;
+    set.font('normal', 8.5); set.text(C.inkMuted);
+    pdf.text(px(String(label ?? '')), margin, y0 + 8.5 * BL + 2);
+    set.font('normal', 9); set.text(C.ink);
+    pdf.text(lines, margin + 130, y0 + 9 * BL + 2);
+    y = y0 + h;
+  }
+
+  // ── Paragraph ──
+  function para(text, col = C.inkMed) {
+    const lines = pdf.splitTextToSize(px(String(text ?? '')), cW);
+    const h     = Math.max(14, lines.length * 9.5 * 1.22 + 4);
+    ensure(h);
+    const y0 = y;
+    set.font('normal', 9.5); set.text(col);
+    pdf.text(lines, margin, y0 + 9.5 * BL + 2);
+    y = y0 + h;
+  }
+
+  function spacer(n = 8) { y += n; }
+
+  return {
+    pdf, pW, pH, margin, cW, set,
+    ensure, newPage, section, h2, kv, para, spacer,
+    getY: () => y,
+    setY: (v) => { y = v; },
+    isoDate,
+    HDR_H, FTR_H,
+  };
+}
+
+// ── Cover page ─────────────────────────────────────────────────────────────────
+function drawCover(pdf, pW, pH, { title, taxpayerName, pan, employer, city, fyRange, isoDate,
+                                   lifetimeEarnings, totalTaxPaid, effectiveTaxRate }) {
+  const s = {
+    fill: (c) => pdf.setFillColor(c[0], c[1], c[2]),
+    draw: (c) => pdf.setDrawColor(c[0], c[1], c[2]),
+    text: (c) => pdf.setTextColor(c[0], c[1], c[2]),
+    font: (st, sz) => { pdf.setFont('helvetica', st); pdf.setFontSize(sz); },
+    lw: (w) => pdf.setLineWidth(w),
+  };
+  const M = 52;
+
+  // Full dark background
+  s.fill(C.coverBg); pdf.rect(0, 0, pW, pH, 'F');
+
+  // Left accent bar (gold)
+  s.fill(C.goldCover); pdf.rect(0, 0, 4, pH, 'F');
+
+  // Ghost "Rs." watermark
   try {
-    document.dispatchEvent(
-      new CustomEvent('pdf-export-progress', { detail: { phase, pct } })
+    if (typeof pdf.GState === 'function') {
+      pdf.setGState(new pdf.GState({ opacity: 0.07 }));
+    }
+    s.font('bold', 130); s.text(C.goldCover);
+    pdf.text('Rs.', pW * 0.62, pH * 0.42, { align: 'center' });
+    if (typeof pdf.GState === 'function') {
+      pdf.setGState(new pdf.GState({ opacity: 1 }));
+    }
+  } catch { /* opacity unsupported — skip */ }
+
+  // ── Top brand label
+  s.font('bold', 7.5); s.text(C.goldCover);
+  pdf.text('INCOME INTELLIGENCE REPORT  \u00B7  TAX STORY', pW / 2, 48, { align: 'center' });
+  s.lw(0.4); s.draw(C.goldCover);
+  pdf.line(pW * 0.2, 54, pW * 0.8, 54);
+
+  // ── Hero taxpayer name
+  const heroName = px(taxpayerName || 'Your Tax Story');
+  s.font('bold', 30); s.text([248, 248, 252]);
+  pdf.text(heroName, pW / 2, pH * 0.38, { align: 'center' });
+
+  // Subtitle
+  s.font('normal', 12); s.text(C.goldCover);
+  pdf.text('Income Intelligence Report', pW / 2, pH * 0.38 + 24, { align: 'center' });
+
+  // FY range
+  if (fyRange) {
+    s.font('normal', 10); s.text(C.tealCover);
+    pdf.text(px(fyRange), pW / 2, pH * 0.38 + 42, { align: 'center' });
+  }
+
+  // Thin divider
+  s.lw(0.4); s.draw(C.goldCover);
+  pdf.line(M + 20, pH * 0.52, pW - M - 20, pH * 0.52);
+
+  // ── Personal info grid (2 columns × 3 rows inside a card area)
+  const cardTop = pH * 0.54;
+  const cardH   = 148;
+  const cardW   = pW - M * 2;
+  // Card bg
+  s.fill([22, 24, 32]); pdf.roundedRect(M, cardTop, cardW, cardH, 6, 6, 'F');
+  s.draw([55, 52, 38]); s.lw(0.5); pdf.roundedRect(M, cardTop, cardW, cardH, 6, 6);
+
+  const col1X = M + 18;
+  const col2X = M + cardW / 2 + 10;
+  const rowH  = 42;
+
+  function infoCell(x, y, label, value, valColor) {
+    s.font('normal', 7); s.text([148, 142, 128]);
+    pdf.text(label, x, y);
+    s.font('bold', 10.5); s.text(valColor || [235, 232, 220]);
+    const lines = pdf.splitTextToSize(px(String(value || '\u2014')), cardW / 2 - 28);
+    pdf.text(lines.slice(0, 2), x, y + 14);
+  }
+
+  const r1 = cardTop + 22;
+  const r2 = cardTop + 22 + rowH;
+  const r3 = cardTop + 22 + rowH * 2;
+
+  infoCell(col1X, r1, 'TAXPAYER',    taxpayerName || '\u2014');
+  infoCell(col2X, r1, 'PAN',          pan          || '\u2014', pan ? C.goldCover : undefined);
+  infoCell(col1X, r2, 'EMPLOYER',     employer     || '\u2014');
+  infoCell(col2X, r2, 'CITY',         city         || '\u2014');
+  infoCell(col1X, r3, 'LIFETIME EARNINGS', fmtInr(lifetimeEarnings), C.goldCover);
+  infoCell(col2X, r3, 'TOTAL TAX PAID', fmtInr(totalTaxPaid));
+
+  // Effective rate badge
+  if (effectiveTaxRate != null) {
+    const rateX = M + cardW - 18;
+    const rateY = cardTop + cardH - 22;
+    s.font('normal', 7); s.text([148, 142, 128]);
+    pdf.text('EFF. RATE', rateX, rateY, { align: 'right' });
+    s.font('bold', 11); s.text(C.tealCover);
+    pdf.text(`${Number(effectiveTaxRate).toFixed(1)}%`, rateX, rateY + 14, { align: 'right' });
+  }
+
+  // ── Bottom
+  s.lw(0.4); s.draw(C.goldCover);
+  pdf.line(M + 20, pH - 44, pW - M - 20, pH - 44);
+  s.font('normal', 7.5); s.text([125, 122, 112]);
+  pdf.text(isoDate, M, pH - 28);
+  pdf.text(
+    'Private browser-generated analysis — not tax or legal advice.',
+    pW / 2, pH - 28, { align: 'center' }
+  );
+
+  // Bottom accent bar
+  s.fill(C.goldCover); pdf.rect(0, pH - 5, pW, 5, 'F');
+}
+
+// ── KPI stat block grid (3 cols) ───────────────────────────────────────────────
+function drawKpiGrid(ctx, kpis) {
+  if (!kpis.length) return;
+  const { pdf, pW, margin, set, ensure, cW } = ctx;
+  const GAP  = 14;
+  const COLS = Math.min(3, kpis.length);
+  const colW = (cW - GAP * (COLS - 1)) / COLS;
+  const CARD_H = 66;
+
+  const items = kpis.slice(0, 6);
+  const rows  = Math.ceil(items.length / COLS);
+  ensure(rows * (CARD_H + GAP) + 8);
+  const startY = ctx.getY();
+
+  items.forEach((k, i) => {
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    const x   = margin + col * (colW + GAP);
+    const y   = startY + row * (CARD_H + GAP);
+
+    // Card
+    set.fill(C.cardBg); pdf.roundedRect(x, y, colW, CARD_H, 4, 4, 'F');
+    // Gold top accent (3pt)
+    set.fill(C.gold); pdf.roundedRect(x, y, colW, 3, 1.5, 1.5, 'F');
+    // Border
+    set.draw(C.rule); pdf.setLineWidth(0.4); pdf.roundedRect(x, y, colW, CARD_H, 4, 4);
+
+    // Label (top of card)
+    const lbl = px(k.label || '');
+    set.font('normal', 7); set.text(C.inkMuted);
+    pdf.text(lbl, x + 10, y + 3 + 7 * BL + 4);
+    // Value
+    const valFontSize = k.value && k.value.length > 14 ? 11 : 14;
+    set.font('bold', valFontSize); set.text(C.ink);
+    pdf.text(px(k.value || '\u2014'), x + 10, y + 3 + 12 + valFontSize * BL + 4);
+    // Sub
+    if (k.sub) {
+      set.font('normal', 7.5); set.text(C.teal);
+      pdf.text(px(k.sub), x + 10, y + CARD_H - 10);
+    }
+  });
+
+  ctx.setY(startY + rows * (CARD_H + GAP) + 8);
+}
+
+// ── Table ──────────────────────────────────────────────────────────────────────
+// All y values are TOP-of-element. Text baseline = y + pad + fontSize * BL
+function drawTable(ctx, { headers, rows, colWidths, alignments }) {
+  const { pdf, pW, pH, margin, set, cW, FTR_H } = ctx;
+  const FONT_SZ = 8;
+  const HDR_H   = 20;   // header row total height
+  const HDR_PAD = 5;    // top padding in header row
+  const ROW_PAD = 4;    // top/bottom padding in data rows
+  const MIN_ROW_H = FONT_SZ * 1.22 + ROW_PAD * 2;
+
+  const totalW  = colWidths.reduce((s, w) => s + w, 0);
+  const scale   = cW / totalW;
+  const sW      = colWidths.map((w) => w * scale);
+
+  function colX(i) {
+    let x = margin;
+    for (let j = 0; j < i; j++) x += sW[j];
+    return x;
+  }
+
+  function drawHeader() {
+    ctx.ensure(HDR_H + 4);
+    const y = ctx.getY();
+    set.fill(C.tableHdr); pdf.rect(margin, y, cW, HDR_H, 'F');
+    set.font('bold', FONT_SZ); set.text(C.tableHdrTxt);
+    headers.forEach((h, i) => {
+      const align = alignments?.[i] || 'left';
+      const xT    = align === 'right' ? colX(i) + sW[i] - 5 : colX(i) + 6;
+      pdf.text(px(String(h)), xT, y + HDR_PAD + FONT_SZ * BL, { align });
+    });
+    ctx.setY(y + HDR_H);
+  }
+
+  drawHeader();
+
+  rows.forEach((row, rIdx) => {
+    const cells    = Array.isArray(row) ? row : (row.cells || []);
+    const cLines   = cells.map((c, i) =>
+      pdf.splitTextToSize(px(String(c ?? '\u2014')), sW[i] - 10).slice(0, 3)
     );
-  } catch {
-    // Event dispatch should never crash the export.
+    const maxLines = Math.max(1, ...cLines.map((l) => l.length));
+    const rowH     = Math.max(MIN_ROW_H, maxLines * FONT_SZ * 1.22 + ROW_PAD * 2);
+
+    if (ctx.getY() + rowH > pH - FTR_H - 8) {
+      ctx.newPage();
+      drawHeader();
+    }
+
+    const y = ctx.getY();
+    // Alternating tint
+    if (rIdx % 2 === 1) {
+      set.fill(C.tableAlt); pdf.rect(margin, y, cW, rowH, 'F');
+    }
+    // Bottom rule
+    set.draw(C.rule); pdf.setLineWidth(0.2);
+    pdf.line(margin, y + rowH, pW - margin, y + rowH);
+    // Cell text
+    set.font('normal', FONT_SZ); set.text(C.ink);
+    cells.forEach((_, i) => {
+      const align = alignments?.[i] || 'left';
+      const xT    = align === 'right' ? colX(i) + sW[i] - 5 : colX(i) + 6;
+      pdf.text(cLines[i], xT, y + ROW_PAD + FONT_SZ * BL, { align });
+    });
+    ctx.setY(y + rowH);
+  });
+
+  ctx.setY(ctx.getY() + 10);
+}
+
+// ── Review card row ────────────────────────────────────────────────────────────
+function drawReviewRow(ctx, card, idx) {
+  const { pdf, pW, margin, set, cW } = ctx;
+  const FONT_SZ = 8.5;
+  const PAD_V   = 8;
+  const BADGE_W = 44;
+  const BADGE_H = 13;
+  const BAR_W   = 3;
+  const textW   = cW - BADGE_W - BAR_W - 16;
+
+  const style  = severityStyle(card.severity);
+  const detail = `${card.fy ? card.fy + '   ' : ''}${String(card.title || '')}${card.body ? '  —  ' + String(card.body).slice(0, 110) : ''}`;
+  const lines  = pdf.splitTextToSize(px(detail), textW).slice(0, 3);
+  const textHt = lines.length * FONT_SZ * 1.22;
+  const rowH   = Math.max(PAD_V * 2 + BADGE_H, PAD_V * 2 + textHt);
+
+  ctx.ensure(rowH + 3);
+  const y = ctx.getY();
+
+  // Alt bg
+  if (idx % 2 === 1) {
+    set.fill(C.tableAlt); pdf.rect(margin, y, cW, rowH, 'F');
+  }
+  // Left severity bar
+  set.fill(style.badge); pdf.rect(margin, y, BAR_W, rowH, 'F');
+
+  // Badge pill (vertically centered)
+  const badgeTop = y + (rowH - BADGE_H) / 2;
+  set.fill(style.badge); pdf.roundedRect(margin + BAR_W + 6, badgeTop, BADGE_W, BADGE_H, 2, 2, 'F');
+  set.font('bold', 6.5); set.text([255, 255, 255]);
+  pdf.text(style.label, margin + BAR_W + 6 + BADGE_W / 2, badgeTop + BADGE_H * 0.64, { align: 'center' });
+
+  // Text (baseline at top row + PAD_V + firstLine baseline)
+  set.font('normal', FONT_SZ); set.text(C.ink);
+  pdf.text(lines, margin + BAR_W + BADGE_W + 16, y + PAD_V + FONT_SZ * BL);
+
+  // Rule
+  set.draw(C.rule); pdf.setLineWidth(0.2);
+  pdf.line(margin, y + rowH, margin + cW, y + rowH);
+
+  ctx.setY(y + rowH + 1);
+}
+
+// ── Footers ────────────────────────────────────────────────────────────────────
+function paintFooters(pdf, pW, pH, totalPages, isoDate) {
+  const M = 48;
+  for (let p = 2; p <= totalPages; p++) {
+    pdf.setPage(p);
+    pdf.setDrawColor(C.gold[0], C.gold[1], C.gold[2]);
+    pdf.setLineWidth(0.3);
+    pdf.line(M, pH - 18, pW - M, pH - 18);
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7);
+    pdf.setTextColor(C.inkMuted[0], C.inkMuted[1], C.inkMuted[2]);
+    pdf.text('Tax Story  \u00B7  Private browser analysis  \u00B7  Not tax advice', M, pH - 9);
+    pdf.text(`${p} / ${totalPages}`, pW / 2, pH - 9, { align: 'center' });
+    pdf.text(isoDate, pW - M, pH - 9, { align: 'right' });
   }
 }
 
-function sanitizeForPdfText(str) {
-  // jsPDF Helvetica cannot render ₹; replace in any text we draw ourselves.
-  return String(str ?? '').replace(/\u20B9/g, 'Rs.');
+// ── Section: Executive Summary ─────────────────────────────────────────────────
+function drawExecutiveSummary(ctx, rd = {}) {
+  const { pdf, margin, set, ensure, cW } = ctx;
+  ctx.section('Executive Summary');
+
+  const totals = rd.totals || {};
+  const regime = rd.regime;
+  const actions = Array.isArray(rd.actions) ? rd.actions : [];
+
+  drawKpiGrid(ctx, [
+    { label: 'Lifetime Earnings',    value: fmtInr(totals.lifetimeEarnings), sub: '' },
+    { label: 'Total Tax Paid',        value: fmtInr(totals.totalTaxPaid),     sub: '' },
+    { label: 'Effective Tax Rate',    value: totals.effectiveTaxRate != null ? `${Number(totals.effectiveTaxRate).toFixed(1)}%` : '\u2014', sub: '' },
+    { label: 'Filing Risk',           value: totals.filingRiskScore != null ? `${totals.filingRiskScore} / 100` : '\u2014', sub: totals.filingRiskLevel ? String(totals.filingRiskLevel).toUpperCase() : '' },
+    { label: 'Taxpayer',             value: px(rd.taxpayerName || '\u2014') },
+    { label: 'Employer / Company',   value: px(rd.employer || '\u2014') },
+  ].filter((k) => k.value && k.value !== '\u2014'));
+
+  ctx.spacer(10);
+
+  if (regime) {
+    ctx.h2('Regime Recommendation');
+    ensure(60);
+    const y0 = ctx.getY();
+    set.fill(C.cardBg); pdf.roundedRect(margin, y0, cW, 54, 4, 4, 'F');
+    set.fill(C.teal); pdf.roundedRect(margin, y0, 3, 54, 1.5, 1.5, 'F');
+    set.draw(C.rule); pdf.setLineWidth(0.4); pdf.roundedRect(margin, y0, cW, 54, 4, 4);
+    set.font('bold', 8.5); set.text(C.teal);
+    pdf.text(`${String(regime.recommended || '').toUpperCase()} REGIME RECOMMENDED`, margin + 14, y0 + 8 * BL + 6);
+    set.font('bold', 13); set.text(C.ink);
+    pdf.text(`Estimated savings: ${fmtInr(Math.abs(regime.savings ?? 0))}`, margin + 14, y0 + 8 * BL + 6 + 13 * BL + 6);
+    if (regime.reason) {
+      const rLines = pdf.splitTextToSize(px(regime.reason), cW - 24).slice(0, 1);
+      set.font('normal', 7.5); set.text(C.inkMuted);
+      pdf.text(rLines, margin + 14, y0 + 8 * BL + 6 + 13 * BL + 6 + 8 * BL + 8);
+    }
+    ctx.setY(y0 + 62);
+    ctx.spacer(8);
+  }
+
+  if (actions.length) {
+    ctx.h2('Priority Actions');
+    actions.slice(0, 5).forEach((a, i) => {
+      const label = `${i + 1}.  ${String(a.title || 'Action')}${a.impact ? '  —  ' + a.impact : ''}`;
+      ctx.para(label, i % 2 === 0 ? C.ink : C.inkMed);
+    });
+  }
+
+  const anomalies = Array.isArray(rd.anomalies) ? rd.anomalies.slice(-4) : [];
+  if (anomalies.length) {
+    ctx.spacer(6);
+    ctx.h2('Recent Anomaly Flags');
+    anomalies.forEach((a) => {
+      ctx.para(`${a.fy ? a.fy + '  ' : ''}${a.label || ''}${a.detail ? '  \u2014  ' + a.detail : ''}`, C.inkMed);
+    });
+  }
 }
 
-/**
- * @param {HTMLElement} el
- * @param {HTMLElement} ancestor
- */
+// ── Section: Income overview (comparative) ────────────────────────────────────
+function drawComparativeSection(ctx, rd = {}) {
+  const comp = rd.comparative;
+  if (!comp?.rows?.length) return;
+
+  ctx.newPage();
+  ctx.section('Income Overview  (Year-on-Year)');
+
+  const years   = Array.isArray(comp.years) ? comp.years : [];
+  const rows    = comp.rows;
+  const shown   = years.slice(-5);
+  const startI  = Math.max(0, years.length - shown.length);
+
+  ctx.para(`Showing last ${shown.length} of ${years.length} FY(s): ${shown.join('  ·  ')}`, C.inkMuted);
+  ctx.spacer(6);
+
+  const metricW  = 160;
+  const perYear  = Math.max(52, (ctx.cW - metricW) / Math.max(1, shown.length));
+  const tableRows = rows.slice(0, 28).map((r) => {
+    const cells = Array.isArray(r.cells) ? r.cells.slice(startI, startI + shown.length) : [];
+    return [String(r.label || ''), ...cells.map((c) => String(c ?? '\u2014'))];
+  });
+
+  drawTable(ctx, {
+    headers: ['Metric', ...shown.map(String)],
+    rows: tableRows,
+    colWidths: [metricW, ...shown.map(() => perYear)],
+    alignments: ['left', ...shown.map(() => 'right')],
+  });
+  if (rows.length > 28) ctx.para(`+ ${rows.length - 28} more rows omitted.`, C.inkMuted);
+}
+
+// ── Section: Regime analysis ───────────────────────────────────────────────────
+function drawRegimeSection(ctx, rd = {}) {
+  ctx.newPage();
+  ctx.section('Regime Analysis');
+
+  const regime  = rd.regime;
+  const totals  = rd.totals || {};
+  const fyRange = Array.isArray(rd.fyRange) && rd.fyRange.length
+    ? `${rd.fyRange[0]} to ${rd.fyRange[rd.fyRange.length - 1]}`
+    : rd.selectedFy || '\u2014';
+
+  drawKpiGrid(ctx, [
+    { label: 'Recommended Regime',    value: regime ? `${String(regime.recommended || '').toUpperCase()} REGIME` : '\u2014' },
+    { label: 'Old Regime Tax',        value: fmtInr(regime?.oldTax) },
+    { label: 'New Regime Tax',        value: fmtInr(regime?.newTax) },
+    { label: 'Estimated Savings',     value: fmtInr(Math.abs(regime?.savings ?? 0)) },
+    { label: 'Analysis FY Range',     value: px(fyRange) },
+    { label: 'Effective Tax Rate',    value: totals.effectiveTaxRate != null ? `${Number(totals.effectiveTaxRate).toFixed(1)}%` : '\u2014' },
+  ]);
+
+  if (!regime) {
+    ctx.para('Regime comparison requires uploaded ITR data with income and deduction details.', C.inkMuted);
+    return;
+  }
+  if (regime.reason) {
+    ctx.spacer(8);
+    ctx.h2('Analysis Notes');
+    ctx.para(regime.reason);
+  }
+
+  const actions = Array.isArray(rd.actions) ? rd.actions : [];
+  if (actions.length) {
+    ctx.spacer(8);
+    ctx.h2('Action Centre');
+    drawTable(ctx, {
+      headers:    ['Priority', 'Recommended Action', 'Estimated Impact'],
+      rows:       actions.slice(0, 16).map((a, i) => [
+        i < 3 ? 'Top' : (i < 8 ? 'Next' : 'Later'),
+        String(a.title || 'Action').slice(0, 90),
+        String(a.impact || '\u2014').slice(0, 60),
+      ]),
+      colWidths:   [80, 260, 140],
+      alignments:  ['left', 'left', 'right'],
+    });
+  }
+}
+
+// ── Section: Review cards ──────────────────────────────────────────────────────
+function drawReviewSection(ctx, rd = {}) {
+  const cards = Array.isArray(rd.reviewCards) ? rd.reviewCards : [];
+  if (!cards.length) return;
+
+  ctx.newPage();
+  ctx.section('ITR vs AIS — Reconciliation');
+  ctx.para(`${cards.length} review item(s) identified across filing history.`, C.inkMuted);
+  ctx.spacer(8);
+
+  // Dedup
+  const seen = new Set();
+  const uniq = cards.filter((c) => {
+    const k = `${c.fy}|${String(c.title || '').slice(0, 48)}`;
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+
+  // Column header
+  const { pdf, margin, set, cW } = ctx;
+  ensure_header: {
+    ctx.ensure(20);
+    const y = ctx.getY();
+    set.fill(C.tableHdr); pdf.rect(margin, y, cW, 20, 'F');
+    set.font('bold', 7.5); set.text(C.tableHdrTxt);
+    pdf.text('Status', margin + 10, y + 5 + 7.5 * BL);
+    pdf.text('Detail', margin + 58, y + 5 + 7.5 * BL);
+    ctx.setY(y + 20);
+  }
+
+  uniq.slice(0, 28).forEach((c, i) => drawReviewRow(ctx, c, i));
+  if (uniq.length > 28) ctx.para(`+ ${uniq.length - 28} more review items.`, C.inkMuted);
+}
+
+// ── Section: Insights ─────────────────────────────────────────────────────────
+function drawInsightsSection(ctx, rd = {}) {
+  const insights = Array.isArray(rd.insights) ? rd.insights : [];
+  if (!insights.length) return;
+
+  ctx.newPage();
+  ctx.section('Tax Insights');
+
+  const { pdf, margin, set, cW } = ctx;
+  const FONT_SZ = 8.5;
+  const PAD_V   = 8;
+  const CIRCLE_R = 8;
+
+  const seen = new Set();
+  const uniq = insights.filter((ins) => {
+    const k = String(ins.category || ins.title || '').slice(0, 32);
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+
+  uniq.slice(0, 20).forEach((ins, i) => {
+    const category = String(ins.category || ins.title || 'Insight');
+    const note     = String(ins.note || ins.body || ins.detail || '');
+    const noteLines = pdf.splitTextToSize(px(note), cW - 60).slice(0, 3);
+    const noteH    = noteLines.length ? noteLines.length * FONT_SZ * 1.22 : 0;
+    const rowH     = PAD_V * 2 + FONT_SZ * 1.22 + (noteH > 0 ? 4 + noteH : 0);
+
+    ctx.ensure(rowH + 4);
+    const y = ctx.getY();
+
+    if (i % 2 === 1) {
+      set.fill(C.tableAlt); pdf.rect(margin, y, cW, rowH, 'F');
+    }
+    // Number circle
+    set.fill(C.teal); pdf.circle(margin + CIRCLE_R + 2, y + rowH / 2, CIRCLE_R, 'F');
+    set.font('bold', 7); set.text([255, 255, 255]);
+    pdf.text(String(i + 1), margin + CIRCLE_R + 2, y + rowH / 2 + 7 * BL * 0.5, { align: 'center' });
+    // Category
+    set.font('bold', FONT_SZ); set.text(C.teal);
+    pdf.text(px(category), margin + 26, y + PAD_V + FONT_SZ * BL);
+    // Note
+    if (noteLines.length) {
+      set.font('normal', FONT_SZ); set.text(C.inkMed);
+      pdf.text(noteLines, margin + 26, y + PAD_V + FONT_SZ * 1.22 + 4 + FONT_SZ * BL);
+    }
+    // Rule
+    set.draw(C.rule); pdf.setLineWidth(0.2);
+    pdf.line(margin, y + rowH, margin + cW, y + rowH);
+
+    ctx.setY(y + rowH + 1);
+  });
+
+  if (uniq.length > 20) ctx.para(`+ ${uniq.length - 20} more insights.`, C.inkMuted);
+}
+
+// ── Section: Anomaly timeline ──────────────────────────────────────────────────
+function drawAnomalySection(ctx, rd = {}) {
+  const anomalies = Array.isArray(rd.anomalies) ? rd.anomalies : [];
+  if (!anomalies.length) return;
+
+  ctx.newPage();
+  ctx.section('Anomaly Timeline');
+  ctx.para(`${anomalies.length} anomaly flag(s) detected.`, C.inkMuted);
+  ctx.spacer(6);
+
+  drawTable(ctx, {
+    headers:    ['FY', 'Flag', 'Detail'],
+    rows:       anomalies.slice(0, 20).map((a) => [
+      String(a.fy || '\u2014'),
+      String(a.label || '').slice(0, 52),
+      String(a.detail || '').slice(0, 82),
+    ]),
+    colWidths:   [80, 182, 218],
+    alignments:  ['left', 'left', 'left'],
+  });
+  if (anomalies.length > 20) ctx.para(`+ ${anomalies.length - 20} more.`, C.inkMuted);
+}
+
+// ── Section: Data confidence ───────────────────────────────────────────────────
+function drawConfidenceSection(ctx, rd = {}) {
+  const conf = Array.isArray(rd.confidence) ? rd.confidence : [];
+  if (!conf.length) return;
+  ctx.ensure(40);
+  ctx.h2('Data Confidence');
+  drawTable(ctx, {
+    headers:    ['Metric', 'Value'],
+    rows:       conf.map((c) => [px(String(c.label || 'Metric')), px(String(c.value || '\u2014'))]),
+    colWidths:  [260, 220],
+    alignments: ['left', 'right'],
+  });
+}
+
+// ── Section: Uploaded files ────────────────────────────────────────────────────
+function drawFilesSection(ctx, rd = {}) {
+  const files = Array.isArray(rd.files) ? rd.files : [];
+  if (!files.length) return;
+
+  ctx.newPage();
+  ctx.section('Uploaded Files');
+  ctx.para(`${files.length} file(s) processed.`, C.inkMuted);
+  ctx.spacer(6);
+
+  drawTable(ctx, {
+    headers:    ['FY', 'Type', 'File Name'],
+    rows:       files.slice(0, 40).map((f) => [
+      String(f.fy || '\u2014'),
+      String(f.kind || 'Unknown'),
+      String(f.name || '').replace(/\s+/g, ' '),
+    ]),
+    colWidths:   [72, 120, 288],
+    alignments:  ['left', 'left', 'left'],
+  });
+  if (files.length > 40) ctx.para(`+ ${files.length - 40} more files.`, C.inkMuted);
+}
+
+// ── html2canvas helpers (detailed/legacy mode) ─────────────────────────────────
 function offsetWithinAncestor(el, ancestor) {
-  const a = ancestor.getBoundingClientRect();
-  const r = el.getBoundingClientRect();
+  const a = ancestor.getBoundingClientRect(), r = el.getBoundingClientRect();
   return { top: r.top - a.top, bottom: r.bottom - a.top };
 }
-
-/**
- * Extract FY range from year chips, e.g. "FY 2010-11" … "FY 2024-25".
- * Returns "FY 2010-11 — FY 2024-25" or the single chip or "".
- */
-function extractFyRange() {
-  const chips = Array.from(document.querySelectorAll('.year-chip__fy'))
-    .map((el) => (el.textContent || '').trim())
-    .filter(Boolean);
-  if (!chips.length) return '';
-  const sorted = chips.slice().sort();
-  if (sorted.length === 1) return sorted[0];
-  return `${sorted[0]} \u2014 ${sorted[sorted.length - 1]}`;
+function chooseBreak(yPx, maxEnd, canH, safeBreaks) {
+  if (maxEnd >= canH) return canH;
+  let best = -1;
+  const minProg = yPx + Math.max(40, (maxEnd - yPx) * 0.15);
+  for (const b of safeBreaks) {
+    if (b <= minProg) continue;
+    if (b > maxEnd) break;
+    best = b;
+  }
+  return best > 0 ? best : maxEnd;
 }
-
-function extractTaxpayerName() {
-  const el = document.querySelector('.hero-greeting strong');
-  const t = el ? (el.textContent || '').trim() : '';
-  if (!t || /^there$/i.test(t)) return '';
-  return t;
+function sliceCanvas(src, srcY, sliceH) {
+  const c = document.createElement('canvas');
+  c.width = src.width; c.height = sliceH;
+  const cx = c.getContext('2d');
+  if (!cx) return null;
+  cx.drawImage(src, 0, srcY, src.width, sliceH, 0, 0, src.width, sliceH);
+  return c;
 }
-
-/**
- * Clone-time hardening so html2canvas-pro captures the exact dark theme.
- * Strips animations, backdrop-filter, filter, and proactively pins computed colors
- * on high-weight surfaces where `color-mix()` has historically tripped older captures.
- */
 function hardenCloneForCanvas(clonedDoc) {
   try {
-    const style = clonedDoc.createElement('style');
-    style.textContent = `
-      * , *::before, *::after {
-        animation: none !important;
-        transition: none !important;
-      }
-      .scroll-reveal, .scroll-reveal * {
-        opacity: 1 !important;
-        transform: none !important;
-        filter: none !important;
-      }
-      .grain-overlay, .hero-orbs, #cursor-trail-canvas, .cursor-trail-canvas {
-        display: none !important;
-      }
+    const s = clonedDoc.createElement('style');
+    s.textContent = `
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .scroll-reveal, .scroll-reveal * { opacity: 1 !important; transform: none !important; filter: none !important; }
+      .grain-overlay, .hero-orbs, #cursor-trail-canvas, .cursor-trail-canvas { display: none !important; }
       .glance-tile__value, .headline-display__accent {
-        background: none !important;
-        background-image: none !important;
-        -webkit-background-clip: border-box !important;
-        background-clip: border-box !important;
-        color: #ececf0 !important;
-        -webkit-text-fill-color: #ececf0 !important;
-        text-shadow: none !important;
-      }
-      .glance-tile::before, .glance-tile::after {
-        opacity: 0 !important;
+        background: none !important; background-image: none !important;
+        color: #ececf0 !important; -webkit-text-fill-color: #ececf0 !important; text-shadow: none !important;
       }
     `;
-    clonedDoc.head.appendChild(style);
+    clonedDoc.head.appendChild(s);
   } catch {}
-  try {
-    clonedDoc.documentElement.style.setProperty('-webkit-font-smoothing', 'antialiased');
-    clonedDoc.documentElement.style.setProperty('text-rendering', 'optimizeLegibility');
-  } catch {}
-  const clones = clonedDoc.querySelectorAll('*');
-  clones.forEach((el) => {
+  clonedDoc.querySelectorAll('*').forEach((el) => {
     if (!(el instanceof HTMLElement)) return;
     el.style.setProperty('backdrop-filter', 'none');
     el.style.setProperty('-webkit-backdrop-filter', 'none');
     const cs = window.getComputedStyle(el);
     if (cs.filter && cs.filter !== 'none') el.style.setProperty('filter', 'none');
-    if (cs.animationName && cs.animationName !== 'none') {
-      el.style.setProperty('animation', 'none');
-    }
-    if (cs.transition && cs.transition !== 'none' && cs.transition !== 'all 0s ease 0s') {
-      el.style.setProperty('transition', 'none');
-    }
-    const isTransparentText = cs.color === 'rgba(0, 0, 0, 0)' || cs.color === 'transparent';
-    if (isTransparentText && cs.backgroundImage && cs.backgroundImage !== 'none') {
+    if (cs.animationName && cs.animationName !== 'none') el.style.setProperty('animation', 'none');
+    const transparentTxt = cs.color === 'rgba(0, 0, 0, 0)' || cs.color === 'transparent';
+    if (transparentTxt && cs.backgroundImage && cs.backgroundImage !== 'none') {
       el.style.setProperty('background-image', 'none');
       el.style.setProperty('-webkit-text-fill-color', '#ececf0');
       el.style.setProperty('color', '#ececf0');
     }
   });
-
-  // Freeze dynamic hero copy so capture avoids in-between typewriter frames.
   const tw = clonedDoc.getElementById('hero-typewriter');
-  if (tw) {
-    const liveTw = document.getElementById('hero-typewriter')?.textContent?.trim();
-    tw.textContent = liveTw || 'tax story';
-  }
+  if (tw) tw.textContent = document.getElementById('hero-typewriter')?.textContent?.trim() || 'tax story';
   const rot = clonedDoc.getElementById('hero-rotating');
-  if (rot) {
-    const liveRot = document.getElementById('hero-rotating')?.textContent?.trim();
-    rot.textContent = liveRot || 'every year, one place.';
-  }
-
-  // Pin resolved computed colors on the heaviest surfaces; scoped so this stays cheap.
-  const heavySel =
-    '.chapter, .chapter__title, .chapter__lead, .review-card, .insight-card, .intel-card, ' +
-    '.chart-shell, .comparative-table-card, .glance-tile, .hero-greeting, .year-chip';
-  const liveHeavy = document.querySelectorAll(heavySel);
-  const cloneHeavy = clonedDoc.querySelectorAll(heavySel);
-  const n = Math.min(liveHeavy.length, cloneHeavy.length);
-  for (let i = 0; i < n; i += 1) {
-    const l = liveHeavy[i];
-    const c = cloneHeavy[i];
-    if (!(c instanceof HTMLElement)) continue;
-    const cs = window.getComputedStyle(l);
+  if (rot) rot.textContent = document.getElementById('hero-rotating')?.textContent?.trim() || 'every year, one place.';
+  // Pin computed colours on heavy surfaces
+  const heavySel = '.chapter, .chapter__title, .review-card, .insight-card, .chart-shell, .glance-tile';
+  const liveH = document.querySelectorAll(heavySel);
+  const cloneH = clonedDoc.querySelectorAll(heavySel);
+  const n = Math.min(liveH.length, cloneH.length);
+  for (let i = 0; i < n; i++) {
+    const ce = cloneH[i];
+    if (!(ce instanceof HTMLElement)) continue;
+    const cs = window.getComputedStyle(liveH[i]);
     const reject = /color-mix|^color\(/;
-    if (cs.backgroundColor && !reject.test(cs.backgroundColor)) {
-      c.style.backgroundColor = cs.backgroundColor;
-    }
-    if (cs.color && !reject.test(cs.color)) c.style.color = cs.color;
-    if (cs.borderColor && !reject.test(cs.borderColor)) {
-      c.style.borderColor = cs.borderColor;
-    }
+    if (cs.backgroundColor && !reject.test(cs.backgroundColor)) ce.style.backgroundColor = cs.backgroundColor;
+    if (cs.color && !reject.test(cs.color)) ce.style.color = cs.color;
   }
 }
 
-/**
- * Slice a portion of a source canvas into a freshly allocated canvas.
- * @param {HTMLCanvasElement} source
- * @param {number} sourceY  – integer pixel Y in source canvas coords.
- * @param {number} sliceHeight – integer pixel height in source canvas coords.
- */
-function sliceCanvas(source, sourceY, sliceHeight) {
-  const c = document.createElement('canvas');
-  c.width = source.width;
-  c.height = sliceHeight;
-  const ctx = c.getContext('2d');
-  if (!ctx) return null;
-  ctx.drawImage(source, 0, sourceY, source.width, sliceHeight, 0, 0, source.width, sliceHeight);
-  return c;
-}
-
-/**
- * Pick a break point within (yPx, maxEndPx]. Prefers a safe-break Y that keeps
- * cards whole. Falls back to maxEndPx when no safe break is reachable.
- */
-function chooseBreak(yPx, maxEndPx, canvasHeight, safeBreaksPx) {
-  if (maxEndPx >= canvasHeight) return canvasHeight;
-  // Find the largest safe break that is strictly greater than yPx and <= maxEndPx.
-  // safeBreaksPx is sorted ascending.
-  let best = -1;
-  // Require at least 15% of a page of progress so we don't infinite-loop on
-  // consecutive breaks within the same region.
-  const minProgress = yPx + Math.max(40, (maxEndPx - yPx) * 0.15);
-  for (let i = 0; i < safeBreaksPx.length; i += 1) {
-    const b = safeBreaksPx[i];
-    if (b <= minProgress) continue;
-    if (b > maxEndPx) break;
-    best = b;
-  }
-  return best > 0 ? best : maxEndPx;
-}
-
-/**
- * Convert a hex color to 0..1 RGB triplet for jsPDF.setFillColor usage.
- */
-function hexToRgb(hex) {
-  const h = hex.replace('#', '');
-  const n = parseInt(h, 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-
-/**
- * Draw a cover page. Page must already be the active jsPDF page.
- */
-function drawCoverPage(pdf, pageW, pageH, cover) {
-  const bg = hexToRgb(COVER_BG);
-  pdf.setFillColor(bg.r, bg.g, bg.b);
-  pdf.rect(0, 0, pageW, pageH, 'F');
-
-  // Decorative glyph: "Rs." at ~80pt in gold, reduced opacity. Use setGState when
-  // available; otherwise fall back to a muted gold color so the decoration is subtle.
-  const goldRgb = hexToRgb(GOLD);
-  try {
-    if (typeof pdf.GState === 'function' && typeof pdf.setGState === 'function') {
-      const gs = new pdf.GState({ opacity: 0.15 });
-      pdf.setGState(gs);
-      pdf.setTextColor(goldRgb.r, goldRgb.g, goldRgb.b);
-    } else {
-      // Blend toward the page background so a 15% gold reads as faint.
-      const blend = (a, b) => Math.round(a * 0.15 + b * 0.85);
-      pdf.setTextColor(blend(goldRgb.r, bg.r), blend(goldRgb.g, bg.g), blend(goldRgb.b, bg.b));
-    }
-  } catch {
-    pdf.setTextColor(60, 50, 20);
-  }
-  pdf.setFont('helvetica', 'italic');
-  pdf.setFontSize(80);
-  pdf.text('Rs.', pageW / 2, pageH * 0.28, { align: 'center' });
-  // Restore full opacity if we changed it.
-  try {
-    if (typeof pdf.GState === 'function' && typeof pdf.setGState === 'function') {
-      pdf.setGState(new pdf.GState({ opacity: 1 }));
-    }
-  } catch {
-    /* no-op */
-  }
-
-  // Title.
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(36);
-  pdf.setTextColor(245, 245, 245);
-  pdf.text(sanitizeForPdfText(cover.title), pageW / 2, pageH * 0.46, { align: 'center' });
-
-  // Subtitle.
-  if (cover.subtitle) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(14);
-    pdf.setTextColor(200, 200, 205);
-    pdf.text(sanitizeForPdfText(cover.subtitle), pageW / 2, pageH * 0.46 + 30, {
-      align: 'center',
-    });
-  }
-
-  // FY range.
-  if (cover.fyRange) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(12);
-    pdf.setTextColor(180, 180, 185);
-    pdf.text(sanitizeForPdfText(cover.fyRange), pageW / 2, pageH * 0.46 + 52, {
-      align: 'center',
-    });
-  }
-
-  // Thin gold rule.
-  pdf.setDrawColor(goldRgb.r, goldRgb.g, goldRgb.b);
-  pdf.setLineWidth(0.6);
-  const ruleW = 120;
-  pdf.line((pageW - ruleW) / 2, pageH * 0.56, (pageW + ruleW) / 2, pageH * 0.56);
-
-  // Date.
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(11);
-  pdf.setTextColor(160, 160, 165);
-  pdf.text(cover.isoDate, pageW / 2, pageH * 0.56 + 22, { align: 'center' });
-
-  // Footer disclaimer.
-  pdf.setFontSize(9);
-  pdf.setTextColor(130, 130, 138);
-  pdf.text(
-    'Private, browser-generated analysis - not tax advice.',
-    pageW / 2,
-    pageH - 48,
-    { align: 'center' }
-  );
-}
-
-/**
- * Draw a Table of Contents on the current jsPDF page.
- * @param {Array<{ title: string, page: number }>} entries
- */
-function drawTocPage(pdf, pageW, pageH, entries) {
-  const bg = hexToRgb(COVER_BG);
-  pdf.setFillColor(bg.r, bg.g, bg.b);
-  pdf.rect(0, 0, pageW, pageH, 'F');
-
-  const margin = 56;
-  const goldRgb = hexToRgb(GOLD);
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(24);
-  pdf.setTextColor(245, 245, 245);
-  pdf.text('Contents', margin, margin + 24);
-
-  pdf.setDrawColor(goldRgb.r, goldRgb.g, goldRgb.b);
-  pdf.setLineWidth(0.6);
-  pdf.line(margin, margin + 34, margin + 80, margin + 34);
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(12);
-  pdf.setTextColor(220, 220, 225);
-
-  let y = margin + 70;
-  const lineGap = 24;
-  const rightX = pageW - margin;
-  const maxTitleWidth = rightX - margin - 60;
-
-  entries.forEach((entry, idx) => {
-    if (y > pageH - margin) return;
-    const num = String(idx + 1).padStart(2, '0');
-    const title = sanitizeForPdfText(`${num}  ${entry.title}`);
-    const pageLabel = String(entry.page);
-
-    const titleW = pdf.getTextWidth(title);
-    pdf.text(title, margin, y);
-    pdf.text(pageLabel, rightX, y, { align: 'right' });
-
-    // Leader dots.
-    const dotStart = margin + Math.min(titleW, maxTitleWidth) + 8;
-    const dotEnd = rightX - pdf.getTextWidth(pageLabel) - 8;
-    if (dotEnd > dotStart) {
-      pdf.setTextColor(110, 110, 118);
-      const dots = '. '.repeat(Math.max(0, Math.floor((dotEnd - dotStart) / 3)));
-      pdf.text(dots, dotStart, y);
-      pdf.setTextColor(220, 220, 225);
-    }
-
-    y += lineGap;
-  });
-}
-
-/**
- * @param {HTMLElement} root
- */
-function extractSummaryData(root) {
-  const tiles = Array.from(root.querySelectorAll('.glance-tile')).slice(0, 8).map((el) => ({
-    label: (el.querySelector('.glance-tile__label')?.textContent || '').trim(),
-    value: (el.querySelector('.glance-tile__value')?.textContent || '').trim(),
-    sub: (el.querySelector('.glance-tile__sub')?.textContent || '').trim(),
-  })).filter((x) => x.label && x.value);
-
-  const reviewHighlights = Array.from(root.querySelectorAll('.review-card')).slice(0, 6).map((el) => ({
-    title: (el.querySelector('.review-card__title')?.textContent || '').trim(),
-    body: (el.querySelector('.review-card__body')?.textContent || '').trim(),
-  })).filter((x) => x.title);
-
-  const insightHighlights = Array.from(root.querySelectorAll('.insight-card')).slice(0, 5).map((el) => ({
-    title: (el.querySelector('.insight-card__category')?.textContent || '').trim(),
-    body: (el.querySelector('.insight-card__note')?.textContent || '').trim(),
-  })).filter((x) => x.title);
-
-  const chartTitles = Array.from(root.querySelectorAll('.chart-shell__label'))
-    .map((el) => (el.textContent || '').trim())
-    .filter(Boolean)
-    .slice(0, 6);
-
-  return { tiles, reviewHighlights, insightHighlights, chartTitles };
-}
-
-function drawSummaryPage(pdf, pageW, pageH, summary) {
-  const bg = hexToRgb(COVER_BG);
-  const goldRgb = hexToRgb(GOLD);
-  pdf.setFillColor(bg.r, bg.g, bg.b);
-  pdf.rect(0, 0, pageW, pageH, 'F');
-
-  const margin = 46;
-  const colGap = 16;
-  const colW = (pageW - margin * 2 - colGap) / 2;
-  let yLeft = 110;
-  let yRight = 110;
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(24);
-  pdf.setTextColor(245, 245, 245);
-  pdf.text('Executive Summary', margin, 70);
-  pdf.setDrawColor(goldRgb.r, goldRgb.g, goldRgb.b);
-  pdf.setLineWidth(0.6);
-  pdf.line(margin, 78, margin + 122, 78);
-
-  const drawTile = (x, y, w, h, title, value, sub = '') => {
-    pdf.setFillColor(25, 25, 30);
-    pdf.roundedRect(x, y, w, h, 8, 8, 'F');
-    pdf.setDrawColor(65, 58, 28);
-    pdf.setLineWidth(0.5);
-    pdf.roundedRect(x, y, w, h, 8, 8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    pdf.setTextColor(166, 166, 173);
-    pdf.text(sanitizeForPdfText(title), x + 10, y + 15);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(13);
-    pdf.setTextColor(236, 236, 240);
-    pdf.text(sanitizeForPdfText(value), x + 10, y + 30);
-    if (sub) {
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(145, 145, 152);
-      pdf.text(sanitizeForPdfText(sub), x + 10, y + 42);
-    }
-  };
-
-  summary.tiles.slice(0, 6).forEach((tile, i) => {
-    const x = i % 2 === 0 ? margin : margin + colW + colGap;
-    const y = i % 2 === 0 ? yLeft : yRight;
-    drawTile(x, y, colW, 54, tile.label, tile.value, tile.sub);
-    if (i % 2 === 0) yLeft += 62; else yRight += 62;
-  });
-
-  const listY = Math.max(yLeft, yRight) + 8;
-  const listBlock = (x, y, title, rows) => {
-    pdf.setFillColor(22, 22, 27);
-    pdf.roundedRect(x, y, colW, 178, 8, 8, 'F');
-    pdf.setDrawColor(55, 55, 62);
-    pdf.roundedRect(x, y, colW, 178, 8, 8);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(11);
-    pdf.setTextColor(216, 216, 222);
-    pdf.text(sanitizeForPdfText(title), x + 10, y + 18);
-    let yy = y + 31;
-    rows.slice(0, 6).forEach((r) => {
-      const msg = r.body ? `${r.title} - ${r.body}` : r.title;
-      const lines = pdf.splitTextToSize(sanitizeForPdfText(msg), colW - 20);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8.5);
-      pdf.setTextColor(176, 176, 184);
-      pdf.text(lines.slice(0, 2), x + 10, yy);
-      yy += Math.min(26, 12 + lines.length * 4.8);
-    });
-  };
-
-  listBlock(margin, listY, 'Top Reconciliation Highlights', summary.reviewHighlights);
-  listBlock(margin + colW + colGap, listY, 'Top Insight Deck Notes', summary.insightHighlights);
-
-  if (summary.chartTitles.length) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8.5);
-    pdf.setTextColor(145, 145, 152);
-    pdf.text(
-      sanitizeForPdfText(`Included charts: ${summary.chartTitles.join(' • ')}`),
-      margin,
-      pageH - 28
-    );
-  }
-}
-
-/**
- * Draw a footer on every page except the cover (page 1).
- */
-function paintFooters(pdf, pageW, pageH, totalPages, isoDate) {
-  const goldRgb = hexToRgb(GOLD);
-  const mutedRgb = hexToRgb(MUTED);
-  const margin = 36;
-  const footerY = pageH - 22;
-  const ruleY = footerY - 10;
-
-  for (let p = 2; p <= totalPages; p += 1) {
-    pdf.setPage(p);
-
-    pdf.setDrawColor(goldRgb.r, goldRgb.g, goldRgb.b);
-    pdf.setLineWidth(0.4);
-    pdf.line(margin, ruleY, pageW - margin, ruleY);
-
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(mutedRgb.r, mutedRgb.g, mutedRgb.b);
-    pdf.text('Tax Story \u00B7 Private browser analysis', margin, footerY);
-    pdf.text(`${p} / ${totalPages}`, pageW / 2, footerY, { align: 'center' });
-    pdf.text(isoDate, pageW - margin, footerY, { align: 'right' });
-  }
-}
-
-/**
- * Paint the full-page dark background before placing an image slice, so any
- * sub-pixel edges around JPEG/PNG boundaries read as the theme color instead of white.
- */
-function fillPageBackground(pdf, pageW, pageH) {
-  const bg = hexToRgb(COVER_BG);
-  pdf.setFillColor(bg.r, bg.g, bg.b);
-  pdf.rect(0, 0, pageW, pageH, 'F');
-}
-
-function formatInr(n) {
-  if (n == null || !Number.isFinite(n)) return '—';
-  const abs = Math.abs(n);
-  if (abs >= 10000000) return `Rs. ${(n / 10000000).toFixed(2)} Cr`;
-  if (abs >= 100000) return `Rs. ${(n / 100000).toFixed(2)} L`;
-  return `Rs. ${Math.round(n).toLocaleString('en-IN')}`;
-}
-
-function lineValue(v) {
-  return v == null || v === '' ? '—' : String(v);
-}
-
-function severityStyle(level) {
-  const s = String(level || '').toLowerCase();
-  if (s === 'review') return { fill: [225, 75, 75], text: [255, 255, 255], label: 'REVIEW' };
-  if (s === 'watch') return { fill: [245, 158, 11], text: [30, 20, 0], label: 'WATCH' };
-  if (s === 'ok') return { fill: [16, 185, 129], text: [255, 255, 255], label: 'OK' };
-  return { fill: [96, 165, 250], text: [255, 255, 255], label: 'INFO' };
-}
-
-function drawStructuredExecutiveSummary(pdf, pageW, pageH, reportData = {}) {
-  fillPageBackground(pdf, pageW, pageH);
-  const margin = 46;
-  const w = pageW - margin * 2;
-  let y = 72;
-  const totals = reportData.totals || {};
-  const regime = reportData.regime || null;
-  const actions = Array.isArray(reportData.actions) ? reportData.actions : [];
-  const risks = Array.isArray(reportData.anomalies) ? reportData.anomalies : [];
-  const textHeight = (lines) => {
-    const arr = Array.isArray(lines) ? lines : [String(lines ?? '')];
-    const d = pdf.getTextDimensions ? pdf.getTextDimensions(arr) : null;
-    const measured = Number(d?.h) || 0;
-    const fontSize = pdf.getFontSize ? pdf.getFontSize() : 10;
-    const lineFactor = typeof pdf.getLineHeightFactor === 'function' ? pdf.getLineHeightFactor() : 1.15;
-    const estimated = arr.length * fontSize * lineFactor;
-    return Math.max(10, measured, estimated);
-  };
-  const ensure = (need = 24) => {
-    if (y + need <= pageH - 48) return;
-    pdf.addPage();
-    fillPageBackground(pdf, pageW, pageH);
-    y = 72;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(16);
-    pdf.setTextColor(236, 236, 240);
-    pdf.text('Executive Summary (cont.)', margin, y);
-    y += 24;
-  };
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(22);
-  pdf.setTextColor(245, 245, 245);
-  pdf.text('Executive Summary', margin, y);
-  y += 24;
-
-  const drawKpi = (x, yy, label, value) => {
-    pdf.setFillColor(24, 24, 30);
-    pdf.setDrawColor(64, 58, 32);
-    pdf.roundedRect(x, yy, 160, 56, 6, 6, 'FD');
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(170, 170, 178);
-    pdf.text(sanitizeForPdfText(label), x + 10, yy + 16);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.setTextColor(236, 236, 240);
-    pdf.text(sanitizeForPdfText(value), x + 10, yy + 35);
-  };
-
-  drawKpi(margin, y, 'Lifetime earnings', formatInr(totals.lifetimeEarnings));
-  drawKpi(margin + 174, y, 'Total tax paid', formatInr(totals.totalTaxPaid));
-  drawKpi(
-    margin + 348,
-    y,
-    'Filing risk',
-    totals.filingRiskScore != null
-      ? `${totals.filingRiskScore}/100${totals.filingRiskLevel ? ` ${String(totals.filingRiskLevel).toUpperCase()}` : ''}`
-      : '—'
-  );
-  y += 74;
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(12);
-  pdf.setTextColor(220, 220, 225);
-  pdf.text('Regime outcome', margin, y);
-  y += 12;
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.setTextColor(205, 205, 212);
-  const rText = regime
-    ? `${String(regime.recommended || '').toUpperCase()} regime recommended. Savings: ${formatInr(Math.abs(regime.savings ?? 0))}.`
-    : 'Regime comparison unavailable for selected FY.';
-  const rLines = pdf.splitTextToSize(sanitizeForPdfText(rText), w);
-  ensure(textHeight(rLines) + 10);
-  pdf.text(rLines, margin, y);
-  y += Math.max(16, textHeight(rLines) + 4);
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(12);
-  pdf.setTextColor(220, 220, 225);
-  pdf.text('Top actions', margin, y);
-  y += 12;
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.setTextColor(205, 205, 212);
-  (actions.length ? actions.slice(0, 4) : [{ title: 'No major action items generated.', impact: '', detail: '' }]).forEach((a) => {
-    const line = `• ${a.title || 'Action'}${a.impact ? ` — ${a.impact}` : ''}${a.detail ? ` (${a.detail})` : ''}`;
-    const lines = pdf.splitTextToSize(sanitizeForPdfText(line), w);
-    ensure(textHeight(lines) + 8);
-    pdf.text(lines, margin, y);
-    y += Math.max(14, textHeight(lines) + 3);
-  });
-
-  y += 6;
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(12);
-  pdf.setTextColor(220, 220, 225);
-  pdf.text('Recent anomaly flags', margin, y);
-  y += 12;
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.setTextColor(205, 205, 212);
-  (risks.length ? risks.slice(-4) : [{ fy: '', label: 'No high-risk anomalies detected.', detail: '' }]).forEach((e) => {
-    const line = `• ${e.fy ? `${e.fy} — ` : ''}${e.label || ''}${e.detail ? `: ${e.detail}` : ''}`;
-    const lines = pdf.splitTextToSize(sanitizeForPdfText(line), w);
-    ensure(textHeight(lines) + 8);
-    pdf.text(lines, margin, y);
-    y += Math.max(14, textHeight(lines) + 3);
-  });
-}
-
-function drawStructuredReport(pdf, pageW, pageH, title, reportData = {}) {
-  const margin = 40;
-  const contentW = pageW - margin * 2;
-  const lineH = 14;
-  let y = 56;
-  const ensure = (need = 32) => {
-    if (y + need <= pageH - 46) return;
-    pdf.addPage();
-    fillPageBackground(pdf, pageW, pageH);
-    y = 56;
-  };
-  const textHeight = (lines) => {
-    const arr = Array.isArray(lines) ? lines : [String(lines ?? '')];
-    const d = pdf.getTextDimensions ? pdf.getTextDimensions(arr) : null;
-    const measured = Number(d?.h) || 0;
-    const fontSize = pdf.getFontSize ? pdf.getFontSize() : 10;
-    const lineFactor = typeof pdf.getLineHeightFactor === 'function' ? pdf.getLineHeightFactor() : 1.15;
-    const estimated = arr.length * fontSize * lineFactor;
-    return Math.max(10, measured, estimated);
-  };
-  const nextSection = (titleText) => {
-    pdf.addPage();
-    fillPageBackground(pdf, pageW, pageH);
-    y = 56;
-    h2(titleText);
-  };
-  const compact = (text, max = 140) => {
-    const t = String(text || '').replace(/\s+/g, ' ').trim();
-    if (!t) return '—';
-    return t.length > max ? `${t.slice(0, max - 1)}…` : t;
-  };
-  const uniqBy = (items, sig) => {
-    const out = [];
-    const seen = new Set();
-    items.forEach((item) => {
-      const key = sig(item);
-      if (!key || seen.has(key)) return;
-      seen.add(key);
-      out.push(item);
-    });
-    return out;
-  };
-  const h1 = (t) => {
-    ensure(36);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(18);
-    pdf.setTextColor(245, 245, 245);
-    pdf.text(sanitizeForPdfText(t), margin, y);
-    y += 22;
-  };
-  const h2 = (t) => {
-    ensure(24);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.setTextColor(220, 220, 225);
-    pdf.text(sanitizeForPdfText(t), margin, y);
-    y += 16;
-  };
-  const kv = (k, v) => {
-    const valLines = pdf.splitTextToSize(sanitizeForPdfText(lineValue(v)), contentW - 126);
-    const h = textHeight(valLines);
-    ensure(Math.max(16, h + 4));
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    pdf.setTextColor(170, 170, 178);
-    pdf.text(sanitizeForPdfText(`${k}:`), margin, y);
-    pdf.setTextColor(236, 236, 240);
-    pdf.text(valLines, margin + 120, y);
-    y += Math.max(lineH, h + 2);
-  };
-  const para = (text) => {
-    const lines = pdf.splitTextToSize(sanitizeForPdfText(lineValue(text)), contentW);
-    const h = textHeight(lines);
-    ensure(h + 8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    pdf.setTextColor(205, 205, 212);
-    pdf.text(lines, margin, y);
-    y += Math.max(14, h + 4);
-  };
-  const bullet = (text) => {
-    const lines = pdf.splitTextToSize(sanitizeForPdfText(lineValue(text)), contentW - 16);
-    const h = textHeight(lines);
-    ensure(h + 8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    pdf.setTextColor(210, 210, 216);
-    pdf.text('•', margin, y);
-    pdf.text(lines, margin + 10, y);
-    y += Math.max(14, h + 4);
-  };
-
-  fillPageBackground(pdf, pageW, pageH);
-  h1(`${title} — Structured Report`);
-  kv('Generated on', (reportData.generatedOn || '').slice(0, 10));
-  kv('Taxpayer', reportData.taxpayerName || '—');
-  kv('Employer', reportData.employer || '—');
-  kv('City', reportData.city || '—');
-  kv('FY range', Array.isArray(reportData.fyRange) && reportData.fyRange.length ? `${reportData.fyRange[0]} to ${reportData.fyRange[reportData.fyRange.length - 1]}` : '—');
-  y += 8;
-
-  h2('Key totals');
-  const totals = reportData.totals || {};
-  kv('Lifetime earnings', formatInr(totals.lifetimeEarnings));
-  kv('Total tax paid', formatInr(totals.totalTaxPaid));
-  kv('Effective tax rate', totals.effectiveTaxRate != null ? `${Number(totals.effectiveTaxRate).toFixed(2)}%` : '—');
-  kv(
-    'Filing risk',
-    totals.filingRiskScore != null
-      ? `${totals.filingRiskScore}/100${totals.filingRiskLevel ? ` (${String(totals.filingRiskLevel).toUpperCase()})` : ''}`
-      : '—'
-  );
-
-  h2('Regime comparison');
-  const r = reportData.regime;
-  if (!r) {
-    para('Not enough data to run regime comparison for selected FY.');
-  } else {
-    kv('Recommended', `${String(r.recommended || '').toUpperCase()} regime`);
-    kv('Estimated savings', formatInr(Math.abs(r.savings ?? 0)));
-    kv('Old regime tax', formatInr(r.oldTax));
-    kv('New regime tax', formatInr(r.newTax));
-    para(r.reason || '');
-  }
-
-  h2('Action center');
-  const actions = Array.isArray(reportData.actions) ? reportData.actions : [];
-  if (!actions.length) {
-    para('No action items generated.');
-  } else {
-    const prioW = 64;
-    const actionW = contentW - prioW;
-    ensure(24);
-    pdf.setFillColor(28, 28, 34);
-    pdf.roundedRect(margin, y - 10, contentW, 16, 3, 3, 'F');
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8.5);
-    pdf.setTextColor(194, 194, 202);
-    pdf.text('Order', margin + 8, y);
-    pdf.text('Recommended action', margin + prioW + 8, y);
-    y += 14;
-    actions.slice(0, 14).forEach((a, idx) => {
-      const level = idx < 3 ? 'Top' : (idx < 8 ? 'Next' : 'Later');
-      const actionText = `${compact(a.title || 'Action', 76)}${a.impact ? ` | ${compact(a.impact, 64)}` : ''}`;
-      const actionLines = pdf.splitTextToSize(sanitizeForPdfText(actionText), actionW - 12).slice(0, 2);
-      const rowH = Math.max(13, textHeight(actionLines) + 2);
-      ensure(rowH + 4);
-      if (idx % 2 === 0) {
-        pdf.setFillColor(22, 22, 28);
-        pdf.rect(margin, y - 9, contentW, rowH, 'F');
-      }
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8.2);
-      pdf.setTextColor(210, 210, 216);
-      pdf.text(level, margin + 8, y);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(actionLines, margin + prioW + 8, y);
-      y += rowH;
-    });
-  }
-
-  h2('Data confidence');
-  const conf = Array.isArray(reportData.confidence) ? reportData.confidence : [];
-  if (!conf.length) para('No confidence items generated.');
-  conf.forEach((c) => kv(c.label || 'Metric', c.value || '—'));
-
-  h2('Anomaly timeline');
-  const an = Array.isArray(reportData.anomalies) ? reportData.anomalies : [];
-  if (!an.length) {
-    para('No major anomalies flagged.');
-  } else {
-    const fyW = 74;
-    const noteW = contentW - fyW;
-    ensure(24);
-    pdf.setFillColor(28, 28, 34);
-    pdf.roundedRect(margin, y - 10, contentW, 16, 3, 3, 'F');
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8.5);
-    pdf.setTextColor(194, 194, 202);
-    pdf.text('FY', margin + 8, y);
-    pdf.text('Flag', margin + fyW + 8, y);
-    y += 14;
-    an.slice(0, 16).forEach((e, idx) => {
-      const note = `${compact(e.label || '', 52)}${e.detail ? ` | ${compact(e.detail, 72)}` : ''}`;
-      const noteLines = pdf.splitTextToSize(sanitizeForPdfText(note), noteW - 12).slice(0, 2);
-      const rowH = Math.max(13, textHeight(noteLines) + 2);
-      ensure(rowH + 4);
-      if (idx % 2 === 0) {
-        pdf.setFillColor(22, 22, 28);
-        pdf.rect(margin, y - 9, contentW, rowH, 'F');
-      }
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8.2);
-      pdf.setTextColor(210, 210, 216);
-      pdf.text(String(e.fy || '—'), margin + 8, y);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(noteLines, margin + fyW + 8, y);
-      y += rowH;
-    });
-  }
-
-  nextSection('Review cards');
-  const cards = Array.isArray(reportData.reviewCards) ? reportData.reviewCards : [];
-  if (!cards.length) para('No review cards generated.');
-  const compactCards = uniqBy(cards, (c) =>
-    `${String(c.severity || '').toLowerCase()}|${String(c.fy || '').toLowerCase()}|${compact(c.title || '', 64).toLowerCase()}`
-  );
-  compactCards.slice(0, 24).forEach((c) => {
-    const style = severityStyle(c.severity);
-    const text = `${c.fy ? `${c.fy} | ` : ''}${compact(c.title || 'Review item', 58)}${c.body ? ` — ${compact(c.body, 108)}` : ''}`;
-    const lines = pdf.splitTextToSize(sanitizeForPdfText(text), contentW - 70).slice(0, 2);
-    const h = textHeight(lines);
-    ensure(h + 14);
-    pdf.setFillColor(style.fill[0], style.fill[1], style.fill[2]);
-    pdf.roundedRect(margin, y - 8, 52, 12, 2, 2, 'F');
-    pdf.setTextColor(style.text[0], style.text[1], style.text[2]);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(7);
-    pdf.text(style.label, margin + 6, y);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    pdf.setTextColor(210, 210, 216);
-    pdf.text(lines, margin + 58, y);
-    y += Math.max(14, h + 4);
-  });
-  if (compactCards.length > 24) para(`+ ${compactCards.length - 24} more review cards omitted for readability.`);
-
-  nextSection('Insights');
-  const insights = Array.isArray(reportData.insights) ? reportData.insights : [];
-  if (!insights.length) para('No insights generated.');
-  const compactInsights = uniqBy(insights, (i) =>
-    `${compact(i.category || i.title || 'Insight', 32).toLowerCase()}|${compact(i.note || i.body || i.detail || '', 72).toLowerCase()}`
-  );
-  compactInsights.slice(0, 18).forEach((i, idx) => {
-    const note = compact(i.note || i.body || i.detail || '', 124);
-    bullet(`${idx + 1}. ${compact(i.category || i.title || 'Insight', 34)} | ${note}`);
-  });
-  if (compactInsights.length > 18) para(`+ ${compactInsights.length - 18} more insights omitted for readability.`);
-
-  nextSection('Comparative table snapshot');
-  const comp = reportData.comparative || {};
-  const years = Array.isArray(comp.years) ? comp.years : [];
-  const rows = Array.isArray(comp.rows) ? comp.rows : [];
-  if (rows.length) {
-    const shownYears = years.slice(-6);
-    const startIdx = Math.max(0, years.length - shownYears.length);
-    const tableYears = shownYears.length ? shownYears : years.slice(0, 1);
-    para(`Showing last ${tableYears.length} FY columns: ${tableYears.join(', ')}`);
-    const metricW = Math.max(142, contentW * 0.34);
-    const yearCount = Math.max(1, tableYears.length);
-    const valueW = (contentW - metricW) / yearCount;
-    const drawTableHeader = () => {
-      ensure(22);
-      pdf.setFillColor(28, 28, 34);
-      pdf.roundedRect(margin, y - 10, contentW, 16, 3, 3, 'F');
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8.5);
-      pdf.setTextColor(194, 194, 202);
-      pdf.text('Metric', margin + 6, y);
-      tableYears.forEach((fy, idx) => {
-        const colX = margin + metricW + idx * valueW;
-        pdf.text(sanitizeForPdfText(String(fy)), colX + valueW / 2, y, { align: 'center' });
-      });
-      y += 14;
-    };
-    drawTableHeader();
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8.4);
-    rows.slice(0, 22).forEach((row, idx) => {
-      const cells = Array.isArray(row.cells) ? row.cells.slice(startIdx, startIdx + tableYears.length) : [];
-      const metricLines = pdf.splitTextToSize(sanitizeForPdfText(row.label || 'Row'), metricW - 10).slice(0, 2);
-      const valueLines = cells.map((c) =>
-        pdf.splitTextToSize(sanitizeForPdfText(String(c ?? '—')), valueW - 8).slice(0, 2)
-      );
-      const rowH = Math.max(
-        14,
-        textHeight(metricLines) + 2,
-        ...valueLines.map((v) => textHeight(v) + 2)
-      );
-      ensure(rowH + 6);
-      if (y + rowH > pageH - 50) {
-        pdf.addPage();
-        fillPageBackground(pdf, pageW, pageH);
-        y = 56;
-        drawTableHeader();
-      }
-      if (idx % 2 === 0) {
-        pdf.setFillColor(22, 22, 28);
-        pdf.rect(margin, y - 9, contentW, rowH, 'F');
-      }
-      pdf.setTextColor(206, 206, 214);
-      pdf.text(metricLines, margin + 6, y);
-      valueLines.forEach((lines, cIdx) => {
-        const colX = margin + metricW + cIdx * valueW;
-        const text = lines.length === 1 ? lines[0] : lines;
-        pdf.text(text, colX + valueW / 2, y, { align: 'center' });
-      });
-      y += rowH;
-    });
-    if (rows.length > 22) para(`+ ${rows.length - 22} more comparative rows omitted for readability.`);
-  } else {
-    para('Comparative table rows are not available.');
-  }
-
-  nextSection('Detected files');
-  const files = Array.isArray(reportData.files) ? reportData.files : [];
-  if (!files.length) para('No uploaded files listed.');
-  const fileRows = files.slice(0, 40);
-  const tableMetricW = 90;
-  const tableKindW = 126;
-  const tableNameW = contentW - tableMetricW - tableKindW;
-  ensure(28);
-  pdf.setFillColor(28, 28, 34);
-  pdf.roundedRect(margin, y - 10, contentW, 16, 3, 3, 'F');
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8.5);
-  pdf.setTextColor(194, 194, 202);
-  pdf.text('FY', margin + 6, y);
-  pdf.text('Type', margin + tableMetricW + 6, y);
-  pdf.text('File', margin + tableMetricW + tableKindW + 6, y);
-  y += 14;
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8.3);
-  fileRows.forEach((f, idx) => {
-    const name = String(f.name || '').replace(/\s+/g, ' ');
-    const nameLines = pdf.splitTextToSize(sanitizeForPdfText(name), tableNameW - 10).slice(0, 2);
-    const rowH = Math.max(13, textHeight(nameLines) + 2);
-    ensure(rowH + 4);
-    if (idx % 2 === 0) {
-      pdf.setFillColor(22, 22, 28);
-      pdf.rect(margin, y - 9, contentW, rowH, 'F');
-    }
-    pdf.setTextColor(210, 210, 216);
-    pdf.text(sanitizeForPdfText(String(f.fy || '—')), margin + 6, y);
-    pdf.text(sanitizeForPdfText(String(f.kind || 'Unknown')), margin + tableMetricW + 6, y);
-    pdf.text(nameLines, margin + tableMetricW + tableKindW + 6, y);
-    y += rowH;
-  });
-  if (files.length > 40) para(`+ ${files.length - 40} more files omitted for readability.`);
-}
-
+// ── Main export entry point ────────────────────────────────────────────────────
 export async function exportStoryPdf(root, opts = {}) {
-  const JsPDF = getJsPdfConstructor();
-  if (!JsPDF) {
-    window.alert('PDF engine did not load. Please reload and try again.');
-    return false;
-  }
-  const html2canvas = window.html2canvas;
+  const JsPDF = getJsPDF();
+  if (!JsPDF) { window.alert('PDF engine did not load. Please reload and try again.'); return false; }
 
-  const title = opts.title ?? 'Tax-Story';
-  const detailMode = opts.detailMode === 'structured'
-    ? 'structured'
-    : (opts.detailMode === 'compact' ? 'compact' : 'detailed');
-  const qualityMode = opts.qualityMode === 'balanced' ? 'balanced' : 'high';
-  const includeSummary = detailMode === 'detailed';
-  const taxpayerName = opts.taxpayerName ?? extractTaxpayerName();
-  const fyRange = extractFyRange();
-  const isoDate = new Date().toISOString().slice(0, 10);
-  const subtitle =
-    opts.subtitle ?? (taxpayerName ? `Prepared for ${taxpayerName}` : 'Private analysis');
+  const title       = opts.title ?? 'Tax-Story';
+  const detailMode  = opts.detailMode === 'structured' ? 'structured' : 'detailed';
+  const isoDate     = new Date().toISOString().slice(0, 10);
+  const taxpayer    = opts.taxpayerName || (document.querySelector('.hero-greeting strong')?.textContent || '').trim() || '';
+  const chips       = Array.from(document.querySelectorAll('.year-chip__fy'))
+    .map((el) => (el.textContent || '').trim()).filter(Boolean).sort();
+  const fyRange     = chips.length === 0 ? '' : chips.length === 1 ? chips[0] : `${chips[0]} \u2014 ${chips[chips.length - 1]}`;
 
+  // ── Structured jsPDF path ──────────────────────────────────────────────────
   if (detailMode === 'structured') {
-    emit('Building structured report…', 10);
-    const JsPDF = getJsPdfConstructor();
-    if (!JsPDF) {
-      window.alert('PDF engine is unavailable. Please reload and try again.');
-      return false;
-    }
-    let pdf;
+    emit('Building premium structured report\u2026', 8);
     try {
-      pdf = new JsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait', compress: true });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const isoDate = new Date().toISOString().slice(0, 10);
-      drawCoverPage(pdf, pageW, pageH, {
+      const pdf = new JsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait', compress: true });
+      const pW  = pdf.internal.pageSize.getWidth();
+      const pH  = pdf.internal.pageSize.getHeight();
+      const rd  = opts.reportData || {};
+
+      emit('Drawing personalised cover page\u2026', 15);
+      drawCover(pdf, pW, pH, {
         title,
-        subtitle,
+        taxpayerName:    taxpayer || rd.taxpayerName || '',
+        pan:             maskPan(rd.pan) || '',
+        employer:        rd.employer || '',
+        city:            rd.city || '',
         fyRange,
         isoDate,
+        lifetimeEarnings: rd.totals?.lifetimeEarnings ?? null,
+        totalTaxPaid:     rd.totals?.totalTaxPaid     ?? null,
+        effectiveTaxRate: rd.totals?.effectiveTaxRate ?? null,
       });
+
+      emit('Building executive summary\u2026', 25);
       pdf.addPage();
-      drawStructuredExecutiveSummary(pdf, pageW, pageH, opts.reportData || {});
-      pdf.addPage();
-      drawStructuredReport(pdf, pageW, pageH, title, opts.reportData || {});
-      const totalPages =
-        typeof pdf.getNumberOfPages === 'function'
-          ? pdf.getNumberOfPages()
-          : typeof pdf.internal?.getNumberOfPages === 'function'
-            ? pdf.internal.getNumberOfPages()
-            : 2;
-      paintFooters(pdf, pageW, pageH, totalPages, isoDate);
-      emit('Saving PDF…', 95);
-      pdf.save(`${title.replace(/\s+/g, '-')}.pdf`);
+      // Manually paint first content page header (ctx.newPage() isn't called for page 2)
+      pdf.setFillColor(C.pageBg[0], C.pageBg[1], C.pageBg[2]);
+      pdf.rect(0, 0, pW, pH, 'F');
+      pdf.setFillColor(C.sectionBg[0], C.sectionBg[1], C.sectionBg[2]);
+      pdf.rect(0, 0, pW, 36, 'F');
+      pdf.setDrawColor(C.gold[0], C.gold[1], C.gold[2]); pdf.setLineWidth(0.5);
+      pdf.line(0, 36, pW, 36);
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8);
+      pdf.setTextColor(C.gold[0], C.gold[1], C.gold[2]);
+      pdf.text('Rs.  TAX STORY', 48, 36 - 10);
+      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7);
+      pdf.setTextColor(C.inkMuted[0], C.inkMuted[1], C.inkMuted[2]);
+      pdf.text(isoDate, pW - 48, 36 - 10, { align: 'right' });
+
+      const ctx = makeCtx(pdf, pW, pH);
+      ctx.setY(36 + 18);
+
+      drawExecutiveSummary(ctx, rd);
+
+      emit('Building income overview\u2026', 38);
+      drawComparativeSection(ctx, rd);
+
+      emit('Building regime analysis\u2026', 50);
+      drawRegimeSection(ctx, rd);
+
+      emit('Building review items\u2026', 62);
+      drawReviewSection(ctx, rd);
+
+      emit('Building insights\u2026', 72);
+      drawInsightsSection(ctx, rd);
+
+      emit('Building anomaly timeline\u2026', 80);
+      drawAnomalySection(ctx, rd);
+      drawConfidenceSection(ctx, rd);
+
+      emit('Building file manifest\u2026', 88);
+      drawFilesSection(ctx, rd);
+
+      emit('Painting footers\u2026', 93);
+      const totalPages = typeof pdf.getNumberOfPages === 'function'
+        ? pdf.getNumberOfPages()
+        : (pdf.internal?.getNumberOfPages?.() ?? 2);
+      paintFooters(pdf, pW, pH, totalPages, isoDate);
+
+      emit('Saving\u2026', 97);
+      pdf.save(`${title.replace(/\s+/g, '-')}-${isoDate}.pdf`);
       emit('Done', 100);
       return true;
     } catch (e) {
-      const msg = e && typeof e === 'object' && 'message' in e ? String(e.message) : String(e);
-      window.alert(`Could not build structured PDF.\n\n${msg}`);
+      window.alert(`Could not build PDF.\n\n${e?.message || e}`);
       return false;
     }
   }
 
+  // ── Detailed html2canvas path (legacy fallback) ────────────────────────────
+  const COVER_BG_HEX = '#0f0f11';
+  const SAFE_SEL     =
+    '.chapter, .review-card, .insight-card, .intel-card, .chart-shell, .comparative-table-card';
+  const h2c = window.html2canvas;
+
   document.body.classList.add('pdf-exporting');
   const prevY = window.scrollY;
-
-  // Collect layout metadata BEFORE capture so we can align page breaks with chapter/card edges.
   window.scrollTo(0, 0);
-  // Allow scroll-triggered layout to settle for a frame.
   await new Promise((r) => requestAnimationFrame(() => r(null)));
 
-  const chapterEls = Array.from(root.querySelectorAll('.chapter'));
-  const chapters = chapterEls
-    .map((el) => {
-      const titleEl = el.querySelector('.chapter__title');
-      const t = titleEl ? (titleEl.textContent || '').trim() : '';
-      const { top, bottom } = offsetWithinAncestor(el, root);
-      return { title: t, topCss: top, bottomCss: bottom };
-    })
-    .filter((c) => c.title);
-
-  const safeBreakEls = Array.from(root.querySelectorAll(SAFE_BREAK_SELECTOR));
-  const safeBreaksCss = safeBreakEls
+  const safeBreaksCss = Array.from(root.querySelectorAll(SAFE_SEL))
     .map((el) => offsetWithinAncestor(el, root).bottom)
     .filter((y) => Number.isFinite(y) && y > 0);
 
-  // Adaptive scale: keep output sharp by default, then step down only for
-  // very large layouts to avoid renderer crashes.
   const dpr = window.devicePixelRatio || 1;
-  const cssArea = Math.max(1, root.scrollWidth * root.scrollHeight);
-  const hugeReport = root.scrollHeight > 10000 || cssArea > 18_000_000;
-  const ultraLargeReport = root.scrollHeight > 14000 || cssArea > 28_000_000;
-  const qBoost = qualityMode === 'high' ? 1 : 0.9;
-  const preferredScale = ultraLargeReport
-    ? Math.min(2.35, Math.max(1.95, dpr * 1.18 * qBoost))
-    : hugeReport
-      ? Math.min(2.8, Math.max(2.05, dpr * 1.3 * qBoost))
-      : Math.min(3, Math.max(2.25, dpr * 1.5 * qBoost));
-  const fallbackScale = Math.max(1.6, preferredScale * 0.82);
-  const qualityLabel = qualityMode === 'high' ? 'high quality' : 'balanced quality';
-  emit(`Capturing page in ${qualityLabel}\u2026`, 10);
-
+  const prefScale = Math.min(3, Math.max(2.25, dpr * 1.5));
+  emit('Capturing page\u2026', 12);
   let canvas;
   try {
-    const captureOnce = (scale) =>
-      html2canvas(root, {
-        scale,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        backgroundColor: COVER_BG,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: root.scrollWidth,
-        windowHeight: root.scrollHeight,
-        imageTimeout: 25000,
-        onclone(clonedDoc) {
-          hardenCloneForCanvas(clonedDoc);
-        },
-      });
-
-    try {
-      canvas = await captureOnce(preferredScale);
-    } catch {
-      emit('Retrying capture with lighter quality\u2026', 25);
-      canvas = await captureOnce(fallbackScale);
-    }
+    const cap = (sc) => h2c(root, {
+      scale: sc, useCORS: true, allowTaint: false, logging: false,
+      backgroundColor: COVER_BG_HEX, scrollX: 0, scrollY: 0,
+      windowWidth: root.scrollWidth, windowHeight: root.scrollHeight,
+      imageTimeout: 25000, onclone: hardenCloneForCanvas,
+    });
+    try { canvas = await cap(prefScale); }
+    catch { emit('Retrying\u2026', 25); canvas = await cap(Math.max(1.6, prefScale * 0.82)); }
   } catch (e) {
     document.body.classList.remove('pdf-exporting');
     window.scrollTo(0, prevY);
-    const msg = e && typeof e === 'object' && 'message' in e ? String(e.message) : String(e);
-    window.alert(
-      `Could not capture the page for PDF.\n\n${msg}\n\nTry reloading, disabling ad blockers, or opening in a different browser.`
-    );
+    window.alert(`Page capture failed.\n\n${e?.message || e}`);
     return false;
   }
 
   window.scrollTo(0, prevY);
   document.body.classList.remove('pdf-exporting');
-
   if (!canvas.width || !canvas.height) {
-    window.alert('Captured image was empty - scroll to the top and export again.');
-    return false;
+    window.alert('Captured image was empty — scroll to top and export again.'); return false;
   }
 
   emit('Laying out PDF\u2026', 60);
-
-  // Build the PDF. Page size is A4 portrait, measured in points.
   let pdf;
-  try {
-    pdf = new JsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait', compress: true });
-  } catch (e) {
-    const msg = e && typeof e === 'object' && 'message' in e ? String(e.message) : String(e);
-    window.alert(`PDF engine could not start.\n\n${msg}`);
-    return false;
-  }
+  try { pdf = new JsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait', compress: true }); }
+  catch (e) { window.alert(`PDF engine error.\n\n${e?.message || e}`); return false; }
 
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
-  const margin = 36;
-  const footerReserve = 24;
-  const usableW = pageW - margin * 2;
-  const usableH = pageH - margin * 2 - footerReserve;
+  const pW = pdf.internal.pageSize.getWidth(), pH = pdf.internal.pageSize.getHeight();
+  const MG = 36, usW = pW - MG * 2, usH = pH - MG * 2 - 24;
+  const sliceMaxPx = Math.floor((usH * canvas.width) / usW);
+  const c2c = canvas.width / Math.max(1, root.scrollWidth);
+  const safeBreaksPx = Array.from(new Set(safeBreaksCss.map((y) => Math.round(y * c2c))))
+    .filter((y) => y > 0 && y <= canvas.height).sort((a, b) => a - b);
+  const bgRgb = hexToRgb(COVER_BG_HEX);
 
-  // Map layout coords: canvas is captured at captureScale, so CSS-px values scale directly.
-  // Image placed at width usableW. The canvas-to-pdf vertical ratio is `usableW / canvas.width`.
-  // Each PDF page can show at most `sliceMaxPxInCanvas` source-canvas rows.
-  const sliceMaxPxInCanvas = Math.floor((usableH * canvas.width) / usableW);
-
-  // Translate CSS-px offsets into canvas-px. Canvas width matches root CSS width * captureScale.
-  const cssToCanvas = canvas.width / Math.max(1, root.scrollWidth);
-  const safeBreaksPx = Array.from(
-    new Set(safeBreaksCss.map((y) => Math.round(y * cssToCanvas)))
-  )
-    .filter((y) => y > 0 && y <= canvas.height)
-    .sort((a, b) => a - b);
-
-  // Paginate content into pages 1..N. Track which chapter starts on which content page.
-  /** @type {Array<{ title: string, contentPage: number }>} */
-  const tocMapping = [];
-  const chapterTopsPx = chapters.map((c) => ({
-    title: c.title,
-    topPx: Math.max(0, Math.round(c.topCss * cssToCanvas)),
-  }));
-  let chapterCursor = 0;
-
-  let yPx = 0;
-  let contentPage = 0;
+  let yPx = 0, pg = 0;
   try {
     while (yPx < canvas.height) {
-      const maxEndPx = Math.min(yPx + sliceMaxPxInCanvas, canvas.height);
-      const breakPx = chooseBreak(yPx, maxEndPx, canvas.height, safeBreaksPx);
-      const slicePx = Math.max(1, breakPx - yPx);
-      const slice = sliceCanvas(canvas, yPx, slicePx);
+      const maxEnd = Math.min(yPx + sliceMaxPx, canvas.height);
+      const brk    = chooseBreak(yPx, maxEnd, canvas.height, safeBreaksPx);
+      const sH     = Math.max(1, brk - yPx);
+      const slice  = sliceCanvas(canvas, yPx, sH);
       if (!slice) break;
-      const sliceH = (slicePx * usableW) / canvas.width;
-
-      if (contentPage > 0) pdf.addPage();
-      contentPage += 1;
-
-      fillPageBackground(pdf, pageW, pageH);
-      pdf.addImage(
-        slice.toDataURL('image/png'),
-        'PNG',
-        margin,
-        margin,
-        usableW,
-        sliceH,
-        undefined,
-        'MEDIUM'
-      );
-
-      // Record chapters whose top lies within this slice.
-      while (
-        chapterCursor < chapterTopsPx.length &&
-        chapterTopsPx[chapterCursor].topPx < breakPx
-      ) {
-        tocMapping.push({
-          title: chapterTopsPx[chapterCursor].title,
-          contentPage,
-        });
-        chapterCursor += 1;
-      }
-
-      yPx = breakPx;
+      if (pg > 0) pdf.addPage();
+      pg++;
+      pdf.setFillColor(bgRgb[0], bgRgb[1], bgRgb[2]); pdf.rect(0, 0, pW, pH, 'F');
+      pdf.addImage(slice.toDataURL('image/png'), 'PNG', MG, MG, usW, (sH * usW) / canvas.width,
+        undefined, 'MEDIUM');
+      yPx = brk;
     }
   } catch (e) {
-    const msg = e && typeof e === 'object' && 'message' in e ? String(e.message) : String(e);
-    window.alert(
-      `PDF layout failed midway.\n\n${msg}\n\nTry closing other tabs or exporting from a desktop browser.`
-    );
-    return false;
+    window.alert(`PDF layout failed.\n\n${e?.message || e}`); return false;
   }
 
-  // Any chapters beyond the last recorded slice (shouldn't happen, but just in case).
-  while (chapterCursor < chapterTopsPx.length) {
-    tocMapping.push({
-      title: chapterTopsPx[chapterCursor].title,
-      contentPage: Math.max(1, contentPage),
-    });
-    chapterCursor += 1;
-  }
-
-  emit('Rendering cover + contents\u2026', 85);
-
-  // Insert TOC at position 1, then cover at position 1.
-  // After both insertions: cover = page 1, TOC = page 2, content = pages 3..N+2.
-  try {
-    if (typeof pdf.insertPage === 'function') {
-      const frontMatterOffset = includeSummary ? 3 : 2;
-      pdf.insertPage(1); // becomes new page 1; content shifts down by 1
-      pdf.setPage(1);
-      // Draw TOC — page numbers in the TOC reflect final document pagination.
-      drawTocPage(
-        pdf,
-        pageW,
-        pageH,
-        tocMapping.map((m) => ({ title: m.title, page: m.contentPage + frontMatterOffset }))
-      );
-
-      pdf.insertPage(1); // new page 1 = cover; TOC shifts to 2.
-      pdf.setPage(1);
-      drawCoverPage(pdf, pageW, pageH, {
-        title,
-        subtitle,
-        fyRange,
-        isoDate,
-      });
-
-      if (includeSummary) {
-        pdf.insertPage(3); // Cover=1, TOC=2, Summary=3
-        pdf.setPage(3);
-        drawSummaryPage(pdf, pageW, pageH, extractSummaryData(root));
-      }
-    } else {
-      // Older jsPDF builds without insertPage: just prepend by re-ordering is not possible,
-      // so fall back to no cover/TOC rather than corrupting the file.
-      // (Recent jsPDF 2.x all expose insertPage, so this branch is a safety net.)
-    }
-  } catch (e) {
-    // Cover/TOC failures should not block saving the core content.
-    emit('Cover/contents fallback applied', 90);
-  }
-
-  // Footers on every page except the cover.
-  const totalPages =
-    typeof pdf.getNumberOfPages === 'function'
-      ? pdf.getNumberOfPages()
-      : typeof pdf.internal?.getNumberOfPages === 'function'
-        ? pdf.internal.getNumberOfPages()
-        : contentPage + 2;
-  paintFooters(pdf, pageW, pageH, totalPages, isoDate);
-
-  emit('Saving PDF\u2026', 98);
-
-  try {
-    pdf.save(`${title.replace(/\s+/g, '-')}.pdf`);
-  } catch (e) {
-    const msg = e && typeof e === 'object' && 'message' in e ? String(e.message) : String(e);
-    window.alert(
-      `PDF could not be saved.\n\n${msg}\n\nTry a different browser or disable aggressive privacy extensions.`
-    );
-    return false;
-  }
-
+  paintFooters(pdf, pW, pH, pg, isoDate);
+  emit('Saving\u2026', 98);
+  try { pdf.save(`${title.replace(/\s+/g, '-')}-${isoDate}.pdf`); }
+  catch (e) { window.alert(`PDF save failed.\n\n${e?.message || e}`); return false; }
   emit('Done', 100);
   return true;
 }

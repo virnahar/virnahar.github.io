@@ -58,10 +58,21 @@
 
 // ─── India tax slab tables ─────────────────────────────────────────────────
 
-/** New regime slabs from FY 2024-25 onwards (current). Std deduction ₹75k. */
-const NEW_SLABS_FY2425_ON = [
+/** New regime slabs for FY 2024-25 only. Std deduction ₹75k. */
+const NEW_SLABS_FY2425 = [
   { upto: 300000, rate: 0 },  { upto: 700000, rate: 5 },  { upto: 1000000, rate: 10 },
   { upto: 1200000, rate: 15 }, { upto: 1500000, rate: 20 }, { upto: Infinity, rate: 30 },
+];
+
+/**
+ * New regime slabs from FY 2025-26 onwards (Budget 2025).
+ * Std deduction ₹75k (unchanged). 87A rebate raised to ₹60k for income ≤ ₹12L,
+ * making salaried income up to ₹12.75L effectively zero-tax.
+ */
+const NEW_SLABS_FY2526_ON = [
+  { upto: 400000, rate: 0 },   { upto: 800000, rate: 5 },   { upto: 1200000, rate: 10 },
+  { upto: 1600000, rate: 15 }, { upto: 2000000, rate: 20 }, { upto: 2400000, rate: 25 },
+  { upto: Infinity, rate: 30 },
 ];
 
 /** New regime slabs for FY 2023-24 only. Std deduction ₹50k (first year for new regime). */
@@ -166,8 +177,9 @@ export function getSlabTable(fy, regime) {
     return { slabs: OLD_SLABS_FY1011, stdDeduction };
   }
   // new regime
-  if (startYear >= 2024) return { slabs: NEW_SLABS_FY2425_ON, stdDeduction: 75000 };
-  if (startYear === 2023) return { slabs: NEW_SLABS_FY2324, stdDeduction: 50000 };
+  if (startYear >= 2025) return { slabs: NEW_SLABS_FY2526_ON, stdDeduction: STD_DEDUCTION_NEW };
+  if (startYear >= 2024) return { slabs: NEW_SLABS_FY2425, stdDeduction: STD_DEDUCTION_NEW };
+  if (startYear === 2023) return { slabs: NEW_SLABS_FY2324, stdDeduction: STD_DEDUCTION_OLD };
   // FY 2020-21, 2021-22, 2022-23 — original 115BAC, no std deduction
   return { slabs: NEW_SLABS_LEGACY, stdDeduction: 0 };
 }
@@ -184,7 +196,8 @@ export function getSlabTable(fy, regime) {
  *
  * New regime (115BAC):
  *   FY 2020-21 → FY 2022-23: ₹12,500 for income up to ₹5L.
- *   FY 2023-24 onwards:      ₹25,000 for income up to ₹7L.
+ *   FY 2023-24 → FY 2024-25: ₹25,000 for income up to ₹7L.
+ *   FY 2025-26 onwards:      ₹60,000 for income up to ₹12L (Budget 2025).
  *
  * @param {string} fy
  * @param {'old'|'new'} regime
@@ -193,6 +206,7 @@ export function getSlabTable(fy, regime) {
 function get87ARebate(fy, regime) {
   const startYear = fyStartYear(fy);
   if (regime === 'new') {
+    if (startYear >= 2025) return { threshold: 1200000, rebate: 60000 };
     if (startYear >= 2023) return { threshold: 700000, rebate: 25000 };
     if (startYear >= 2020) return { threshold: 500000, rebate: 12500 };
     // New regime didn't exist before FY 2020-21.
@@ -286,36 +300,23 @@ function fmtL(n) {
 }
 
 /**
- * Calculate surcharge. Both FY- and regime-aware.
- *
- * Old regime history:
- *   FY 2013-14 → FY 2015-16: 10% above ₹1Cr.
- *   FY 2016-17:              15% above ₹1Cr.
- *   FY 2017-18 → FY 2018-19: 10% above ₹50L, 15% above ₹1Cr.
- *   FY 2019-20 onwards:      also 25% above ₹2Cr and 37% above ₹5Cr.
- *
- * New regime (115BAC):
- *   FY 2020-21 → FY 2022-23: mirrors the old regime (incl. 25% / 37%).
- *   FY 2023-24 onwards:      capped at 25% (no 37% slab).
- *
+ * Raw surcharge without marginal relief. Internal only.
  * @param {number} baseTax
  * @param {number} income
- * @param {'old'|'new'} [regime]
- * @param {string} [fy]
+ * @param {'old'|'new'} regime
+ * @param {string} fy
  * @returns {number}
  */
-function calcSurcharge(baseTax, income, regime = 'old', fy = '2024-25') {
+function _calcRawSurcharge(baseTax, income, regime, fy) {
   const startYear = fyStartYear(fy);
 
   if (regime === 'new') {
     if (startYear >= 2023) {
-      // 25% cap from FY 2023-24.
       if (income > 20000000) return baseTax * 0.25;
       if (income > 10000000) return baseTax * 0.15;
       if (income > 5000000)  return baseTax * 0.10;
       return 0;
     }
-    // FY 2020-21 → FY 2022-23: mirrors old regime (incl. 37%).
     if (income > 50000000) return baseTax * 0.37;
     if (income > 20000000) return baseTax * 0.25;
     if (income > 10000000) return baseTax * 0.15;
@@ -323,7 +324,6 @@ function calcSurcharge(baseTax, income, regime = 'old', fy = '2024-25') {
     return 0;
   }
 
-  // old regime
   if (startYear >= 2019) {
     if (income > 50000000) return baseTax * 0.37;
     if (income > 20000000) return baseTax * 0.25;
@@ -332,22 +332,60 @@ function calcSurcharge(baseTax, income, regime = 'old', fy = '2024-25') {
     return 0;
   }
   if (startYear >= 2017) {
-    // 10% > 50L, 15% > 1Cr.
     if (income > 10000000) return baseTax * 0.15;
     if (income > 5000000)  return baseTax * 0.10;
     return 0;
   }
   if (startYear === 2016) {
-    // 15% > 1Cr.
     if (income > 10000000) return baseTax * 0.15;
     return 0;
   }
   if (startYear >= 2013) {
-    // 10% > 1Cr.
     if (income > 10000000) return baseTax * 0.10;
     return 0;
   }
   return 0;
+}
+
+/**
+ * Surcharge with CBDT marginal relief applied.
+ *
+ * When surcharge pushes total tax above (tax at the lower threshold + excess income),
+ * the surcharge is capped so taxpayers just above a bracket never pay more than those
+ * at the threshold plus their marginal income.
+ *
+ * Old/new regime history: FY 2013-14 → FY 2015-16: 10% above ₹1Cr.
+ * FY 2016-17: 15% above ₹1Cr. FY 2017-18+: 10% > ₹50L, 15% > ₹1Cr.
+ * FY 2019-20+: also 25% > ₹2Cr and 37% > ₹5Cr (old; new capped at 25% from FY23-24).
+ *
+ * @param {number} baseTax
+ * @param {number} income
+ * @param {'old'|'new'} [regime]
+ * @param {string} [fy]
+ * @param {{ upto: number, rate: number }[]} [slabs]  When provided, enables marginal relief
+ * @returns {number}
+ */
+function calcSurcharge(baseTax, income, regime = 'old', fy = '2024-25', slabs) {
+  const raw = _calcRawSurcharge(baseTax, income, regime, fy);
+  if (raw === 0 || !slabs) return raw;
+
+  // Find the immediately-lower surcharge threshold boundary.
+  const thresholds = [50000000, 20000000, 10000000, 5000000];
+  let lowerThreshold = null;
+  for (const t of thresholds) {
+    if (income > t) { lowerThreshold = t; break; }
+  }
+  if (lowerThreshold === null) return raw;
+
+  // Tax at the lower threshold boundary (with surcharge at that level).
+  const { baseTax: thresholdBaseTax } = calcTaxOnSlabs(lowerThreshold, slabs);
+  const thresholdSurcharge = _calcRawSurcharge(thresholdBaseTax, lowerThreshold, regime, fy);
+  const taxAtThreshold = thresholdBaseTax + thresholdSurcharge;
+
+  // Total tax can't legally exceed: tax at threshold + (income above threshold).
+  const maxTaxAllowed = taxAtThreshold + (income - lowerThreshold);
+  if (baseTax + raw <= maxTaxAllowed) return raw;
+  return Math.max(0, maxTaxAllowed - baseTax);
 }
 
 /**
@@ -408,7 +446,7 @@ export function computeOldRegimeTax(grossSalary, otherIncome = 0, deductions = {
     rebateMax,
   );
 
-  const surcharge = calcSurcharge(taxAfterRebate, taxableIncome, 'old', normal);
+  const surcharge = calcSurcharge(taxAfterRebate, taxableIncome, 'old', normal, slabs);
   const cess = (taxAfterRebate + surcharge) * cessRate(normal);
   const totalTax = taxAfterRebate + surcharge + cess;
   const totalGross = safeGross + Math.max(0, otherIncome || 0);
@@ -447,7 +485,7 @@ export function computeNewRegimeTax(grossSalary, otherIncome = 0, fy = '2024-25'
     rebateMax,
   );
 
-  const surcharge = calcSurcharge(taxAfterRebate, taxableIncome, 'new', normal);
+  const surcharge = calcSurcharge(taxAfterRebate, taxableIncome, 'new', normal, slabs);
   const cess = (taxAfterRebate + surcharge) * cessRate(normal);
   const totalTax = taxAfterRebate + surcharge + cess;
   const totalGross = safeGross + Math.max(0, otherIncome || 0);

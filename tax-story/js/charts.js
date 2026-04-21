@@ -15,25 +15,42 @@ export async function renderIncomeLineChart(canvas, series) {
 
   const gold = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#d4af37';
   const teal = getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary').trim() || '#5ead9a';
-  const muted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#71717a';
+  const muted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#828290';
 
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
   const extras = series.extraDatasets ?? [];
   const dualAxis = extras.length > 0;
+
+  // Build a vertical Canvas gradient for the area fill — rich top, transparent bottom
+  function makeGoldGradient(chart) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return 'rgba(212,175,55,0.15)';
+    const grad = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    grad.addColorStop(0, 'rgba(212,175,55,0.28)');
+    grad.addColorStop(0.55, 'rgba(212,175,55,0.08)');
+    grad.addColorStop(1, 'rgba(212,175,55,0)');
+    return grad;
+  }
 
   const primary = {
     label: series.datasetLabel ?? 'Per FY metric',
     data: series.values,
     yAxisID: 'y',
     borderColor: gold,
-    backgroundColor: 'rgba(212, 175, 55, 0.14)',
+    backgroundColor(context) {
+      const chart = context.chart;
+      return makeGoldGradient(chart);
+    },
     tension: 0.42,
     fill: true,
     pointRadius: 5,
-    pointHoverRadius: 9,
+    pointHoverRadius: 10,
     pointBackgroundColor: gold,
-    pointBorderColor: 'rgba(15,15,17,0.95)',
-    pointBorderWidth: 2,
+    pointBorderColor: 'rgba(6,6,8,0.95)',
+    pointBorderWidth: 2.5,
+    pointHoverBackgroundColor: '#f0d78c',
+    pointHoverBorderColor: gold,
+    pointHoverBorderWidth: 3,
     borderWidth: 2.5,
     borderCapStyle: 'round',
     borderJoinStyle: 'round',
@@ -116,27 +133,49 @@ export async function renderIncomeLineChart(canvas, series) {
           labels: { color: muted, padding: 16, usePointStyle: true, boxWidth: 8 },
         },
         tooltip: {
-          backgroundColor: 'rgba(24,24,28,0.94)',
+          backgroundColor: 'rgba(14,14,18,0.96)',
           titleColor: '#f4f4f5',
           bodyColor: '#e4e4e7',
-          borderColor: 'rgba(212,175,55,0.35)',
+          borderColor: 'rgba(212,175,55,0.4)',
           borderWidth: 1,
-          padding: 12,
-          cornerRadius: 10,
+          padding: 14,
+          cornerRadius: 12,
+          displayColors: true,
+          boxWidth: 8,
+          boxHeight: 8,
+          boxPadding: 4,
+          callbacks: {
+            label(ctx) {
+              const v = ctx.parsed.y;
+              if (!Number.isFinite(v)) return ctx.dataset.label;
+              const formatted = v >= 10000000
+                ? `₹${(v / 10000000).toFixed(2)} Cr`
+                : v >= 100000
+                  ? `₹${(v / 100000).toFixed(2)} L`
+                  : `₹${v.toLocaleString('en-IN')}`;
+              return ` ${ctx.dataset.label}: ${formatted}`;
+            },
+          },
         },
       },
       scales: {
-        x: { ticks: { color: muted }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        x: {
+          ticks: { color: muted, font: { size: 12 } },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          border: { color: 'rgba(255,255,255,0.06)' },
+        },
         y: {
           position: 'left',
           ticks: {
             color: muted,
+            font: { size: 12 },
             callback(value) {
               const n = Number(value);
               return formatYTickRupee(n);
             },
           },
-          grid: { color: 'rgba(255,255,255,0.06)' },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          border: { color: 'rgba(255,255,255,0.06)' },
           beginAtZero: true,
         },
         ...(dualAxis
@@ -173,98 +212,6 @@ function formatYTickRupee(n) {
   if (n >= 100000) return `₹${(n / 100000).toFixed(1)} L`;
   if (n >= 1000) return `₹${(n / 1000).toFixed(0)} k`;
   return `₹${n}`;
-}
-
-/**
- * Income mix doughnut — legacy two-part or multi-segment `segments`.
- * @param {HTMLCanvasElement} canvas
- * @param {{
- *   salaryPct?: number,
- *   otherPct?: number,
- *   label?: string,
- *   segments?: { value: number; label: string; color?: string | null }[],
- * }} parts
- */
-async function renderIncomeMixDonut(canvas, parts) {
-  const ChartCtor = window.Chart;
-  if (!ChartCtor) return null;
-
-  const gold = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#d4af37';
-  const teal = getComputedStyle(document.documentElement).getPropertyValue('--accent-secondary').trim() || '#5ead9a';
-  const muted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#71717a';
-  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
-
-  // @ts-ignore
-  if (canvas.chart) {
-    // @ts-ignore
-    canvas.chart.destroy();
-  }
-
-  const palette = [gold, teal, '#a78bfa', '#f59e0b', '#78716c', '#38bdf8'];
-  let labels;
-  let data;
-  let colors;
-
-  if (parts.segments?.length) {
-    const segs = parts.segments;
-    labels = segs.map((s) => s.label);
-    data = segs.map((s) => s.value);
-    colors = segs.map((s, i) => s.color || palette[i % palette.length]);
-  } else {
-    const s = Math.max(0, Math.min(100, parts.salaryPct ?? 0));
-    const o = Math.max(0, Math.min(100, parts.otherPct ?? 0));
-    labels = ['Salary', 'Other & investments'];
-    data = [s, o];
-    colors = [gold, teal];
-  }
-
-  // @ts-ignore
-  const chart = new ChartCtor(canvas, {
-    type: 'doughnut',
-    data: {
-      labels,
-      datasets: [
-        {
-          data,
-          backgroundColor: colors,
-          borderColor: 'rgba(15,15,17,0.92)',
-          borderWidth: 2,
-          hoverOffset: 8,
-        },
-      ],
-    },
-    options: {
-      animation: reduce
-        ? false
-        : {
-            duration: 1500,
-            easing: 'easeOutCubic',
-            delay(ctx) {
-              if (ctx.type === 'data' && ctx.mode === 'default') return (ctx.dataIndex ?? 0) * 110;
-              return 0;
-            },
-          },
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '58%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: muted, padding: 12, font: { size: 11 } },
-        },
-        title: {
-          display: true,
-          text: parts.label ?? 'Income mix',
-          color: muted,
-          font: { size: 12, weight: '600' },
-        },
-      },
-    },
-  });
-
-  // @ts-ignore
-  canvas.chart = chart;
-  return chart;
 }
 
 /**
@@ -467,7 +414,7 @@ export async function renderItrComparativeCharts(opts) {
         {
           data: pieData,
           backgroundColor: [gold, '#f59e0b', '#a78bfa', '#38bdf8'],
-          borderColor: 'rgba(15,15,17,0.92)',
+          borderColor: 'rgba(6,6,8,0.95)',
           borderWidth: 2,
         },
       ],
@@ -521,7 +468,7 @@ export function renderRadarChart(canvas, data) {
         backgroundColor: 'rgba(224, 120, 120, 0.18)',
         borderWidth: 2,
         pointBackgroundColor: gold,
-        pointBorderColor: 'rgba(15,15,17,0.9)',
+        pointBorderColor: 'rgba(6,6,8,0.95)',
         pointRadius: 4,
         pointHoverRadius: 7,
       }],
@@ -550,89 +497,6 @@ export function renderRadarChart(canvas, data) {
           borderWidth: 1,
           callbacks: {
             label: (ctx) => `${ctx.raw?.toFixed(0)}% gap severity`,
-          },
-        },
-      },
-    },
-  });
-
-  // @ts-ignore
-  canvas.chart = chart;
-  return chart;
-}
-
-/**
- * Animated horizontal bar chart for deduction utilisation.
- * @param {HTMLCanvasElement} canvas
- * @param {{ label: string, used: number, limit: number, color?: string }[]} items
- */
-function renderDeductionBars(canvas, items) {
-  const ChartCtor = window.Chart;
-  if (!ChartCtor || !items.length) return null;
-
-  const muted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#71717a';
-  const gold = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#d4af37';
-  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
-
-  // @ts-ignore
-  if (canvas.chart) { canvas.chart.destroy(); }
-
-  const labels = items.map((i) => i.label);
-  const usedData = items.map((i) => Math.min(i.used, i.limit));
-  const unusedData = items.map((i) => Math.max(0, i.limit - i.used));
-
-  // @ts-ignore
-  const chart = new ChartCtor(canvas, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Claimed',
-          data: usedData,
-          backgroundColor: gold,
-          borderRadius: 4,
-          borderSkipped: false,
-        },
-        {
-          label: 'Remaining room',
-          data: unusedData,
-          backgroundColor: 'rgba(255,255,255,0.06)',
-          borderRadius: 4,
-          borderSkipped: false,
-        },
-      ],
-    },
-    options: {
-      animation: reduce ? false : { duration: 1000, easing: 'easeOutQuart' },
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          stacked: true,
-          ticks: { color: muted, callback: (v) => formatYTickRupee(Number(v)) },
-          grid: { color: 'rgba(255,255,255,0.06)' },
-          beginAtZero: true,
-        },
-        y: { stacked: true, ticks: { color: muted }, grid: { display: false } },
-      },
-      plugins: {
-        legend: {
-          position: 'top',
-          labels: { color: muted, usePointStyle: true, boxWidth: 8, padding: 12 },
-        },
-        tooltip: {
-          backgroundColor: 'rgba(24,24,28,0.94)',
-          titleColor: '#f4f4f5',
-          bodyColor: '#a1a1aa',
-          borderColor: 'rgba(212,175,55,0.35)',
-          borderWidth: 1,
-          callbacks: {
-            label: (ctx) => {
-              const n = Number(ctx.raw);
-              return `${ctx.dataset.label}: ${formatYTickRupee(n)}`;
-            },
           },
         },
       },
@@ -686,7 +550,7 @@ export function renderTaxBreakdownDonut(canvas, { labels, values, colors }) {
       datasets: [{
         data: filtered.map((s) => s.value),
         backgroundColor: filtered.map((s) => s.color),
-        borderColor: 'rgba(15,15,17,0.92)',
+        borderColor: 'rgba(6,6,8,0.95)',
         borderWidth: 2,
         hoverOffset: 10,
       }],

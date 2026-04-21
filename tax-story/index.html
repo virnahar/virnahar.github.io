@@ -193,14 +193,18 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@500;600;700;800&family=Noto+Sans+Devanagari:wght@700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
 
+    <!-- Alpine ESM module preload with SRI — enforces integrity before execution -->
+    <link rel="modulepreload" crossorigin href="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/+esm" integrity="sha384-+/u5CGJDbmIJ2xsm12Cy4fyfbNpNgPA9qzKLoXPIyleCfMSB7BS2PIjVYaOW5gJx" />
+    <link rel="modulepreload" crossorigin href="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.3/dist/module.esm.js" integrity="sha384-kklYc4a0XueE0w8/PEQvyTWw6f+U9tfJtMVnmwRini7PstHCbj0Ym1D9eHeozHfb" />
+
     <!-- GSAP for animations -->
-    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" crossorigin="anonymous" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" crossorigin="anonymous" integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d"></script>
 
     <!-- PDF + Charts -->
-    <script defer src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" integrity="sha384-QbVSYhU9faw2C7l92rI0Dmke8Yod6KaOixC1kkbO/dGnMDKtbWhwcxSSOkmHXWom"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"></script>
 
     <link rel="stylesheet" href="./css/tax-story.css" />
     <link rel="stylesheet" href="./css/tax-story-enhancements.css" />
@@ -343,7 +347,7 @@
           <span class="material-symbols-outlined story-rail__glyph" aria-hidden="true">compare_arrows</span>
           <span class="story-rail__label">ITR vs AIS</span>
         </a>
-        <button type="button" class="story-rail__item story-rail__item--accent" title="Portal guide" @click="guideModalOpen = true">
+        <button type="button" class="story-rail__item story-rail__item--accent" title="Portal guide" @click="openGuide()">
           <span class="material-symbols-outlined story-rail__glyph" aria-hidden="true">menu_book</span>
           <span class="story-rail__label">Portal guide</span>
         </button>
@@ -366,10 +370,11 @@
 
       <!-- ═══════════════════════ HERO ═══════════════════════ -->
       <section id="hero" class="chapter chapter--hero">
-      <!-- Floating depth orbs -->
+      <!-- Cinematic ambient blobs -->
       <div class="hero-orbs" aria-hidden="true">
         <div class="hero-orb hero-orb--gold"></div>
         <div class="hero-orb hero-orb--teal"></div>
+        <div class="hero-orb hero-orb--indigo"></div>
       </div>
         <div class="hero-grid">
           <!-- Copy column -->
@@ -431,13 +436,16 @@
                 <span class="material-symbols-outlined btn__icon" aria-hidden="true">play_circle</span>
                 Try demo
               </button>
-              <button type="button" class="btn btn--ghost" @click="openSessionJsonImport()" :disabled="ingestBusy">
-                <span class="material-symbols-outlined btn__icon" aria-hidden="true">upload</span>
-                Import JSON
+            </div>
+            <div class="hero-actions-secondary">
+              <button type="button" class="hero-link" @click="openGuide()">
+                <span class="material-symbols-outlined" aria-hidden="true" style="font-size:14px;vertical-align:-2px">help_outline</span>
+                Not sure which files to use?
               </button>
-              <button type="button" class="btn btn--ghost" @click="guideModalOpen = true">
-                <span class="material-symbols-outlined btn__icon" aria-hidden="true">help_outline</span>
-                Which files?
+              <span class="hero-actions-secondary__divider" aria-hidden="true">·</span>
+              <button type="button" class="hero-link" @click="openSessionJsonImport()" :disabled="ingestBusy">
+                <span class="material-symbols-outlined" aria-hidden="true" style="font-size:14px;vertical-align:-2px">upload</span>
+                Import saved session
               </button>
             </div>
 
@@ -447,10 +455,18 @@
               Demo mode — showing sample data for a fictional Indian taxpayer
             </div>
 
-            <p class="hero-privacy" x-show="!hasRealData() && !isDemoMode">
-              <span class="material-symbols-outlined" aria-hidden="true" style="font-size:14px;vertical-align:-2px">lock</span>
-              100% private · parsed locally in your browser · no account · no upload
-            </p>
+            <div class="hero-trust" x-show="!hasRealData() && !isDemoMode" aria-label="Privacy: your files never leave your device">
+              <span class="hero-trust__badge">
+                <svg class="hero-trust__lock" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false"><rect x="3" y="7" width="10" height="8" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                100% private
+              </span>
+              <span class="hero-trust__dot" aria-hidden="true"></span>
+              <span class="hero-trust__item">browser-only</span>
+              <span class="hero-trust__dot" aria-hidden="true"></span>
+              <span class="hero-trust__item">no account</span>
+              <span class="hero-trust__dot" aria-hidden="true"></span>
+              <span class="hero-trust__item">no upload</span>
+            </div>
           </div>
 
           <!-- Rupee visual -->
@@ -465,46 +481,65 @@
                   <stop offset="100%" stop-color="#9a7a28"/>
                 </linearGradient>
                 <radialGradient id="ringGrad" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="rgba(212,175,55,0.1)"/>
+                  <stop offset="0%" stop-color="rgba(212,175,55,0.12)"/>
                   <stop offset="100%" stop-color="rgba(212,175,55,0)"/>
                 </radialGradient>
+                <!-- Metallic shimmer sweep — SMIL animated across the glyph -->
+                <linearGradient id="shimmerGrad" gradientUnits="userSpaceOnUse" x1="100" y1="120" x2="200" y2="220">
+                  <stop offset="0%"   stop-color="rgba(255,255,255,0)"/>
+                  <stop offset="42%"  stop-color="rgba(255,255,255,0)"/>
+                  <stop offset="50%"  stop-color="rgba(255,255,255,0.34)"/>
+                  <stop offset="58%"  stop-color="rgba(255,255,255,0)"/>
+                  <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+                  <animateTransform attributeName="gradientTransform" type="translate" values="-320 0;360 0" dur="5s" repeatCount="indefinite"/>
+                </linearGradient>
                 <filter id="softBloom" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="4" result="b"/>
+                  <feGaussianBlur stdDeviation="3.5" result="b"/>
+                  <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+                <!-- Glow filter for the halo -->
+                <filter id="haloGlow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="6" result="b"/>
                   <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
                 </filter>
               </defs>
 
-              <!-- Background ring 1 — outermost, very subtle -->
-              <circle cx="210" cy="165" r="130" fill="none" stroke="rgba(212,175,55,0.06)" stroke-width="1" stroke-dasharray="4 8"/>
+              <!-- Ring 1 — outermost, very slow CW drift -->
+              <circle class="hero-ring-outer" cx="210" cy="165" r="138" fill="none" stroke="rgba(212,175,55,0.05)" stroke-width="1" stroke-dasharray="3 10"/>
 
-              <!-- Ring 2 -->
-              <circle cx="210" cy="165" r="105" fill="none" stroke="rgba(212,175,55,0.10)" stroke-width="1" stroke-dasharray="2 6"/>
+              <!-- Ring 2 — slow CCW drift -->
+              <circle class="hero-ring-mid" cx="210" cy="165" r="110" fill="none" stroke="rgba(212,175,55,0.09)" stroke-width="1" stroke-dasharray="2 8"/>
 
-              <!-- Ring 3 — inner glow circle -->
-              <circle class="hero-rupee-svg__halo" cx="210" cy="165" r="80" fill="url(#ringGrad)" stroke="rgba(212,175,55,0.18)" stroke-width="1"/>
+              <!-- Ring 3 — halo glow fill + slow rotation -->
+              <circle class="hero-rupee-svg__halo" cx="210" cy="165" r="82" fill="url(#ringGrad)" stroke="rgba(212,175,55,0.20)" stroke-width="1.5"/>
 
-              <!-- Ring 4 — closest -->
-              <circle cx="210" cy="165" r="58" fill="rgba(212,175,55,0.05)" stroke="rgba(212,175,55,0.25)" stroke-width="1.5" stroke-dasharray="3 5"/>
+              <!-- Sonar ping rings — expand outward and fade -->
+              <circle class="hero-ping" cx="210" cy="165" r="82" fill="none" stroke="rgba(212,175,55,0.45)" stroke-width="1.5"/>
+              <circle class="hero-ping hero-ping--2" cx="210" cy="165" r="82" fill="none" stroke="rgba(212,175,55,0.3)" stroke-width="1"/>
 
-              <!-- Rupee glyph — refined, no harsh glow filter -->
-              <text class="hero-rupee-svg__glyph" x="210" y="183" text-anchor="middle" dominant-baseline="middle" font-size="110" font-family="'Noto Sans Devanagari','Syne',system-ui,sans-serif" font-weight="700" fill="url(#heroRupeeFill)" opacity="0.92">₹</text>
+              <!-- Ring 4 — closest, fast CW -->
+              <circle class="hero-ring-inner" cx="210" cy="165" r="60" fill="rgba(212,175,55,0.04)" stroke="rgba(212,175,55,0.22)" stroke-width="1.5" stroke-dasharray="3 5"/>
 
-              <!-- Orbiting accent dots (subtle) -->
-              <g class="rupee-orbit" transform-origin="210 165">
-                <circle cx="210" cy="78"  r="4"   fill="#d4af37" opacity="0.6"/>
-                <circle cx="295" cy="248" r="3"   fill="#5ead9a" opacity="0.5"/>
-                <circle cx="122" cy="238" r="3.5" fill="#a78bfa" opacity="0.45"/>
-                <circle cx="288" cy="96"  r="2.5" fill="#38bdf8" opacity="0.4"/>
-              </g>
+              <!-- Rupee glyph — the centrepiece -->
+              <text class="hero-rupee-svg__glyph" x="210" y="185" text-anchor="middle" dominant-baseline="middle" font-size="112" font-family="'Noto Sans Devanagari','Syne',system-ui,sans-serif" font-weight="700" fill="url(#heroRupeeFill)" opacity="0.94">₹</text>
 
-              <!-- Income arc path — bottom decorative -->
-              <path class="hero-rupee-svg__arc" d="M55 290 C105 255, 175 235, 255 248 S358 278 378 305" stroke="rgba(212,175,55,0.35)" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 7"/>
+              <!-- Metallic shimmer overlay on the glyph -->
+              <text class="hero-rupee-svg__shimmer" x="210" y="185" text-anchor="middle" dominant-baseline="middle" font-size="112" font-family="'Noto Sans Devanagari','Syne',system-ui,sans-serif" font-weight="700" fill="url(#shimmerGrad)">₹</text>
 
-              <!-- Year data dots on arc (decorative) -->
+              <!-- Orbiting accent dots — each on its own independent path -->
+              <circle class="hero-orbit-dot hero-orbit-dot--gold"   cx="210" cy="78"  r="4.5" fill="#d4af37" opacity="0.75"/>
+              <circle class="hero-orbit-dot hero-orbit-dot--teal"   cx="295" cy="250" r="3.5" fill="#5ead9a" opacity="0.6"/>
+              <circle class="hero-orbit-dot hero-orbit-dot--purple" cx="120" cy="238" r="4"   fill="#a78bfa" opacity="0.55"/>
+              <circle class="hero-orbit-dot hero-orbit-dot--sky"    cx="290" cy="94"  r="3"   fill="#38bdf8" opacity="0.5"/>
+
+              <!-- Income arc path — slow animated dash crawl -->
+              <path class="hero-rupee-svg__arc" d="M55 290 C105 255, 175 235, 255 248 S358 278 378 305" stroke="rgba(212,175,55,0.38)" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="6 8"/>
+
+              <!-- Year data dots on arc -->
               <circle cx="105" cy="261" r="3" fill="#d4af37" opacity="0.5"/>
-              <circle cx="175" cy="243" r="3" fill="#d4af37" opacity="0.65"/>
-              <circle cx="255" cy="248" r="3" fill="#d4af37" opacity="0.8"/>
-              <circle cx="340" cy="283" r="3" fill="#d4af37" opacity="0.7"/>
+              <circle cx="175" cy="243" r="3" fill="#d4af37" opacity="0.7"/>
+              <circle cx="255" cy="248" r="3.5" fill="#d4af37" opacity="0.85"/>
+              <circle cx="340" cy="283" r="3" fill="#d4af37" opacity="0.65"/>
             </svg>
 
             <!-- Quote shown when no data — rotates every 5 seconds -->
@@ -601,8 +636,10 @@
                 <div class="glance-tile"
                   :class="{ 'glance-tile--wide': item.key === 'latest' || item.key === 'regime', ['glance-tile--' + (item.colorClass || 'gold')]: true }"
                   :style="'--tile-delay: ' + (idx * 60) + 'ms'">
-                  <span class="material-symbols-outlined glance-tile__icon" aria-hidden="true" x-text="item.icon" x-show="!item.logoSvg"></span>
-                  <span class="glance-tile__brand-logo" x-show="item.logoSvg" x-html="item.logoSvg" aria-hidden="true"></span>
+                  <span class="material-symbols-outlined glance-tile__icon" aria-hidden="true" x-text="item.icon" x-show="!item.isAppleLogo"></span>
+                  <span class="glance-tile__brand-logo" x-show="item.isAppleLogo" aria-hidden="true">
+                    <svg class="employer-logo employer-logo--apple" viewBox="0 0 17 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13.27 10.29c-.02-2.4 1.96-3.55 2.05-3.61-1.12-1.64-2.86-1.86-3.48-1.89-1.48-.15-2.89.87-3.65.87-.76 0-1.92-.85-3.15-.82-1.62.02-3.12.94-3.95 2.39-1.69 2.93-.43 7.26 1.21 9.63.8 1.16 1.76 2.46 3.01 2.41 1.21-.05 1.67-.78 3.14-.78 1.47 0 1.87.78 3.15.76 1.3-.02 2.13-1.18 2.92-2.35.92-1.35 1.3-2.66 1.32-2.73-.03-.01-2.54-.97-2.57-3.88zM11.17 3.13c.67-.81 1.12-1.94.99-3.06-.96.04-2.13.64-2.82 1.45-.62.72-1.16 1.87-1.02 2.97 1.08.08 2.18-.55 2.85-1.36z"/></svg>
+                  </span>
                   <span class="glance-tile__label" x-text="item.label"></span>
                   <span class="glance-tile__value tabular" x-text="glanceDisplay(item)"></span>
                   <span class="glance-tile__sub" x-show="item.sub" x-text="item.sub"></span>
@@ -636,6 +673,31 @@
         <p class="toast" x-show="toast.length" x-text="toast" x-cloak role="status" aria-live="polite" style="margin-top:var(--space-4)"></p>
       </section>
 
+      <!-- ── Guided post-upload CTA banner ─────────────────────────── -->
+      <div
+        class="guided-cta-banner"
+        x-show="guidedBannerVisible && hasRealData() && !ingestBusy"
+        x-cloak
+        x-transition:enter.duration.400ms
+        x-transition:leave.duration.200ms
+        role="status"
+        aria-live="polite"
+      >
+        <span class="material-symbols-outlined guided-cta-banner__icon" aria-hidden="true">auto_awesome</span>
+        <div class="guided-cta-banner__body">
+          <p class="guided-cta-banner__title">Your data is ready — scroll down to explore</p>
+          <p class="guided-cta-banner__sub">Income arc, tax intelligence, and AIS reconciliation are live below</p>
+        </div>
+        <button
+          type="button"
+          class="guided-cta-banner__close"
+          @click="guidedBannerVisible = false"
+          aria-label="Dismiss"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+
       <!-- ═══════════════════════ INCOME ARC ═══════════════════════ -->
       <section id="arc" class="chapter chapter--arc"
         x-show="hasRealData()"
@@ -649,6 +711,7 @@
             <span class="material-symbols-outlined" aria-hidden="true">show_chart</span>
           </div>
           <div>
+            <p class="chapter-eyebrow" aria-hidden="true">Income analysis</p>
             <h2 class="chapter__title">Income arc</h2>
             <p class="chapter__lead" x-show="fileCount() > 0 && hasArcGross()">
               <span x-show="taxpayerFirstName()"><strong x-text="taxpayerFirstName()"></strong>'s gross total income from each filed ITR, year by year.</span>
@@ -754,12 +817,9 @@
             <span class="material-symbols-outlined" aria-hidden="true">psychology</span>
           </div>
           <div>
+            <p class="chapter-eyebrow chapter-eyebrow--purple" aria-hidden="true">Regime & optimisation</p>
             <h2 class="chapter__title">Tax intelligence</h2>
-            <p class="chapter__lead">
-              Regime optimisation, effective tax rate, deduction efficiency, and notice risk —
-              calculated from <span x-show="taxpayerFirstName()"><strong x-text="taxpayerFirstName()"></strong>'s</span><span x-show="!taxpayerFirstName()">your</span>
-              actual ITR data, in-browser. Informational only; not tax advice.
-            </p>
+            <p class="chapter__lead">Regime switch, effective rate, deduction efficiency, and notice-risk signals — from <span x-show="taxpayerFirstName()"><strong x-text="taxpayerFirstName()"></strong>'s</span><span x-show="!taxpayerFirstName()">your</span> ITR, in-browser. Not tax advice.</p>
           </div>
         </div>
 
@@ -771,6 +831,88 @@
               <option :value="fy" x-text="fy"></option>
             </template>
           </select>
+        </div>
+
+        <!-- ── Tax Health Score ─────────────────────────────────────────── -->
+        <div class="intel-card intel-card--health-score" x-show="taxHealthScore()" x-cloak x-transition:enter="sr-fade-in" x-transition:enter-start="sr-fade-in--start" x-transition:enter-end="sr-fade-in--end">
+          <div class="intel-card__head">
+            <span class="material-symbols-outlined intel-card__icon" aria-hidden="true">monitor_heart</span>
+            <h3 class="intel-card__title">Tax health score</h3>
+            <span class="health-badge" :class="'health-badge--' + (taxHealthScore()?.color ?? 'gold')" x-text="taxHealthScore()?.label ?? ''"></span>
+            <span class="pill pill--fy" x-text="'FY ' + (taxHealthScore()?.fy ?? getSelectedFy())"></span>
+          </div>
+          <div class="health-score-layout">
+            <div class="health-ring-wrap" role="img" :aria-label="'Tax health score: ' + (taxHealthScore()?.total ?? 0) + ' out of 100'">
+              <svg class="health-ring" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs>
+                  <linearGradient id="healthGradA" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#d4af37"/>
+                    <stop offset="100%" stop-color="#5ead9a"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="70" cy="70" r="55" stroke="rgba(255,255,255,0.07)" stroke-width="11" fill="none"/>
+                <circle class="health-ring__fill" cx="70" cy="70" r="55"
+                  stroke="url(#healthGradA)" stroke-width="11" fill="none"
+                  stroke-linecap="round" stroke-dashoffset="34"
+                  stroke-dasharray="0 346"
+                  :stroke-dasharray="(taxHealthScore()?.total ?? 0) * 3.46 + ' 346'"/>
+                <text x="70" y="67" text-anchor="middle" font-size="34" font-family="'JetBrains Mono','DM Mono',monospace" font-weight="700" fill="#f4f4f5" x-text="taxHealthScore()?.total ?? 0"></text>
+                <text x="70" y="83" text-anchor="middle" font-size="9" font-family="'DM Sans',sans-serif" fill="#828290">/100</text>
+                <text x="70" y="99" text-anchor="middle" font-size="7" font-family="'DM Sans',sans-serif" fill="#525260" letter-spacing="1.5">TAX HEALTH</text>
+              </svg>
+            </div>
+            <div class="health-sub-scores">
+              <template x-for="dim in [taxHealthScore()?.regime, taxHealthScore()?.deduction, taxHealthScore()?.compliance].filter(Boolean)" :key="dim.label">
+                <div class="health-sub">
+                  <div class="health-sub__meta">
+                    <span class="health-sub__label" x-text="dim.label"></span>
+                    <span class="health-sub__val tabular" x-text="dim.score + '/' + dim.max"></span>
+                  </div>
+                  <div class="health-sub__bar-wrap">
+                    <div class="health-sub__bar" :style="'width:' + Math.round(dim.score / dim.max * 100) + '%'" :class="'health-sub__bar--' + dim.label.toLowerCase().replace(/\s+/g,'-')"></div>
+                  </div>
+                </div>
+              </template>
+              <p class="health-score__hint">Informational only — not tax advice. Covers regime, deductions, and AIS compliance for <span x-text="getSelectedFy()"></span>.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Deduction Opportunities ─────────────────────────────────── -->
+        <div class="intel-card intel-card--opportunities" x-show="deductionOpportunities().length" x-cloak x-transition:enter="sr-fade-in" x-transition:enter-start="sr-fade-in--start" x-transition:enter-end="sr-fade-in--end">
+          <div class="intel-card__head">
+            <span class="material-symbols-outlined intel-card__icon" aria-hidden="true">lightbulb</span>
+            <h3 class="intel-card__title">Deduction opportunities</h3>
+            <span class="pill pill--fy" x-text="'FY ' + getSelectedFy()"></span>
+          </div>
+          <p class="intel-card__sub">Unused deduction room under old regime — amounts your ITR could have additionally claimed.</p>
+          <div class="opp-list">
+            <template x-for="opp in deductionOpportunities()" :key="opp.label">
+              <div class="opp-item" :class="'opp-item--' + (opp.color ?? 'gold')">
+                <span class="material-symbols-outlined opp-item__icon" aria-hidden="true" x-text="opp.icon"></span>
+                <div class="opp-item__body">
+                  <strong class="opp-item__label" x-text="opp.label"></strong>
+                  <span class="opp-item__detail" x-text="opp.detail"></span>
+                </div>
+                <span class="opp-item__amount tabular" x-text="'↑ ' + fmtInr(opp.amount)"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="intel-card intel-card--locked" x-show="!deductionOpportunities().length" x-cloak aria-hidden="true">
+          <div class="intel-card__head">
+            <span class="material-symbols-outlined intel-card__icon" aria-hidden="true">lightbulb</span>
+            <h3 class="intel-card__title">Deduction opportunities</h3>
+          </div>
+          <div class="intel-locked-body">
+            <span class="material-symbols-outlined intel-locked-body__icon" aria-hidden="true">lock</span>
+            <div class="intel-locked-shimmer" aria-hidden="true">
+              <div class="intel-locked-shimmer__bar"></div>
+              <div class="intel-locked-shimmer__bar"></div>
+              <div class="intel-locked-shimmer__bar"></div>
+            </div>
+            <p class="intel-locked-body__hint">Upload an old-regime ITR to see unused deduction room</p>
+          </div>
         </div>
 
         <div class="intel-top-grid scroll-reveal">
@@ -809,7 +951,47 @@
           </div>
         </div>
 
-        <div class="intel-card intel-card--timeline scroll-reveal" x-show="anomalyTimeline().length">
+        <!-- ── Lifetime Savings Potential ───────────────────────────────── -->
+        <div class="intel-card intel-card--lifetime"
+          x-show="lifetimeSavingsPotential()" x-cloak x-transition:enter="sr-fade-in" x-transition:enter-start="sr-fade-in--start" x-transition:enter-end="sr-fade-in--end">
+          <div class="intel-card__head">
+            <span class="material-symbols-outlined intel-card__icon" aria-hidden="true">trending_up</span>
+            <h3 class="intel-card__title">Lifetime deduction gap</h3>
+          </div>
+          <p class="intel-card__sub">Uncaptured deduction room (80C + NPS + 80D) across your old-regime years — estimated tax left on the table.</p>
+          <div class="lifetime-stat-row">
+            <div class="lifetime-stat">
+              <span class="lifetime-stat__val tabular" x-text="fmtInr(lifetimeSavingsPotential()?.totalGap ?? 0)"></span>
+              <span class="lifetime-stat__lbl">Missed deduction room</span>
+            </div>
+            <div class="lifetime-stat lifetime-stat--accent">
+              <span class="lifetime-stat__val tabular" x-text="'≈ ' + fmtInr(lifetimeSavingsPotential()?.totalTaxSaved ?? 0)"></span>
+              <span class="lifetime-stat__lbl">Est. tax that could have been saved</span>
+            </div>
+            <div class="lifetime-stat">
+              <span class="lifetime-stat__val tabular" x-text="(lifetimeSavingsPotential()?.yearCount ?? 0) + ' yr' + ((lifetimeSavingsPotential()?.yearCount ?? 0) !== 1 ? 's' : '')"></span>
+              <span class="lifetime-stat__lbl">Old-regime years analysed</span>
+            </div>
+          </div>
+          <p class="intel-card__sub" style="margin-top:var(--space-4)">Estimate uses marginal slab rate + 4% cess. Not tax advice — consult a CA for filing decisions.</p>
+        </div>
+        <div class="intel-card intel-card--locked" x-show="!lifetimeSavingsPotential()" x-cloak aria-hidden="true">
+          <div class="intel-card__head">
+            <span class="material-symbols-outlined intel-card__icon" aria-hidden="true">trending_up</span>
+            <h3 class="intel-card__title">Lifetime deduction gap</h3>
+          </div>
+          <div class="intel-locked-body">
+            <span class="material-symbols-outlined intel-locked-body__icon" aria-hidden="true">lock</span>
+            <div class="intel-locked-shimmer" aria-hidden="true">
+              <div class="intel-locked-shimmer__bar"></div>
+              <div class="intel-locked-shimmer__bar"></div>
+              <div class="intel-locked-shimmer__bar"></div>
+            </div>
+            <p class="intel-locked-body__hint">Upload 2+ years of old-regime ITR to unlock lifetime analysis</p>
+          </div>
+        </div>
+
+        <div class="intel-card intel-card--timeline" x-show="anomalyTimeline().length" x-cloak x-transition:enter="sr-fade-in" x-transition:enter-start="sr-fade-in--start" x-transition:enter-end="sr-fade-in--end">
           <div class="intel-card__head">
             <span class="material-symbols-outlined intel-card__icon" aria-hidden="true">timeline</span>
             <h3 class="intel-card__title">What changed over years</h3>
@@ -824,8 +1006,23 @@
             </template>
           </div>
         </div>
+        <div class="intel-card intel-card--locked" x-show="!anomalyTimeline().length" x-cloak aria-hidden="true">
+          <div class="intel-card__head">
+            <span class="material-symbols-outlined intel-card__icon" aria-hidden="true">timeline</span>
+            <h3 class="intel-card__title">What changed over years</h3>
+          </div>
+          <div class="intel-locked-body">
+            <span class="material-symbols-outlined intel-locked-body__icon" aria-hidden="true">lock</span>
+            <div class="intel-locked-shimmer" aria-hidden="true">
+              <div class="intel-locked-shimmer__bar"></div>
+              <div class="intel-locked-shimmer__bar"></div>
+              <div class="intel-locked-shimmer__bar"></div>
+            </div>
+            <p class="intel-locked-body__hint">Upload 2+ years of ITR to see what changed over years</p>
+          </div>
+        </div>
 
-        <div class="intel-card intel-card--simulator scroll-reveal" x-show="scenarioRecommendation()">
+        <div class="intel-card intel-card--simulator" x-show="scenarioRecommendation()" x-cloak x-transition:enter="sr-fade-in" x-transition:enter-start="sr-fade-in--start" x-transition:enter-end="sr-fade-in--end">
           <div class="intel-card__head">
             <span class="material-symbols-outlined intel-card__icon" aria-hidden="true">tune</span>
             <h3 class="intel-card__title">Tax scenario simulator</h3>
@@ -1055,10 +1252,9 @@
             <span class="material-symbols-outlined" aria-hidden="true">table_chart</span>
           </div>
           <div>
+            <p class="chapter-eyebrow chapter-eyebrow--amber" aria-hidden="true">Year-on-year workbook</p>
             <h2 class="chapter__title">ITR year-on-year</h2>
-            <p class="chapter__lead">
-              Multi-FY ITR workbook: heads of income, Chapter VI-A deductions, tax paid, and net worth proxy. Expand sections for detail. ITR JSON only — not a substitute for the official utility.
-            </p>
+            <p class="chapter__lead">Side-by-side ITR view across all uploaded years — income heads, deductions, tax paid, and net worth proxy. Expand any row for detail.</p>
           </div>
         </div>
 
@@ -1188,10 +1384,9 @@
             <span class="material-symbols-outlined" aria-hidden="true">bubble_chart</span>
           </div>
           <div>
+            <p class="chapter-eyebrow chapter-eyebrow--teal" aria-hidden="true">Document reconciliation</p>
             <h2 class="chapter__title">TIS vs ITR insights</h2>
-            <p class="chapter__lead">
-              Side-by-side comparison of TIS (government's view) vs your ITR. PDF text layer — treat as indicative, not filing-grade. Prefer AIS JSON for precise numbers.
-            </p>
+            <p class="chapter__lead">Government's TIS view vs your ITR, card by card. Indicative — for precise figures, upload AIS JSON alongside.</p>
           </div>
         </div>
 
@@ -1235,11 +1430,9 @@
             <span class="material-symbols-outlined" aria-hidden="true">compare_arrows</span>
           </div>
           <div>
+            <p class="chapter-eyebrow chapter-eyebrow--amber" aria-hidden="true">Pre-filing sanity checks</p>
             <h2 class="chapter__title">ITR vs AIS — reconciliation</h2>
-            <p class="chapter__lead">
-              Pre-filing sanity checks comparing what the income tax department knows (AIS) vs what your ITR declares. Items marked <strong>Review</strong> may attract notices under Section 143(1) or 148.
-              Not tax advice — always confirm with your CA.
-            </p>
+            <p class="chapter__lead">What the department knows vs what your ITR declares. <strong>Review</strong> items may attract notices — always verify with your CA before filing.</p>
           </div>
         </div>
 
@@ -1335,6 +1528,7 @@
             <span class="material-symbols-outlined" aria-hidden="true">picture_as_pdf</span>
           </div>
           <div>
+            <p class="chapter-eyebrow chapter-eyebrow--teal" aria-hidden="true">Download & share</p>
             <h2 class="chapter__title">Export your tax story</h2>
             <p class="chapter__lead">
               <span x-show="taxpayerFirstName()"><strong x-text="taxpayerFirstName()"></strong>'s complete tax story,</span><span x-show="!taxpayerFirstName()">Your complete tax story,</span>
@@ -1343,9 +1537,9 @@
           </div>
         </div>
         <div class="export-actions scroll-reveal">
-          <button type="button" class="btn btn--primary btn--glow" @click="downloadPdf()" :disabled="ingestBusy">
-            <span class="material-symbols-outlined btn__icon" aria-hidden="true">download</span>
-            Export PDF
+          <button type="button" class="btn btn--primary btn--glow" @click="downloadPdf()" :disabled="ingestBusy || pdfBusy" :aria-busy="pdfBusy">
+            <span class="material-symbols-outlined btn__icon" aria-hidden="true" x-text="pdfBusy ? 'hourglass_empty' : 'download'"></span>
+            <span x-text="pdfBusy ? 'Generating PDF…' : 'Export PDF'"></span>
           </button>
           <button type="button" class="btn btn--ghost" @click="downloadSessionJson()" :disabled="ingestBusy">
             <span class="material-symbols-outlined btn__icon" aria-hidden="true">download</span>
@@ -1365,6 +1559,7 @@
             <span class="material-symbols-outlined" aria-hidden="true">help</span>
           </div>
           <div>
+            <p class="chapter-eyebrow chapter-eyebrow--purple" aria-hidden="true">Common questions</p>
             <h2 class="chapter__title">Indian tax FAQ</h2>
             <p class="chapter__lead">Quick answers about privacy, data support, and how Tax Story helps Indian salaried taxpayers understand ITR and AIS data better.</p>
           </div>
@@ -1395,6 +1590,7 @@
             <span class="material-symbols-outlined" aria-hidden="true">school</span>
           </div>
           <div>
+            <p class="chapter-eyebrow" aria-hidden="true">Guides & resources</p>
             <h2 class="chapter__title">Learn Indian tax basics</h2>
             <p class="chapter__lead">Practical guides for salaried taxpayers in India. These pages are built for quick reading and search discoverability.</p>
           </div>
@@ -1452,6 +1648,116 @@
       </section>
 
     </main><!-- /main -->
+
+    <!-- ── Snapshot Save Banner ──────────────────────────────────────── -->
+    <div
+      class="snapshot-banner"
+      x-show="hasRealData() && !ingestBusy && !snapshotBannerDismissed"
+      x-transition:enter="sb-enter"
+      x-transition:enter-start="sb-enter-start"
+      x-transition:enter-end="sb-enter-end"
+      x-transition:leave="sb-leave"
+      x-transition:leave-start="sb-leave-end"
+      x-transition:leave-end="sb-leave-start"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="snapshot-banner__icon" aria-hidden="true">💾</span>
+      <div class="snapshot-banner__body">
+        <strong class="snapshot-banner__title">Session is live</strong>
+        <span class="snapshot-banner__sub">Save a snapshot — re-import anytime without re-uploading</span>
+      </div>
+      <button
+        type="button"
+        class="snapshot-banner__cta"
+        @click="downloadStateSnapshot()"
+        aria-label="Export JSON snapshot"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">download</span>
+        Export JSON
+      </button>
+      <button
+        type="button"
+        class="snapshot-banner__dismiss"
+        @click="snapshotBannerDismissed = true"
+        aria-label="Dismiss reminder"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </div>
+    <!-- /Snapshot Banner -->
+
+    <!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <div class="site-footer__brand">
+          <span class="site-footer__rupee" aria-hidden="true">₹</span>
+          <span class="site-footer__name">Tax Story</span>
+        </div>
+        <p class="site-footer__tagline">Your income, your story — understood in minutes.</p>
+        <nav class="site-footer__links" aria-label="Footer links">
+          <a href="#hero" class="site-footer__link">Home</a>
+          <a
+            href="#arc"
+            class="site-footer__link"
+            :class="{ 'site-footer__link--locked': !hasRealData() }"
+            :aria-disabled="!hasRealData() ? 'true' : null"
+            :tabindex="hasRealData() ? '0' : '-1'"
+          >Income arc</a>
+          <a
+            href="#intelligence"
+            class="site-footer__link"
+            :class="{ 'site-footer__link--locked': !hasTaxIntelligence() }"
+            :aria-disabled="!hasTaxIntelligence() ? 'true' : null"
+            :tabindex="hasTaxIntelligence() ? '0' : '-1'"
+          >Tax intelligence</a>
+          <a
+            href="#itr-comparative"
+            class="site-footer__link"
+            :class="{ 'site-footer__link--locked': !hasRealData() }"
+            :aria-disabled="!hasRealData() ? 'true' : null"
+            :tabindex="hasRealData() ? '0' : '-1'"
+          >Year-on-year</a>
+          <a
+            href="#review"
+            class="site-footer__link"
+            :class="{ 'site-footer__link--locked': !hasRealData() }"
+            :aria-disabled="!hasRealData() ? 'true' : null"
+            :tabindex="hasRealData() ? '0' : '-1'"
+          >ITR vs AIS</a>
+          <a
+            href="#export"
+            class="site-footer__link"
+            x-show="showExport()"
+            x-cloak
+          >Export</a>
+          <a href="#faq" class="site-footer__link">FAQ</a>
+        </nav>
+
+        <!-- Upload nudge — only when no data loaded -->
+        <div class="site-footer__nudge" x-show="!hasRealData()" x-cloak>
+          <span class="material-symbols-outlined site-footer__nudge-icon" aria-hidden="true">upload_file</span>
+          <span>Upload your portal exports to unlock all sections</span>
+          <button type="button" class="site-footer__nudge-btn" @click="pickFiles()">
+            Get started
+          </button>
+        </div>
+        <div class="site-footer__meta">
+          <p class="site-footer__disclaimer">
+            Tax Story is an analysis tool for Indian salaried taxpayers — not tax advice.
+            Always verify with the official income tax portal and consult a CA for filing decisions.
+          </p>
+          <p class="site-footer__privacy">
+            <span class="material-symbols-outlined site-footer__lock" aria-hidden="true">lock</span>
+            All processing happens locally in your browser. Your ITR, AIS, and TIS files are never uploaded.
+          </p>
+          <p class="site-footer__copy">
+            &copy; <span x-text="new Date().getFullYear()"></span> Tax Story &mdash; built for salaried India.
+            Tax rules updated through FY&nbsp;2025-26.
+          </p>
+        </div>
+      </div>
+    </footer>
 
     <!-- ═══════════════════════ UPLOAD MODAL ═══════════════════════ -->
     <div
@@ -1514,7 +1820,7 @@
               <p class="upload-modal__sub">ITR JSON · ITR XML · AIS JSON · TIS PDF · or a ZIP</p>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <button type="button" class="upload-modal__guide-btn" @click="_guideOpenedFromUpload = true; guideModalOpen = true; uploadModalOpen = false">
+              <button type="button" class="upload-modal__guide-btn" @click="openGuideFromUpload()">
                 <span class="material-symbols-outlined" style="font-size:15px">help_outline</span>
                 How to download
               </button>
@@ -1706,6 +2012,7 @@
       <div class="ingest-bg" aria-hidden="true">
         <div class="ingest-bg__orb ingest-bg__orb--gold"></div>
         <div class="ingest-bg__orb ingest-bg__orb--teal"></div>
+        <div class="ingest-bg__orb ingest-bg__orb--indigo"></div>
       </div>
 
       <div class="ingest-overlay__panel">
@@ -1917,7 +2224,7 @@
 
     <!-- Custom rupee cursor + trail -->
     <div id="rupee-cursor" aria-hidden="true">₹</div>
-    <div id="cursor-trail-canvas" aria-hidden="true" style="position:fixed;top:0;left:0;pointer-events:none;z-index:9999;overflow:hidden;width:100%;height:100%;"></div>
+    <canvas id="cursor-trail-canvas" aria-hidden="true" style="position:fixed;top:0;left:0;pointer-events:none;z-index:9999;"></canvas>
 
     <!-- Alpine.js (ESM) -->
     <script type="module" src="./js/main.js"></script>

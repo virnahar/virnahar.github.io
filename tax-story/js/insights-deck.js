@@ -5,7 +5,7 @@
  * @typedef {{ fy: string, score: number, lines: InsightLine[], summary: string }} InsightCard
  */
 
-import { getRegimeDefaults } from './tax-engine.js';
+import { getRegimeDefaults, compareRegimes } from './tax-engine.js';
 
 /**
  * Parse the starting year of an FY string (e.g. "2024-25" → 2024).
@@ -137,6 +137,125 @@ function hraExemptionLimit({ actualHra, basicSalary, rentPaid, isMetro }) {
     : limit === salaryPct ? `${isMetro ? '50%' : '40%'} of basic (metro rule)`
     : 'rent paid minus 10% of basic';
   return { limit, breakdownLabel: binding };
+}
+
+/**
+ * Regime tipping point: find minimum deduction total at which the old regime
+ * becomes cheaper than the new regime. Binary-searches 80C as the marginal lever
+ * (most commonly adjusted deduction); all other deductions held at claimed values.
+ * Returns null if insufficient data or not applicable.
+ * @param {string} fy
+ * @param {import('./model.js').ItrSnapshot} itr
+ * @returns {{ type: 'new-wins-always'|'old-wins-now'|'tipping-found', flipAt80C: number|null, currentSavings: number }|null}
+ */
+function regimeTippingPoint(fy, itr) {
+  if (fyStart(fy) < 2020) return null;
+  const grossSalary = itr.grossSalaryIncome ?? Math.max(0, (itr.salaryIncome ?? 0) + (itr.deductions?.standardDeduction ?? 0) + (itr.deductions?.hraExemption ?? 0));
+  if (grossSalary <= 0) return null;
+  const d = itr.deductions ?? {};
+  const specialRateCg = Math.max(0, itr.capitalGains?.totalCg ?? 0);
+  const nonSalary = Math.max(0, (itr.grossIncome ?? 0) - (itr.salaryIncome ?? 0) - specialRateCg);
+  const baseDeds = { sec80D: d.section80D ?? 0, hra: d.hraExemption ?? 0, nps80CCD: d.npsDeduction ?? 0, homeLoan: d.homeLoanInterest ?? 0, sec80TTA: d.section80TTA ?? 0 };
+  try {
+    const current = compareRegimes(grossSalary, nonSalary, { ...baseDeds, sec80C: d.section80C ?? 0 }, fy);
+    const currentSavings = current.savings; // positive = new saves money
+    // Already on old regime and it's better → no tipping point needed
+    if (currentSavings < 0) return { type: 'old-wins-now', flipAt80C: null, currentSavings };
+    // Binary search for 80C level at which old regime breaks even
+    let lo = d.section80C ?? 0, hi = 250000; // max practical 80C
+    let flipAt = null;
+    for (let iter = 0; iter < 30; iter++) {
+      const mid = Math.round((lo + hi) / 2);
+      const r = compareRegimes(grossSalary, nonSalary, { ...baseDeds, sec80C: mid }, fy);
+      if (r.savings <= 0) { flipAt = mid; hi = mid; } else { lo = mid; }
+      if (hi - lo < 100) break;
+    }
+    if (flipAt === null) return { type: 'new-wins-always', flipAt80C: null, currentSavings };
+    return { type: 'tipping-found', flipAt80C: flipAt, currentSavings };
+  } catch { return null; }
+}
+
+/**
+ * 87A rebate + capital gains exclusion card (Budget 2023 Finance Act amendment).
+ * For FY 2023-24 onwards in the new regime, special-rate CG (Section 111A STCG,
+ * Section 112A LTCG) tax cannot be offset by the Section 87A rebate.
+ * @param {string} fy
+ * @param {import('./model.js').ItrSnapshot} itr
+ * @returns {object|null}
+ */
+function build87ARebateCard(fy, itr) {
+  const start = fyStart(fy);
+  if (start < 2023) return null;
+  const regime = itr.taxRegimeKey;
+  const cg = itr.capitalGains;
+  const totalCg = cg?.totalCg ?? 0;
+  if (totalCg <= 0) return null;
+  const threshold = start >= 2025 ? 1200000 : 700000;
+  const totalIncome = itr.totalIncome ?? itr.grossIncome ?? 0;
+  if (totalIncome > threshold * 1.5) return null; // Only relevant near threshold
+  const stcgEquity = cg?.stcg ?? 0;
+  const ltcgEquity = cg?.ltcg ?? 0;
+  const specialRateCg = stcgEquity + ltcgEquity;
+  if (specialRateCg <= 0) return null;
+  const thresholdFmt = fmtINR(threshold);
+  const note = regime === 'new'
+    ? `Budget 2023 amendment: Section 87A rebate (up to ${start >= 2025 ? '₹60,000' : '₹25,000'} for income ≤ ${thresholdFmt}) does NOT apply to tax on special-rate capital gains — STCG under Section 111A (15%/20%) or LTCG under Section 112A (10%/12.5%). Even if your total income is within ${thresholdFmt}, you still owe the applicable CG tax. This is a common surprise — verify your ITR computation includes this tax.`
+    : `You have equity capital gains (${fmtINR(totalCg)}). In the new regime, if your income is ≤ ${thresholdFmt}, the 87A rebate covers normal slab tax but NOT the special-rate CG tax — verify before filing.`;
+  return {
+    id: `87a-cg-exclusion-${fy}`,
+    fy,
+    category: 'Section 87A rebate — capital gains exclusion',
+    icon: 'warning_amber',
+    matchLevel: 'review',
+    tisFormatted: fmtINR(specialRateCg),
+    itrFormatted: regime === 'new' ? 'No rebate on CG tax' : 'Verify',
+    note,
+  };
+}
+
+/**
+ * Interest income split card — savings vs FD with 80TTA/80TTB optimisation.
+ * @param {string} fy
+ * @param {import('./model.js').ItrSnapshot} itr
+ * @param {import('./model.js').AisSnapshot|null} ais
+ * @returns {object|null}
+ */
+function buildInterestSplitCard(fy, itr, ais) {
+  const totalInterest = itr.interestIncome ?? 0;
+  if (totalInterest <= 0) return null;
+  const regime = itr.taxRegimeKey;
+  const savingsInterest = ais?.interestSavings ?? null;
+  const fdInterest = ais?.interestFD ?? null;
+  const claimed80TTA = itr.deductions?.section80TTA ?? 0;
+  const hasSplit = savingsInterest != null || fdInterest != null;
+  let note = '';
+  if (regime === 'new') {
+    note = `You declared ${fmtINR(totalInterest)} interest income in ITR. In the new regime, Section 80TTA/80TTB deductions are NOT available — all interest income is fully taxable at slab rates. Consider whether the old regime would be better if your savings interest is significant.`;
+  } else if (hasSplit) {
+    const sav = savingsInterest ?? 0;
+    const fd = fdInterest ?? 0;
+    const eligible80TTA = Math.min(sav, 10000);
+    const unclaimed = Math.max(0, eligible80TTA - claimed80TTA);
+    if (unclaimed > 1000) {
+      note = `AIS shows savings bank interest of ~${fmtINR(sav)} and FD interest of ~${fmtINR(fd)}. Section 80TTA allows up to ₹10,000 deduction on savings account interest (not FD) in old regime. You claimed ${fmtINR(claimed80TTA)} — up to ${fmtINR(unclaimed)} more may be deductible next year if you keep savings account interest income. FD interest is fully taxable — no 80TTA benefit.`;
+    } else {
+      note = `AIS shows savings interest ~${fmtINR(sav)}, FD interest ~${fmtINR(fd)}. Section 80TTA (₹10,000 cap, savings interest only) claimed at ${fmtINR(claimed80TTA)}. FD interest is fully taxable. If your savings interest regularly exceeds ₹10,000, consider moving excess to FD isn't tax-beneficial — sweep accounts help earn better returns while keeping savings interest within the deductible limit.`;
+    }
+  } else {
+    const eligible80TTA = Math.min(totalInterest, 10000);
+    const unclaimed = Math.max(0, eligible80TTA - claimed80TTA);
+    note = `Interest income declared: ${fmtINR(totalInterest)}. In old regime, savings account interest up to ₹10,000 is deductible under Section 80TTA (${claimed80TTA > 0 ? `₹${claimed80TTA.toLocaleString('en-IN')} claimed` : 'nothing claimed'}). FD interest has no deduction. ${unclaimed > 1000 ? `Consider whether up to ${fmtINR(unclaimed)} additional 80TTA benefit applies.` : ''}`;
+  }
+  return {
+    id: `interest-split-${fy}`,
+    fy,
+    category: 'Interest income & 80TTA analysis',
+    icon: 'account_balance',
+    matchLevel: claimed80TTA > 0 || regime === 'new' ? 'ok' : 'review',
+    tisFormatted: hasSplit ? `${fmtINR(savingsInterest ?? 0)} savings / ${fmtINR(fdInterest ?? 0)} FD` : fmtINR(totalInterest),
+    itrFormatted: fmtINR(totalInterest),
+    note,
+  };
 }
 
 /**
@@ -351,6 +470,48 @@ function buildItrInsightCards(fy, itr, ais) {
       });
     }
   }
+
+  // ── Regime tipping point ──────────────────────────────────────────────────
+  if (grossIncome != null && grossIncome > 0 && fyStart(fy) >= 2020) {
+    const tp = regimeTippingPoint(fy, itr);
+    if (tp) {
+      const current80C = itr.deductions?.section80C ?? 0;
+      if (tp.type === 'tipping-found' && tp.flipAt80C != null) {
+        const extra = Math.max(0, tp.flipAt80C - current80C);
+        const extraFmt = fmtINR(extra);
+        const atFmt = fmtINR(tp.flipAt80C);
+        cards.push({
+          id: `regime-tipping-${fy}`,
+          fy,
+          category: 'Regime tipping point',
+          icon: 'balance',
+          matchLevel: extra < 25000 ? 'review' : 'ok',
+          tisFormatted: `80C at ${atFmt}`,
+          itrFormatted: fmtINR(tp.currentSavings) + ' saved (new)',
+          note: `New regime currently saves ${fmtINR(Math.abs(tp.currentSavings))} in tax. To make old regime worthwhile, you would need Section 80C alone to reach ~${atFmt} (${extra > 0 ? `~${extraFmt} more than current ₹${current80C.toLocaleString('en-IN')}` : 'already past tipping point — double-check your deductions'}). ${extra > 0 && extra <= 50000 ? `You're close — adding ${extraFmt} in PPF, ELSS, or EPF could flip the optimal regime next year.` : extra > 50000 ? 'The gap is significant — new regime is firmly the better choice unless your deductions grow substantially.' : 'Old regime appears to be the better option — verify all deductions are claimed.'}`,
+        });
+      } else if (tp.type === 'new-wins-always') {
+        cards.push({
+          id: `regime-tipping-always-new-${fy}`,
+          fy,
+          category: 'Regime tipping point',
+          icon: 'balance',
+          matchLevel: 'ok',
+          tisFormatted: 'New regime',
+          itrFormatted: `Saves ${fmtINR(Math.abs(tp.currentSavings))}`,
+          note: `New regime saves ${fmtINR(Math.abs(tp.currentSavings))} even at maximum practical 80C (₹2.5L). No realistic deduction level flips this to old regime for your income profile — new regime is firmly optimal.`,
+        });
+      }
+    }
+  }
+
+  // ── 87A rebate + capital gains exclusion ──────────────────────────────────
+  const cgCard = build87ARebateCard(fy, itr);
+  if (cgCard) cards.push(cgCard);
+
+  // ── Interest income & 80TTA split ─────────────────────────────────────────
+  const interestCard = buildInterestSplitCard(fy, itr, ais);
+  if (interestCard) cards.push(interestCard);
 
   return cards;
 }

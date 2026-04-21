@@ -40,6 +40,7 @@ Alpine.data('taxStory', () => ({
   dragOver: false,
   toast: '',
   ingestBusy: false,
+  pdfBusy: false,
   ingestPhase: '',
   ingestHint: '',
   /** Reactive 0..100 progress for the loading overlay bar */
@@ -73,6 +74,9 @@ Alpine.data('taxStory', () => ({
   ],
   _onRevealIn: /** @type {((ev: Event) => void) | null} */ (null),
   _onPtr: /** @type {((ev: PointerEvent) => void) | null} */ (null),
+  _scrollSpyHandler: /** @type {((ev: Event) => void) | null} */ (null),
+  _trapHandler: /** @type {((ev: KeyboardEvent) => void) | null} */ (null),
+  _prevFocus: /** @type {Element | null} */ (null),
   /** @type {Awaited<ReturnType<typeof buildComparativeFromState>>} */
   comparativeSnap: /** @type {{ yearLabels: string[], displayRows: unknown[], subRows?: Record<string, unknown[]> } | null} */ ({ yearLabels: [], displayRows: [] }),
   comparativeNarrative: '',
@@ -119,6 +123,12 @@ Alpine.data('taxStory', () => ({
   _quoteTransitioning: false,
   /** Track if guide modal was opened from upload modal (to re-open on close) */
   _guideOpenedFromUpload: false,
+  /** Snapshot save reminder banner */
+  snapshotBannerDismissed: false,
+  /** Guided post-upload CTA banner */
+  guidedBannerVisible: false,
+  /** rAF handle for debounced GSAP refresh */
+  _rafGsapId: 0,
 
   init() {
     this._onRevealIn = (ev) => {
@@ -342,11 +352,12 @@ Alpine.data('taxStory', () => ({
     if (!cursor) return;
     document.body.classList.add('tax-story--rupee-cursor');
     let frame = 0;
-    let tx = window.innerWidth / 2;
-    let ty = window.innerHeight / 2;
+    let tx = -200;
+    let ty = -200;
+    let pressScale = 1;
     const paint = () => {
       frame = 0;
-      cursor.style.transform = `translate(${tx}px, ${ty}px) translate(-50%, -50%)`;
+      cursor.style.transform = `translate(${tx}px, ${ty}px) translate(-50%, -50%) scale(${pressScale})`;
     };
     const updateTarget = (e) => {
       tx = e.clientX;
@@ -354,84 +365,120 @@ Alpine.data('taxStory', () => ({
       if (!frame) frame = requestAnimationFrame(paint);
     };
     window.addEventListener('pointermove', updateTarget, { passive: true });
-    window.addEventListener('pointerdown', () => cursor.classList.add('rupee-cursor--active'), { passive: true });
-    window.addEventListener('pointerup', () => cursor.classList.remove('rupee-cursor--active'), { passive: true });
-    paint();
+    window.addEventListener('pointerdown', () => { pressScale = 0.82; if (!frame) frame = requestAnimationFrame(paint); }, { passive: true });
+    window.addEventListener('pointerup', () => { pressScale = 1; if (!frame) frame = requestAnimationFrame(paint); }, { passive: true });
+    // Keep cursor off-screen until first real move to avoid edge flash
+    cursor.style.opacity = '0';
+    window.addEventListener('pointermove', function revealOnMove() {
+      cursor.style.opacity = '';
+      window.removeEventListener('pointermove', revealOnMove);
+    }, { passive: true, once: true });
   },
 
   _initCursorTrail() {
-    const canvas = document.getElementById('cursor-trail-canvas');
-    if (!canvas) return;
+    if (!window.matchMedia('(pointer:fine)').matches) return;
     if (prefersReducedMotion()) return;
+    const canvas = document.getElementById('cursor-trail-canvas');
+    if (!canvas || typeof canvas.getContext !== 'function') return;
 
-    let lastX = 0, lastY = 0, lastSpawn = 0, lastTs = performance.now();
-    let liveCount = 0;
-    const MIN_DIST = 8;
-    const SPAWN_GAP = 40;
+    const ctx = canvas.getContext('2d');
+    const particles = [];
+    let lastX = 0, lastY = 0, lastSpawn = 0, rafId = 0;
+    const MIN_DIST = 10;
+    const SPAWN_GAP = 52; // ms — more fluid than 70ms
 
-    const createParticle = (x, y, vx = 0, vy = 0) => {
-      const el = document.createElement('span');
-      const size = 9 + Math.random() * 10;
-      const rot = (Math.random() - 0.5) * 90;
-      const driftX = (Math.random() - 0.5) * 22 - vx * (0.18 + Math.random() * 0.18);
-      const driftY = -(18 + Math.random() * 28) - vy * (0.14 + Math.random() * 0.2);
-      const opacity = 0.6 + Math.random() * 0.35;
-      const hue = Math.random() > 0.25 ? '212,175,55' : '245,195,85';
-      const duration = 620 + Math.random() * 260;
-      el.textContent = '₹';
-      el.style.cssText = [
-        'position:absolute',
-        `font-family:'Noto Sans Devanagari','DM Sans',sans-serif`,
-        `font-size:${size}px`,
-        `font-weight:700`,
-        `color:rgba(${hue},${opacity})`,
-        `left:${x}px`,
-        `top:${y}px`,
-        `opacity:1`,
-        `transform:translate(-50%,-50%) rotate(${rot}deg) scale(1)`,
-        'pointer-events:none',
-        'user-select:none',
-        `text-shadow:0 0 10px rgba(${hue},0.65),0 0 24px rgba(212,175,55,0.28)`,
-        `transition:opacity ${duration}ms cubic-bezier(0.22,0.61,0.36,1),transform ${duration}ms cubic-bezier(0.22,0.61,0.36,1)`,
-        'will-change:opacity,transform',
-      ].join(';');
-      canvas.appendChild(el);
-      liveCount += 1;
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          el.style.opacity = '0';
-          el.style.transform = `translate(calc(-50% + ${driftX}px), calc(-50% + ${driftY}px)) rotate(${rot + (Math.random() - 0.5) * 40}deg) scale(0.2)`;
-        });
-      });
-      setTimeout(() => {
-        if (el.parentNode) el.remove();
-        liveCount = Math.max(0, liveCount - 1);
-      }, duration + 120);
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
+
+    // Pre-render ₹ glyphs with ambient glow — drawImage is far cheaper than fillText per frame.
+    const GLYPH_PX = 44;
+    const glyphs = [];
+
+    const makeGlyph = (r, g, b) => {
+      const c = document.createElement('canvas');
+      c.width = c.height = GLYPH_PX;
+      const cx = c.getContext('2d');
+      cx.shadowColor = `rgba(${r},${g},${b},0.55)`;
+      cx.shadowBlur = 5;
+      cx.font = `700 ${Math.round(GLYPH_PX * 0.72)}px 'Noto Sans Devanagari','DM Sans',sans-serif`;
+      cx.fillStyle = `rgb(${r},${g},${b})`;
+      cx.textAlign = 'center';
+      cx.textBaseline = 'middle';
+      cx.fillText('₹', GLYPH_PX / 2, GLYPH_PX / 2);
+      return c;
+    };
+
+    const buildGlyphs = () => {
+      // Weighted pool: 3× gold, 1× warm bright, 1× teal accent
+      const gGold   = makeGlyph(212, 175, 55);
+      const gBright = makeGlyph(240, 196, 72);
+      const gTeal   = makeGlyph(94, 173, 154);
+      glyphs.splice(0, glyphs.length, gGold, gGold, gGold, gBright, gTeal);
+    };
+    buildGlyphs();
+    document.fonts.ready.then(buildGlyphs);
+
+    const spawn = (x, y, vx, vy) => {
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 0.7 - vx * 0.018,
+        vy: -(0.35 + Math.random() * 0.75) - vy * 0.016,
+        size: 6 + Math.random() * 7,
+        alpha: 0.42 + Math.random() * 0.28,
+        rot: (Math.random() - 0.5) * Math.PI * 0.6,
+        rotV: (Math.random() - 0.5) * 0.032,
+        decay: 0.026 + Math.random() * 0.012,
+        life: 1.0,
+        glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
+      });
+    };
+
+    const tick = () => {
+      rafId = requestAnimationFrame(tick);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= p.decay;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.018; // subtle gravity — particles arc then fall, feels organic
+        p.rot += p.rotV;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        // Ease out alpha — smooth fade (life² for faster initial fade)
+        ctx.globalAlpha = p.life * p.life * p.alpha;
+        const half = p.size / 2;
+        ctx.drawImage(p.glyph, -half, -half, p.size, p.size);
+        ctx.restore();
+      }
+    };
+    rafId = requestAnimationFrame(tick);
 
     window.addEventListener('mousemove', (e) => {
       const now = performance.now();
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const dt = Math.max(1, now - lastTs);
-      const vx = dx / dt * 16;
-      const vy = dy / dt * 16;
+      const dist = Math.hypot(dx, dy);
       if (dist < MIN_DIST || now - lastSpawn < SPAWN_GAP) return;
-      if (liveCount > 110) return;
+      const dt = Math.max(1, now - lastSpawn);
       lastX = e.clientX;
       lastY = e.clientY;
       lastSpawn = now;
-      lastTs = now;
-      const speed = Math.sqrt(vx * vx + vy * vy);
-      const burst = speed > 32 ? 2 : 1;
-      for (let i = 0; i < burst; i += 1) {
-        const jitterX = (Math.random() - 0.5) * 12;
-        const jitterY = (Math.random() - 0.5) * 8;
-        window.setTimeout(() => {
-          createParticle(e.clientX + jitterX, e.clientY + jitterY, vx, vy);
-        }, i * 16);
+      const vx = dx / dt * 12;
+      const vy = dy / dt * 12;
+      const count = Math.hypot(vx, vy) > 38 ? 2 : 1;
+      for (let i = 0; i < count; i++) {
+        spawn(
+          e.clientX + (Math.random() - 0.5) * 8,
+          e.clientY + (Math.random() - 0.5) * 6,
+          vx, vy,
+        );
       }
     }, { passive: true });
   },
@@ -525,12 +572,6 @@ Alpine.data('taxStory', () => ({
       const gsap = window.gsap;
       document.body.classList.add('gsap-loaded');
 
-      // Rupee SVG orbit — continuous rotation
-      gsap.to('.rupee-orbit', {
-        rotation: 360, duration: 28, repeat: -1, ease: 'none',
-        svgOrigin: '210 165',
-      });
-
       if (window.ScrollTrigger) {
         gsap.registerPlugin(window.ScrollTrigger);
 
@@ -612,6 +653,14 @@ Alpine.data('taxStory', () => ({
    * Uses data-g-done guards to prevent double-animating on repeated calls.
    * Called from loadDemo() and handleFiles() after state is populated and DOM updated.
    */
+  _scheduleGsapRefresh() {
+    if (this._rafGsapId) cancelAnimationFrame(this._rafGsapId);
+    this._rafGsapId = requestAnimationFrame(() => {
+      this._rafGsapId = 0;
+      this._refreshGsapForData();
+    });
+  },
+
   _refreshGsapForData() {
     if (prefersReducedMotion()) return;
     try {
@@ -1109,28 +1158,21 @@ Alpine.data('taxStory', () => ({
     return '';
   },
 
+  /** PAN from the latest ITR that has one */
+  taxpayerPan() {
+    for (const fy of this.sortedFyKeys().reverse()) {
+      const itr = this.getItrForFy(fy);
+      if (itr?.pan) return String(itr.pan).toUpperCase();
+    }
+    return '';
+  },
+
   /** First name only (title-cased) — friendlier for greeting */
   taxpayerFirstName() {
     const full = this.taxpayerName();
     if (!full) return '';
     const first = full.split(/\s+/)[0] || full;
     return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
-  },
-
-  /**
-   * Return an inline SVG logo string for known employer names, or empty
-   * string. Used to render a recognisable mark alongside the employer name
-   * in the glance tile. Currently ships an Apple silhouette.
-   * @param {string} name
-   */
-  employerLogoSvg(name) {
-    if (!name) return '';
-    const key = String(name).toLowerCase().trim();
-    // Classic Apple silhouette (bitten apple) — iconic + instantly recognisable.
-    if (/\bapple\b/.test(key)) {
-      return `<svg class="employer-logo employer-logo--apple" viewBox="0 0 17 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13.27 10.29c-.02-2.4 1.96-3.55 2.05-3.61-1.12-1.64-2.86-1.86-3.48-1.89-1.48-.15-2.89.87-3.65.87-.76 0-1.92-.85-3.15-.82-1.62.02-3.12.94-3.95 2.39-1.69 2.93-.43 7.26 1.21 9.63.8 1.16 1.76 2.46 3.01 2.41 1.21-.05 1.67-.78 3.14-.78 1.47 0 1.87.78 3.15.76 1.3-.02 2.13-1.18 2.92-2.35.92-1.35 1.3-2.66 1.32-2.73-.03-.01-2.54-.97-2.57-3.88zM11.17 3.13c.67-.81 1.12-1.94.99-3.06-.96.04-2.13.64-2.82 1.45-.62.72-1.16 1.87-1.02 2.97 1.08.08 2.18-.55 2.85-1.36z"/></svg>`;
-    }
-    return '';
   },
 
   /** Primary employer display name from latest ITR */
@@ -1173,6 +1215,158 @@ Alpine.data('taxStory', () => ({
     const fy = this.latestItrFy();
     const itr = this.getItrForFy(fy);
     return !!(itr?.hasData && itr.grossIncome);
+  },
+
+  /**
+   * Composite Tax Health Score: regime (40) + deduction efficiency (30) + compliance (30) = 100.
+   * Returns null when insufficient data.
+   */
+  taxHealthScore() {
+    const fy = this.getSelectedFy();
+    const itr = this.getItrForFy(fy);
+    if (!itr?.hasData || !itr.grossIncome) return null;
+
+    // ── Regime score (0–40) ──
+    let regimeScore = 20;
+    const regime = this.regimeComparison(fy);
+    if (regime) {
+      const filed = itr.taxRegimeKey;
+      const optimal = regime.recommended;
+      if (filed === optimal) {
+        regimeScore = 40;
+      } else {
+        const lossPct = itr.grossIncome > 0 ? (Math.abs(regime.savings ?? 0) / itr.grossIncome) * 100 : 0;
+        regimeScore = Math.max(5, 30 - Math.round(lossPct * 4));
+      }
+    }
+
+    // ── Deduction score (0–30) ──
+    let deductionScore = 15;
+    if (itr.taxRegimeKey === 'old') {
+      const used80C = itr.deductions?.section80C ?? 0;
+      const util80C = Math.min(used80C / 150000, 1);
+      const hasNps = (itr.deductions?.nps80CCD1B ?? 0) > 0;
+      const has80D = (itr.deductions?.section80D ?? 0) > 0;
+      deductionScore = Math.round(util80C * 18) + (hasNps ? 6 : 0) + (has80D ? 6 : 0);
+      deductionScore = Math.min(30, deductionScore);
+    } else {
+      // New regime: fewer levers, reward for being on it
+      deductionScore = 24;
+    }
+
+    // ── Compliance score (0–30) ── (inverse of notice risk)
+    let complianceScore = 28;
+    const risk = this.noticeRisk(fy);
+    if (risk) {
+      complianceScore = Math.max(0, 30 - Math.round(risk.score * 0.3));
+    }
+
+    const total = Math.min(100, regimeScore + deductionScore + complianceScore);
+
+    let label, color;
+    if (total >= 85)      { label = 'Excellent'; color = 'green'; }
+    else if (total >= 70) { label = 'Good';      color = 'teal';  }
+    else if (total >= 55) { label = 'Fair';      color = 'gold';  }
+    else if (total >= 40) { label = 'Needs work';color = 'amber'; }
+    else                  { label = 'At risk';   color = 'red';   }
+
+    return {
+      total,
+      regime:     { score: regimeScore,     max: 40, label: 'Regime choice' },
+      deduction:  { score: deductionScore,  max: 30, label: 'Deduction use' },
+      compliance: { score: complianceScore, max: 30, label: 'Compliance' },
+      label,
+      color,
+      fy,
+    };
+  },
+
+  /** Actionable missed deduction opportunities for old-regime filers */
+  deductionOpportunities() {
+    const fy = this.getSelectedFy();
+    const itr = this.getItrForFy(fy);
+    if (!itr?.hasData || itr.taxRegimeKey !== 'old') return [];
+    const ops = [];
+    const used80C = itr.deductions?.section80C ?? 0;
+    const gap80C = Math.max(0, 150000 - used80C);
+    if (gap80C >= 5000) {
+      ops.push({
+        icon: 'savings',
+        label: '80C — unused room',
+        detail: `₹${Math.round(gap80C / 1000)}k of ₹1.5L limit unclaimed (ELSS, PPF, LIC, tuition fees)`,
+        amount: gap80C,
+        color: 'gold',
+      });
+    }
+    const nps = itr.deductions?.nps80CCD1B ?? 0;
+    if (nps < 50000) {
+      const npsGap = 50000 - nps;
+      ops.push({
+        icon: 'account_balance',
+        label: '80CCD(1B) — NPS extra',
+        detail: `Additional ₹50k deduction via NPS over 80C limit — ₹${Math.round(npsGap / 1000)}k still available`,
+        amount: npsGap,
+        color: 'teal',
+      });
+    }
+    const d80 = itr.deductions?.section80D ?? 0;
+    if (d80 < 25000) {
+      ops.push({
+        icon: 'health_and_safety',
+        label: '80D — health insurance',
+        detail: `Self+family: ₹25k deductible; parents (senior): +₹50k more`,
+        amount: 25000 - d80,
+        color: 'indigo',
+      });
+    }
+    const ais = this.getAisForFy(fy);
+    const savingsInterest = ais?.interestSavings ?? 0;
+    if (savingsInterest > 0 && savingsInterest <= 10000 && (itr.deductions?.section80TTA ?? 0) < savingsInterest) {
+      ops.push({
+        icon: 'account_balance_wallet',
+        label: '80TTA — savings interest',
+        detail: `₹${Math.round(savingsInterest / 1000)}k savings interest — up to ₹10k deductible under 80TTA`,
+        amount: Math.min(10000, savingsInterest),
+        color: 'amber',
+      });
+    }
+    return ops;
+  },
+
+  /**
+   * Aggregate uncaptured tax savings across all old-regime ITR years.
+   * Estimates marginal rate to compute rupee impact of missed deductions.
+   * Returns null when fewer than 1 old-regime year with deduction data.
+   */
+  lifetimeSavingsPotential() {
+    const keys = this.sortedFyKeys().filter((fy) => {
+      const itr = this.getItrForFy(fy);
+      return itr?.hasData && itr.taxRegimeKey === 'old' && (itr.grossIncome ?? 0) > 0;
+    });
+    if (!keys.length) return null;
+
+    let totalGap = 0;
+    let totalTaxSaved = 0;
+    let yearCount = 0;
+
+    for (const fy of keys) {
+      const itr = this.getItrForFy(fy);
+      if (!itr) continue;
+      const g80C  = Math.max(0, 150000 - (itr.deductions?.section80C   ?? 0));
+      const gNps  = Math.max(0, 50000  - (itr.deductions?.nps80CCD1B   ?? 0));
+      const g80D  = Math.max(0, 25000  - (itr.deductions?.section80D   ?? 0));
+      const gap = g80C + gNps + g80D;
+      if (gap === 0) continue;
+      const gross = itr.grossIncome ?? 0;
+      const marginal = gross > 1500000 ? 0.30 : gross > 1000000 ? 0.20 : 0.10;
+      const taxSaved = Math.round(gap * marginal * 1.04); // +4% cess
+      totalGap += gap;
+      totalTaxSaved += taxSaved;
+      yearCount++;
+    }
+
+    if (totalTaxSaved === 0) return null;
+    return { totalGap, totalTaxSaved, yearCount };
   },
 
   /** Income composition segments for latest FY donut */
@@ -1383,7 +1577,7 @@ Alpine.data('taxStory', () => ({
       prevRegime = rk;
     }
     if (regimeFlips >= 1) {
-      stats.push({ key: 'regimeFlips', icon: 'swap_horiz', label: 'Regime switches', value: String(regimeFlips), sub: regimeFlips === 1 ? 'across your filings' : 'across your filings', roll: { type: 'int', n: regimeFlips }, colorClass: 'purple' });
+      stats.push({ key: 'regimeFlips', icon: 'swap_horiz', label: 'Regime switches', value: String(regimeFlips), sub: regimeFlips === 1 ? 'across your filing' : 'across your filings', roll: { type: 'int', n: regimeFlips }, colorClass: 'purple' });
     }
 
     // Total refunds across years
@@ -1434,7 +1628,7 @@ Alpine.data('taxStory', () => ({
         value: emp,
         sub: city || '',
         colorClass: 'teal',
-        logoSvg: this.employerLogoSvg(emp),
+        isAppleLogo: /\bapple\b/.test(String(emp).toLowerCase().trim()),
       });
     }
 
@@ -1482,6 +1676,7 @@ Alpine.data('taxStory', () => ({
 
   pickFiles() {
     this.uploadModalOpen = true;
+    this.$nextTick(() => this._trapFocus(document.querySelector('.upload-modal-panel')));
   },
 
   openFilePicker() {
@@ -1491,17 +1686,20 @@ Alpine.data('taxStory', () => ({
   closeUploadModal() {
     this.uploadModalOpen = false;
     this.pendingUploadFiles = [];
+    this._releaseFocusTrap();
   },
 
   /** Open the files-detected modal */
   openDetectModal() {
     if (this.fileCount() === 0) return;
     this.detectModalOpen = true;
+    this.$nextTick(() => this._trapFocus(document.querySelector('.detect-modal-panel')));
   },
 
   /** Close the files-detected modal */
   closeDetectModal() {
     this.detectModalOpen = false;
+    this._releaseFocusTrap();
   },
 
   /** Check if any flat file list contains a PDF that may need a password */
@@ -1515,14 +1713,17 @@ Alpine.data('taxStory', () => ({
     this.pdfModalFileName = firstPdf?.name ?? 'PDF file';
     this.pdfModalPassword = '';
     this._pendingIngestFiles = flatFiles;
-    this.uploadModalOpen = false; // Close upload modal before showing PDF modal
+    this._releaseFocusTrap();
+    this.uploadModalOpen = false;
     this.pdfModalOpen = true;
+    this.$nextTick(() => this._trapFocus(document.querySelector('.pdf-modal-panel')));
   },
 
   /** Called when user submits password in the modal */
   async submitPdfPassword() {
     this.aisPdfPassword = this.pdfModalPassword;
     this.pdfModalOpen = false;
+    this._releaseFocusTrap();
     const files = this._pendingIngestFiles;
     this._pendingIngestFiles = null;
     if (files) await this._doIngest(files);
@@ -1532,6 +1733,7 @@ Alpine.data('taxStory', () => ({
   async skipPdfPassword() {
     this.aisPdfPassword = '';
     this.pdfModalOpen = false;
+    this._releaseFocusTrap();
     const files = this._pendingIngestFiles;
     this._pendingIngestFiles = null;
     if (files) await this._doIngest(files);
@@ -1542,15 +1744,65 @@ Alpine.data('taxStory', () => ({
     this.pdfModalOpen = false;
     this._pendingIngestFiles = null;
     this.pdfModalPassword = '';
+    this._releaseFocusTrap();
+  },
+
+  _trapFocus(panelEl) {
+    if (!panelEl) return;
+    this._prevFocus = document.activeElement;
+    const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const getFocusable = () => [...panelEl.querySelectorAll(FOCUSABLE)].filter(el => !el.closest('[x-cloak]'));
+    const focusable = getFocusable();
+    if (focusable.length) focusable[0].focus();
+    this._trapHandler = (e) => {
+      if (e.key !== 'Tab') return;
+      const nodes = getFocusable();
+      if (!nodes.length) return;
+      const idx = nodes.indexOf(document.activeElement);
+      if (e.shiftKey) {
+        if (idx <= 0) { e.preventDefault(); nodes[nodes.length - 1].focus(); }
+      } else {
+        if (idx >= nodes.length - 1) { e.preventDefault(); nodes[0].focus(); }
+      }
+    };
+    document.addEventListener('keydown', this._trapHandler);
+  },
+
+  _releaseFocusTrap() {
+    if (this._trapHandler) {
+      document.removeEventListener('keydown', this._trapHandler);
+      this._trapHandler = null;
+    }
+    if (this._prevFocus && typeof this._prevFocus.focus === 'function') {
+      this._prevFocus.focus();
+      this._prevFocus = null;
+    }
+  },
+
+  openGuide() {
+    this.guideModalOpen = true;
+    this.$nextTick(() => this._trapFocus(document.querySelector('.modal-panel')));
+  },
+
+  openGuideFromUpload() {
+    this._guideOpenedFromUpload = true;
+    this.uploadModalOpen = false;
+    this.$nextTick(() => {
+      this.guideModalOpen = true;
+      this.$nextTick(() => this._trapFocus(document.querySelector('.modal-panel')));
+    });
   },
 
   closeGuide() {
     const wasFromUpload = this._guideOpenedFromUpload;
     this.guideModalOpen = false;
     this._guideOpenedFromUpload = false;
-    // Re-show upload modal if guide was opened from within it
+    this._releaseFocusTrap();
     if (wasFromUpload) {
-      this.$nextTick(() => { this.uploadModalOpen = true; });
+      this.$nextTick(() => {
+        this.uploadModalOpen = true;
+        this.$nextTick(() => this._trapFocus(document.querySelector('.upload-modal-panel')));
+      });
     }
   },
 
@@ -1620,6 +1872,24 @@ Alpine.data('taxStory', () => ({
 
   _scrollBehavior() {
     return prefersReducedMotion() ? 'auto' : 'smooth';
+  },
+
+  _startGuidedFlow() {
+    if (!this.hasRealData()) return;
+    this.guidedBannerVisible = true;
+    // Auto-dismiss after 8s so it doesn't linger for returning users
+    setTimeout(() => { this.guidedBannerVisible = false; }, 8000);
+    // Scroll to the first populated section: arc → intelligence → review
+    setTimeout(() => {
+      const candidates = ['#arc', '#intelligence', '#review'];
+      for (const id of candidates) {
+        const el = document.querySelector(id);
+        if (el && el.offsetParent !== null) {
+          el.scrollIntoView({ behavior: this._scrollBehavior(), block: 'start' });
+          break;
+        }
+      }
+    }, 600);
   },
 
   ingestStageLabel() {
@@ -1705,7 +1975,7 @@ Alpine.data('taxStory', () => ({
       // Additional refresh after layout settles (handles deep x-for cards)
       setTimeout(() => {
         refreshScrollReveal(this.$root || document.body);
-        this._refreshGsapForData();
+        this._scheduleGsapRefresh();
         this._mountCarousels();
         scanCountUps(this.$root || document.body);
       }, 300);
@@ -1726,6 +1996,9 @@ Alpine.data('taxStory', () => ({
       this.ingestBusy = false;
       this.ingestPhase = '';
       this._stopIngestHints();
+      // Apple-style success breath — brief teal glow fades over 1.4s
+      document.body.classList.add('parse-success-flash');
+      setTimeout(() => document.body.classList.remove('parse-success-flash'), 1500);
       // Re-init scrollspy after overlay hides so positions are fresh
       setTimeout(() => this._initScrollSpy(), 100);
     }
@@ -1893,7 +2166,7 @@ Alpine.data('taxStory', () => ({
       this._initScrollSpy();
       setTimeout(() => {
         refreshScrollReveal(this.$root || document.body);
-        this._refreshGsapForData();
+        this._scheduleGsapRefresh();
         this._mountCarousels();
         scanCountUps(this.$root || document.body);
       }, 300);
@@ -1925,6 +2198,8 @@ Alpine.data('taxStory', () => ({
       this._ingestNotices = [];
       // Re-init scrollspy after overlay hides so rail positions are fresh
       setTimeout(() => this._initScrollSpy(), 100);
+      // Guide the user to the first populated section
+      this._startGuidedFlow();
     }
   },
 
@@ -2002,7 +2277,7 @@ Alpine.data('taxStory', () => ({
       const d = itr.deductions;
       const deductions = [
         { label: 'Section 80C', used: d.section80C ?? 0, limit: 150000 },
-        { label: 'Section 80D', used: d.section80D ?? 0, limit: itr.taxRegimeKey === 'new' ? 0 : 75000 },
+        { label: 'Section 80D', used: d.section80D ?? 0, limit: itr.taxRegimeKey === 'new' ? 0 : 25000 },
         { label: 'NPS 80CCD(1B)', used: d.npsDeduction ?? 0, limit: 50000 },
         { label: 'Home loan 24(b)', used: Math.abs(itr.housePropertyIncome ?? 0), limit: 200000 },
         { label: 'Std deduction', used: d.standardDeduction ?? 0, limit: itr.taxRegimeKey === 'new' ? 75000 : 50000 },
@@ -2118,6 +2393,7 @@ Alpine.data('taxStory', () => ({
     return {
       generatedOn: new Date().toISOString(),
       taxpayerName: this.taxpayerName() || '',
+      pan: this.taxpayerPan() || '',
       employer: this.taxpayerEmployer() || '',
       city: this.taxpayerCity() || '',
       fyRange: this.sortedFyKeys(),
@@ -2261,7 +2537,7 @@ Alpine.data('taxStory', () => ({
       await this.$nextTick();
       refreshScrollReveal(this.$root || document.body);
       this.triggerGlanceRoll();
-      this._refreshGsapForData();
+      this._scheduleGsapRefresh();
       this._mountCarousels();
       scanCountUps(this.$root || document.body);
       this.toast = 'Session imported successfully.';
@@ -2284,6 +2560,26 @@ Alpine.data('taxStory', () => ({
     }
   },
 
+  downloadStateSnapshot() {
+    const replacer = (_key, val) => {
+      if (val instanceof Map) return { __type: 'Map', entries: [...val.entries()] };
+      return val;
+    };
+    const blob = new Blob(
+      [JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), state: this.state }, replacer, 2)],
+      { type: 'application/json' }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tax-story-snapshot-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.snapshotBannerDismissed = true;
+    this.toast = 'Snapshot downloaded — import it anytime without re-uploading.';
+    setTimeout(() => (this.toast = ''), 3500);
+  },
+
   async downloadPdf() {
     const el = this.$refs.printRoot;
     if (!el) return;
@@ -2296,6 +2592,7 @@ Alpine.data('taxStory', () => ({
     };
     document.addEventListener('pdf-export-progress', onProgress);
     this.toast = 'Preparing rich PDF report…';
+    this.pdfBusy = true;
     try {
       const ok = await exportStoryPdf(el, {
         title: 'Tax-Story',
@@ -2310,6 +2607,7 @@ Alpine.data('taxStory', () => ({
         this.toast = '';
       }
     } finally {
+      this.pdfBusy = false;
       document.removeEventListener('pdf-export-progress', onProgress);
     }
   },

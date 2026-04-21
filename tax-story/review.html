@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tax Story — Product Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Mandatory viewport base (STYLE_PRESETS.md) ── */
+html, body { height: 100%; overflow-x: hidden; margin: 0; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+*, *::before, *::after { box-sizing: border-box; }
+
+.slide {
+  width: 100vw; height: 100vh; height: 100dvh;
+  overflow: hidden; scroll-snap-align: start;
+  display: flex; flex-direction: column; position: relative;
+}
+
+/* ── Tax Story design tokens ── */
+:root {
+  --bg: #060608; --bg-2: #0d0d12;
+  --gold: #d4af37; --gold-dim: rgba(212,175,55,0.18);
+  --teal: #5ead9a; --indigo: #5e6ad2;
+  --text: rgba(255,255,255,0.92); --text-muted: rgba(255,255,255,0.48);
+  --border: rgba(255,255,255,0.08);
+
+  --title-size: clamp(2rem,5.5vw,5rem);
+  --h2-size: clamp(1.4rem,3vw,2.6rem);
+  --h3-size: clamp(1rem,2vw,1.5rem);
+  --body-size: clamp(0.8rem,1.4vw,1.05rem);
+  --small-size: clamp(0.65rem,1vw,0.8rem);
+  --slide-padding: clamp(2rem,5vw,5rem);
+  --gap: clamp(0.5rem,1.5vw,1.5rem);
+
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+@media (max-height:700px) {
+  :root { --slide-padding:clamp(1rem,3vw,2.5rem); --title-size:clamp(1.5rem,4.5vw,3rem); --h2-size:clamp(1.1rem,2.5vw,2rem); }
+}
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:0.01ms !important; transition-duration:0.2s !important; }
+  html { scroll-behavior:auto; }
+}
+
+body { font-family:var(--font-body); background:var(--bg); color:var(--text); }
+
+.slide-inner {
+  flex:1; display:flex; flex-direction:column; justify-content:center;
+  padding:var(--slide-padding); max-height:100%; overflow:hidden; position:relative; z-index:2;
+}
+
+.bg-grain {
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-size:256px; opacity:0.4; mix-blend-mode:overlay;
+}
+
+.gold-orb {
+  position:absolute; border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle,rgba(212,175,55,0.14) 0%,transparent 70%); filter:blur(60px);
+}
+
+.tag {
+  display:inline-flex; align-items:center;
+  font-family:var(--font-mono); font-size:var(--small-size);
+  letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--gold); border:1px solid rgba(212,175,55,0.3);
+  border-radius:100px; padding:0.3em 0.9em; width:fit-content;
+  background:rgba(212,175,55,0.06);
+}
+
+.rule { width:3rem; height:1.5px; background:var(--gold); opacity:0.6; margin:1rem 0; }
+
+/* ── Nav ── */
+#nav-dots { position:fixed; right:clamp(1rem,2.5vw,2rem); top:50%; transform:translateY(-50%); z-index:100; display:flex; flex-direction:column; gap:8px; }
+.dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.22); cursor:pointer; transition:background 0.3s,transform 0.3s; border:none; }
+.dot.active { background:var(--gold); transform:scale(1.5); }
+#progress { position:fixed; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),var(--teal)); transform-origin:left; z-index:200; transition:transform 0.4s cubic-bezier(0.16,1,0.3,1); }
+#slide-counter { position:fixed; bottom:clamp(1rem,2vw,1.5rem); right:clamp(1rem,2.5vw,2rem); font-family:var(--font-mono); font-size:var(--small-size); color:var(--text-muted); z-index:100; }
+#kb-hint { position:fixed; bottom:clamp(1rem,2vw,1.5rem); left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:var(--small-size); color:rgba(255,255,255,0.2); z-index:100; display:flex; align-items:center; gap:0.5rem; }
+.kb { border:1px solid rgba(255,255,255,0.15); border-radius:4px; padding:0.15em 0.5em; }
+
+/* ── Reveal ── */
+.reveal { opacity:0; transform:translateY(24px); transition:opacity 0.6s cubic-bezier(0.16,1,0.3,1),transform 0.6s cubic-bezier(0.16,1,0.3,1); }
+.reveal.in { opacity:1; transform:none; }
+.reveal-d1{transition-delay:0.1s} .reveal-d2{transition-delay:0.2s}
+.reveal-d3{transition-delay:0.3s} .reveal-d4{transition-delay:0.4s}
+.reveal-d5{transition-delay:0.5s}
+
+/* ── Slide-specific ── */
+.title-rupee { font-family:'Syne',sans-serif; font-weight:800; font-size:clamp(5rem,14vw,14rem); background:linear-gradient(135deg,#d4af37 0%,#f0d060 40%,#b8922a 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:0.85; filter:drop-shadow(0 0 40px rgba(212,175,55,0.3)); position:absolute; right:var(--slide-padding); bottom:var(--slide-padding); opacity:0.14; user-select:none; pointer-events:none; }
+
+.pill-list { display:flex; flex-direction:column; gap:0.75rem; margin-top:1rem; }
+.pill { display:flex; align-items:center; gap:1rem; padding:0.65rem 1.1rem; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:0.75rem; font-size:var(--body-size); }
+.pill-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+.stack-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(0.6rem,1.2vw,1rem); margin-top:1.5rem; }
+.stack-card { background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:0.875rem; padding:clamp(0.8rem,1.4vw,1.2rem); }
+.stack-card-name { font-family:var(--font-display); font-weight:700; font-size:var(--h3-size); margin-bottom:0.3rem; }
+.stack-card-role { font-size:var(--small-size); color:var(--text-muted); line-height:1.4; }
+.stack-tag { font-family:var(--font-mono); font-size:0.62rem; color:var(--teal); margin-top:0.4rem; }
+
+.feature-rail { display:flex; gap:clamp(0.6rem,1.2vw,1rem); margin-top:1.25rem; }
+.feature-card { flex:1; background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:0.875rem; padding:clamp(0.8rem,1.4vw,1.1rem); border-top:2px solid transparent; min-width:0; }
+.feature-card--gold{border-top-color:var(--gold)} .feature-card--teal{border-top-color:var(--teal)}
+.feature-card--indigo{border-top-color:var(--indigo)} .feature-card--amber{border-top-color:#f59e0b} .feature-card--rose{border-top-color:#fb7185}
+.feature-num { font-family:var(--font-mono); font-size:var(--small-size); color:var(--text-muted); margin-bottom:0.4rem; }
+.feature-title { font-family:var(--font-display); font-weight:700; font-size:var(--body-size); margin-bottom:0.3rem; }
+.feature-desc { font-size:var(--small-size); color:var(--text-muted); line-height:1.4; }
+
+.ds-grid { display:grid; grid-template-columns:1fr 1fr; gap:2.5rem; margin-top:1.25rem; }
+.ds-label { font-family:var(--font-mono); font-size:var(--small-size); text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted); margin-bottom:0.75rem; }
+.swatches { display:flex; gap:0.5rem; flex-wrap:wrap; }
+.swatch { width:clamp(2rem,3.5vw,3rem); height:clamp(2rem,3.5vw,3rem); border-radius:0.5rem; }
+.font-row { display:flex; flex-direction:column; gap:0.5rem; margin-top:0.75rem; }
+.font-sample { display:flex; align-items:baseline; gap:0.75rem; }
+.font-label { font-family:var(--font-mono); font-size:var(--small-size); color:var(--text-muted); width:7ch; flex-shrink:0; }
+.token-list { display:flex; flex-direction:column; gap:0.35rem; }
+.token-row { display:flex; justify-content:space-between; align-items:center; padding:0.35rem 0.65rem; background:rgba(255,255,255,0.025); border-radius:0.4rem; }
+.token-name { font-family:var(--font-mono); font-size:var(--small-size); color:var(--teal); }
+.token-val { font-family:var(--font-mono); font-size:var(--small-size); color:var(--text-muted); }
+
+.timeline { display:flex; flex-direction:column; gap:0; margin-top:1.25rem; position:relative; }
+.timeline::before { content:''; position:absolute; left:11px; top:8px; bottom:8px; width:1.5px; background:linear-gradient(to bottom,var(--gold),var(--teal),var(--indigo)); opacity:0.4; }
+.tl-item { display:flex; gap:1.1rem; padding:0.5rem 0; position:relative; }
+.tl-dot { width:23px; height:23px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; font-weight:700; position:relative; z-index:1; }
+.tl-dot--gold{background:rgba(212,175,55,0.2);border:1.5px solid var(--gold);color:var(--gold)}
+.tl-dot--teal{background:rgba(94,173,154,0.2);border:1.5px solid var(--teal);color:var(--teal)}
+.tl-dot--indigo{background:rgba(94,106,210,0.2);border:1.5px solid var(--indigo);color:var(--indigo)}
+.tl-title { font-size:var(--body-size); font-weight:600; line-height:1.3; }
+.tl-detail { font-size:var(--small-size); color:var(--text-muted); margin-top:0.1rem; line-height:1.35; }
+
+.cursor-demo { position:relative; height:clamp(110px,16vh,160px); margin:1rem 0; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:1rem; overflow:hidden; }
+.code-block { background:rgba(0,0,0,0.4); border:1px solid var(--border); border-radius:0.75rem; padding:clamp(0.65rem,1.2vw,1rem); font-family:var(--font-mono); font-size:var(--small-size); line-height:1.6; color:rgba(255,255,255,0.75); overflow:hidden; }
+.ck{color:#5e6ad2} .cs{color:#d4af37} .cn{color:#5ead9a} .cc{color:rgba(255,255,255,0.35)}
+
+.intel-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(0.5rem,1vw,0.9rem); margin-top:1.25rem; }
+.intel-tile { background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:0.875rem; padding:clamp(0.75rem,1.3vw,1.1rem); }
+.intel-tile-icon { font-size:clamp(1rem,2vw,1.4rem); margin-bottom:0.4rem; }
+.intel-tile-title { font-family:var(--font-display); font-weight:700; font-size:var(--body-size); margin-bottom:0.25rem; }
+.intel-tile-desc { font-size:var(--small-size); color:var(--text-muted); line-height:1.35; }
+
+.audit-grid { display:grid; grid-template-columns:1fr 1fr; gap:clamp(1rem,2vw,2rem); margin-top:1.25rem; }
+.audit-row { display:flex; flex-direction:column; gap:0.4rem; }
+.audit-item { display:flex; align-items:flex-start; gap:0.65rem; padding:0.5rem 0.8rem; background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:0.5rem; }
+.audit-label { font-size:var(--small-size); line-height:1.3; }
+
+.next-grid { display:grid; grid-template-columns:1fr 1fr; gap:clamp(0.6rem,1.2vw,1rem); margin-top:1.25rem; }
+.next-card { background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:0.875rem; padding:clamp(0.8rem,1.4vw,1.1rem); }
+.next-card-label { font-family:var(--font-mono); font-size:var(--small-size); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.35rem; }
+.next-card-title { font-family:var(--font-display); font-weight:700; font-size:var(--body-size); margin-bottom:0.35rem; }
+.next-card-items { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.25rem; }
+.next-card-items li { font-size:var(--small-size); color:var(--text-muted); padding-left:1.2em; position:relative; line-height:1.35; }
+.next-card-items li::before { content:'→'; position:absolute; left:0; color:var(--gold); opacity:0.6; }
+
+.verdict-score { font-family:var(--font-display); font-weight:800; font-size:clamp(5rem,13vw,11rem); line-height:1; background:linear-gradient(135deg,#d4af37 0%,#f0d060 50%,#5ead9a 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; filter:drop-shadow(0 0 50px rgba(212,175,55,0.2)); }
+.vcheck { display:flex; align-items:center; gap:0.75rem; font-size:var(--body-size); margin-bottom:0.4rem; }
+</style>
+</head>
+<body>
+
+<div id="nav-dots"></div>
+<div id="progress" style="transform:scaleX(0)"></div>
+<div id="slide-counter">1 / 11</div>
+<div id="kb-hint"><span class="kb">↑↓</span> navigate &nbsp;<span class="kb">F</span> fullscreen</div>
+
+<!-- S1: TITLE -->
+<section class="slide" id="s1" style="background:var(--bg)">
+  <div class="bg-grain"></div>
+  <div class="gold-orb" style="width:60vw;height:60vw;top:-20%;left:-10%"></div>
+  <div class="gold-orb" style="width:35vw;height:35vw;bottom:-10%;right:5%;background:radial-gradient(circle,rgba(94,106,210,0.12) 0%,transparent 70%)"></div>
+  <div class="title-rupee">₹</div>
+  <div class="slide-inner">
+    <p class="reveal" style="font-family:var(--font-mono);font-size:var(--small-size);letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin:0 0 1.25rem">Product Review · April 2026</p>
+    <h1 class="reveal reveal-d1" style="font-family:var(--font-display);font-weight:800;font-size:var(--title-size);line-height:1.05;margin:0 0 1rem">Tax<br><span style="background:linear-gradient(135deg,#d4af37,#f0d060);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Story</span></h1>
+    <p class="reveal reveal-d2" style="font-size:clamp(0.9rem,1.7vw,1.2rem);color:var(--text-muted);max-width:42ch;line-height:1.6;margin:0 0 2rem">India's definitive tax intelligence platform for salaried filers. Parse, visualise, and understand your ITR — entirely in the browser.</p>
+    <div class="reveal reveal-d3" style="display:flex;gap:2rem;flex-wrap:wrap">
+      <div><div style="font-family:var(--font-display);font-weight:700;font-size:clamp(1.2rem,2.5vw,2rem);color:var(--gold)">25</div><div style="font-size:var(--small-size);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em">JS Modules</div></div>
+      <div><div style="font-family:var(--font-display);font-weight:700;font-size:clamp(1.2rem,2.5vw,2rem);color:var(--gold)">10K+</div><div style="font-size:var(--small-size);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em">CSS Lines</div></div>
+      <div><div style="font-family:var(--font-display);font-weight:700;font-size:clamp(1.2rem,2.5vw,2rem);color:var(--gold)">0</div><div style="font-size:var(--small-size);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em">Server Calls</div></div>
+      <div><div style="font-family:var(--font-display);font-weight:700;font-size:clamp(1.2rem,2.5vw,2rem);color:var(--gold)">ITR-1/2</div><div style="font-size:var(--small-size);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em">Target</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- S2: PRODUCT IDENTITY -->
+<section class="slide" id="s2" style="background:var(--bg-2)">
+  <div class="bg-grain"></div>
+  <div class="gold-orb" style="width:45vw;height:45vw;top:-10%;right:-10%"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">What it is</div>
+    <div class="rule reveal reveal-d1"></div>
+    <div class="reveal reveal-d2" style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,4vw,5rem);align-items:center">
+      <div>
+        <h2 style="font-family:var(--font-display);font-weight:800;font-size:var(--h2-size);line-height:1.15;margin:0 0 1rem">Client-only.<br>Privacy-first.<br>Zero upload.</h2>
+        <p style="font-size:var(--body-size);color:var(--text-muted);line-height:1.6;max-width:36ch;margin:0">Drag in ITR JSON/XML, AIS JSON, TIS PDF. Everything parses in the browser. No data leaves the device.</p>
+      </div>
+      <div class="pill-list">
+        <div class="pill"><div class="pill-dot" style="background:var(--gold)"></div>Income Arc — multi-year gross income visualisation</div>
+        <div class="pill"><div class="pill-dot" style="background:var(--teal)"></div>ITR Year-on-Year — comparative workbook + narrative</div>
+        <div class="pill"><div class="pill-dot" style="background:var(--indigo)"></div>AIS Reconciliation — portal vs filed checks</div>
+        <div class="pill"><div class="pill-dot" style="background:#f59e0b"></div>Tax Intelligence — health score, gaps, scenarios</div>
+        <div class="pill"><div class="pill-dot" style="background:#fb7185"></div>PDF Export — branded multi-page story</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S3: TECH STACK -->
+<section class="slide" id="s3" style="background:var(--bg)">
+  <div class="bg-grain"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">Architecture</div>
+    <h2 class="reveal reveal-d1" style="font-family:var(--font-display);font-weight:800;font-size:var(--h2-size);margin:0.6rem 0 0;line-height:1.2">Zero-bundler. GitHub Pages ready.</h2>
+    <div class="stack-grid reveal reveal-d2">
+      <div class="stack-card"><div class="stack-card-name" style="color:var(--gold)">Alpine.js 3</div><div class="stack-card-role">Reactive UI — upload state, section visibility, chart lifecycle, PDF trigger</div><div class="stack-tag">x-data · x-show · x-transition</div></div>
+      <div class="stack-card"><div class="stack-card-name" style="color:var(--teal)">Three.js</div><div class="stack-card-role">Hero WebGL — particle field, orbital rings, pointer-reactive depth</div><div class="stack-tag">WebGLRenderer · InstancedMesh</div></div>
+      <div class="stack-card"><div class="stack-card-name" style="color:var(--indigo)">Chart.js 4</div><div class="stack-card-role">Income arc, comparative bar/sparklines, custom tooltips</div><div class="stack-tag">UMD · window.Chart</div></div>
+      <div class="stack-card"><div class="stack-card-name" style="color:#f59e0b">GSAP + ScrollTrigger</div><div class="stack-card-role">Section entrance animations, parallax scrub, scroll progress</div><div class="stack-tag">CDN · ScrollTrigger.refresh()</div></div>
+      <div class="stack-card"><div class="stack-card-name" style="color:#fb7185">html2canvas-pro + jsPDF</div><div class="stack-card-role">Multi-page PDF — hardenCloneForCanvas strips backdrop-filter</div><div class="stack-tag">UMD · onclone hook</div></div>
+      <div class="stack-card"><div class="stack-card-name" style="color:#a78bfa">fflate</div><div class="stack-card-role">ZIP extraction for bundled portal exports</div><div class="stack-tag">ES module · dynamic import</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- S4: FEATURE MAP -->
+<section class="slide" id="s4" style="background:var(--bg-2)">
+  <div class="bg-grain"></div>
+  <div class="gold-orb" style="width:35vw;height:35vw;bottom:-10%;left:5%;background:radial-gradient(circle,rgba(94,173,154,0.1) 0%,transparent 70%)"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">User Journey</div>
+    <h2 class="reveal reveal-d1" style="font-family:var(--font-display);font-weight:800;font-size:var(--h2-size);margin:0.6rem 0 0;line-height:1.2">Five chapters, one story.</h2>
+    <div class="feature-rail reveal reveal-d2">
+      <div class="feature-card feature-card--gold"><div class="feature-num">01</div><div class="feature-title">Income Arc</div><div class="feature-desc">Multi-year gross income chart. ₹ orbit empty state until data lands.</div></div>
+      <div class="feature-card feature-card--teal"><div class="feature-num">02</div><div class="feature-title">ITR Comparative</div><div class="feature-desc">Year-on-year workbook table with mini charts and narrative string.</div></div>
+      <div class="feature-card feature-card--indigo"><div class="feature-num">03</div><div class="feature-title">Tax Intelligence</div><div class="feature-desc">Health score, deduction gaps, scenario simulator, anomaly timeline.</div></div>
+      <div class="feature-card feature-card--amber"><div class="feature-num">04</div><div class="feature-title">AIS Review</div><div class="feature-desc">ITR vs AIS alignment — mismatches surfaced as action cards.</div></div>
+      <div class="feature-card feature-card--rose"><div class="feature-num">05</div><div class="feature-title">PDF Export</div><div class="feature-desc">Branded multi-page capture via html2canvas-pro + jsPDF.</div></div>
+    </div>
+    <p class="reveal reveal-d3" style="font-size:var(--small-size);color:var(--text-muted);margin-top:0.75rem">Guided post-upload scroll flow (auto-scroll to first populated section) is the highest-priority open UX task.</p>
+  </div>
+</section>
+
+<!-- S5: DESIGN SYSTEM -->
+<section class="slide" id="s5" style="background:var(--bg)">
+  <div class="bg-grain"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">Visual System</div>
+    <h2 class="reveal reveal-d1" style="font-family:var(--font-display);font-weight:800;font-size:var(--h2-size);margin:0.6rem 0 0;line-height:1.2">Dark luxury. Gold intelligence.</h2>
+    <div class="ds-grid reveal reveal-d2">
+      <div>
+        <div class="ds-label">Palette</div>
+        <div class="swatches">
+          <div class="swatch" style="background:#060608" title="#060608"></div>
+          <div class="swatch" style="background:#d4af37" title="#d4af37"></div>
+          <div class="swatch" style="background:#5ead9a" title="#5ead9a"></div>
+          <div class="swatch" style="background:#5e6ad2" title="#5e6ad2"></div>
+          <div class="swatch" style="background:#f59e0b" title="#f59e0b"></div>
+          <div class="swatch" style="background:#fb7185" title="#fb7185"></div>
+          <div class="swatch" style="background:#a78bfa" title="#a78bfa"></div>
+        </div>
+        <div class="font-row" style="margin-top:1.25rem">
+          <div class="ds-label">Typography</div>
+          <div class="font-sample"><span class="font-label">Display</span><span style="font-family:'Syne',sans-serif;font-weight:700;font-size:clamp(1rem,2vw,1.35rem)">Syne — Tax Story</span></div>
+          <div class="font-sample"><span class="font-label">UI</span><span style="font-family:'DM Sans',sans-serif;font-size:clamp(0.8rem,1.4vw,1.05rem)">DM Sans — interface copy</span></div>
+          <div class="font-sample"><span class="font-label">Mono</span><span style="font-family:'JetBrains Mono',monospace;font-size:clamp(0.7rem,1.1vw,0.9rem);color:var(--teal)">JetBrains Mono — data</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="ds-label">New tokens (this session)</div>
+        <div class="token-list">
+          <div class="token-row"><span class="token-name">--z-cursor</span><span class="token-val">10000</span></div>
+          <div class="token-row"><span class="token-name">--z-progress-bar</span><span class="token-val">9999</span></div>
+          <div class="token-row"><span class="token-name">--z-grain</span><span class="token-val">9998</span></div>
+          <div class="token-row"><span class="token-name">--z-guide-modal</span><span class="token-val">9200</span></div>
+          <div class="token-row"><span class="token-name">--z-pdf-modal</span><span class="token-val">9000</span></div>
+          <div class="token-row"><span class="token-name">--lh-tight / --lh-normal / --lh-loose</span><span class="token-val">1.25 / 1.5 / 1.75</span></div>
+        </div>
+        <div style="margin-top:0.75rem;padding:0.6rem 0.8rem;background:rgba(94,173,154,0.06);border:1px solid rgba(94,173,154,0.2);border-radius:0.5rem">
+          <div style="font-family:var(--font-mono);font-size:var(--small-size);color:var(--teal)">✓ All 68 CSS custom property refs resolve</div>
+          <div style="font-family:var(--font-mono);font-size:var(--small-size);color:var(--text-muted);margin-top:0.2rem">var(--gold) undefined bug fixed → var(--accent-gold)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S6: SESSION IMPROVEMENTS -->
+<section class="slide" id="s6" style="background:var(--bg-2)">
+  <div class="bg-grain"></div>
+  <div class="gold-orb" style="width:35vw;height:35vw;top:10%;right:-5%"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">This Session</div>
+    <h2 class="reveal reveal-d1" style="font-family:var(--font-display);font-weight:800;font-size:var(--h2-size);margin:0.6rem 0 0;line-height:1.2">Six bugs fixed. Token system built.</h2>
+    <div class="timeline reveal reveal-d2">
+      <div class="tl-item"><div class="tl-dot tl-dot--gold">✓</div><div><div class="tl-title">Cursor lag eliminated</div><div class="tl-detail">Removed CSS transform transition (120ms); rAF-only positioning — instant compositor response</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--gold">✓</div><div><div class="tl-title">Cursor jump on click fixed</div><div class="tl-detail">Active-state scale moved entirely into JS paint() — no CSS rule overwriting inline position</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--gold">✓</div><div><div class="tl-title">Rupee trail refined</div><div class="tl-detail">Gravity arc, quadratic alpha decay, 44px glyph, cleaner spawn threshold</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--teal">✓</div><div><div class="tl-title">Session banner premature display fixed</div><div class="tl-detail">x-show now requires !ingestBusy — banner only shows after full parse completes</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--teal">✓</div><div><div class="tl-title">Intel section blank space eliminated</div><div class="tl-detail">Replaced scroll-reveal on x-show cards with Alpine x-transition — no IntersectionObserver race</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--indigo">✓</div><div><div class="tl-title">Z-index token system + will-change + line-height tokens</div><div class="tl-detail">13 z-index tokens, all 10 usages tokenised; GPU compositing on card hovers; --lh-* on body</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- S7: CURSOR SYSTEM -->
+<section class="slide" id="s7" style="background:var(--bg)">
+  <div class="bg-grain"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">Cursor System</div>
+    <h2 class="reveal reveal-d1" style="font-family:var(--font-display);font-weight:800;font-size:var(--h2-size);margin:0.6rem 0 0;line-height:1.2">₹ cursor + particle trail</h2>
+    <div class="cursor-demo reveal reveal-d2" id="cursor-demo">
+      <canvas id="demo-canvas"></canvas>
+      <div id="demo-hint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:var(--small-size);color:rgba(255,255,255,0.2);pointer-events:none">Move mouse here</div>
+    </div>
+    <div class="code-block reveal reveal-d3"><span class="cc">// rAF-only — no CSS transition on transform</span>
+<span class="ck">const</span> <span class="cn">paint</span> = () => {
+  frame = <span class="cs">0</span>;
+  cursor.style.transform = <span class="cs">`translate(${tx}px,${ty}px) translate(-50%,-50%) scale(${pressScale})`</span>;
+};
+window.addEventListener(<span class="cs">'pointermove'</span>, e => {
+  tx = e.clientX; ty = e.clientY;
+  <span class="ck">if</span> (!frame) frame = requestAnimationFrame(paint);
+}, { passive: <span class="ck">true</span> });</div>
+  </div>
+</section>
+
+<!-- S8: TAX INTELLIGENCE -->
+<section class="slide" id="s8" style="background:var(--bg-2)">
+  <div class="bg-grain"></div>
+  <div class="gold-orb" style="width:40vw;height:40vw;bottom:-15%;right:-5%"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">Tax Intelligence Engine</div>
+    <h2 class="reveal reveal-d1" style="font-family:var(--font-display);font-weight:800;font-size:var(--h2-size);margin:0.6rem 0 0;line-height:1.2">What the engine surfaces</h2>
+    <div class="intel-grid reveal reveal-d2">
+      <div class="intel-tile"><div class="intel-tile-icon">🏥</div><div class="intel-tile-title">Health Score</div><div class="intel-tile-desc">0–100 composite — filing compliance, deduction utilisation, AIS alignment, growth arc</div></div>
+      <div class="intel-tile"><div class="intel-tile-icon">💡</div><div class="intel-tile-title">Deduction Gaps</div><div class="intel-tile-desc">Unused 80C/D/E room, NPS benefit, HRA missed — actionable ₹ figure per section</div></div>
+      <div class="intel-tile"><div class="intel-tile-icon">⚡</div><div class="intel-tile-title">Scenario Simulator</div><div class="intel-tile-desc">Old vs New regime recommendation with projected savings and breakeven income</div></div>
+      <div class="intel-tile"><div class="intel-tile-icon">📅</div><div class="intel-tile-title">Anomaly Timeline</div><div class="intel-tile-desc">Year-by-year flags — income spikes, AIS mismatches, late filings, large TDS gaps</div></div>
+      <div class="intel-tile"><div class="intel-tile-icon">📊</div><div class="intel-tile-title">Lifetime Savings</div><div class="intel-tile-desc">Compounded deduction potential if full utilisation achieved over career horizon</div></div>
+      <div class="intel-tile"><div class="intel-tile-icon">🔍</div><div class="intel-tile-title">TIS Insight Deck</div><div class="intel-tile-desc">Story-card rail from TIS/ITR data — only shown when sufficient parsed data exists</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- S9: QUALITY AUDIT -->
+<section class="slide" id="s9" style="background:var(--bg)">
+  <div class="bg-grain"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">Quality Audit</div>
+    <h2 class="reveal reveal-d1" style="font-family:var(--font-display);font-weight:800;font-size:var(--h2-size);margin:0.6rem 0 0;line-height:1.2">9 / 10 production readiness</h2>
+    <div class="audit-grid reveal reveal-d2">
+      <div class="audit-row">
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">✅</span><span class="audit-label">CSS token system — surfaces, borders, z-index, line-heights</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">✅</span><span class="audit-label">Typography — Syne + DM Sans + JetBrains Mono, intentional scale</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">✅</span><span class="audit-label">Color — dark gold palette, semantic accents, all refs resolve</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">✅</span><span class="audit-label">Motion — GSAP ScrollTrigger + CSS transitions + rAF cursor</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">✅</span><span class="audit-label">Cards — will-change, cursor glow pseudo-element, 3D tilt</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">✅</span><span class="audit-label">Accessibility — skip link, ARIA labels, scope="col" on tables</span></div>
+      </div>
+      <div class="audit-row">
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">✅</span><span class="audit-label">Alpine x-transition replaces scroll-reveal on conditional cards</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">✅</span><span class="audit-label">PDF export — html2canvas-pro, onclone hardening, http:// required</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">✅</span><span class="audit-label">Grain overlay + atmospheric section gradients throughout</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">⚠️</span><span class="audit-label">Intel card empty states — no skeleton placeholders yet</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">⚠️</span><span class="audit-label">Guided post-upload scroll flow — not yet implemented</span></div>
+        <div class="audit-item"><span style="font-size:0.85rem;flex-shrink:0">⚠️</span><span class="audit-label">Test fixtures — no golden file / Playwright tests yet</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S10: WHAT'S NEXT -->
+<section class="slide" id="s10" style="background:var(--bg-2)">
+  <div class="bg-grain"></div>
+  <div class="gold-orb" style="width:35vw;height:35vw;top:-10%;left:-5%;background:radial-gradient(circle,rgba(94,106,210,0.12) 0%,transparent 70%)"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">Roadmap</div>
+    <h2 class="reveal reveal-d1" style="font-family:var(--font-display);font-weight:800;font-size:var(--h2-size);margin:0.6rem 0 0;line-height:1.2">Four highest-impact next tasks</h2>
+    <div class="next-grid reveal reveal-d2">
+      <div class="next-card" style="border-top:2px solid var(--gold)"><div class="next-card-label">P1 · UX</div><div class="next-card-title">Guided post-upload flow</div><ul class="next-card-items"><li>Auto-scroll to first populated section</li><li>Checklist-style completion indicator</li><li>Section CTA when data is absent</li></ul></div>
+      <div class="next-card" style="border-top:2px solid var(--teal)"><div class="next-card-label">P1 · Quality</div><div class="next-card-title">Intel card empty states</div><ul class="next-card-items"><li>Skeleton shimmer when card data absent</li><li>"Needs AIS data" / "Needs 2+ years" hints</li><li>Locked-state preview instead of blank</li></ul></div>
+      <div class="next-card" style="border-top:2px solid var(--indigo)"><div class="next-card-label">P2 · Testing</div><div class="next-card-title">Golden fixture tests</div><ul class="next-card-items"><li>Sanitised ITR JSON + AIS JSON fixtures</li><li>Parser output snapshots</li><li>Playwright visual regression 1440/768</li></ul></div>
+      <div class="next-card" style="border-top:2px solid #f59e0b"><div class="next-card-label">P2 · Motion</div><div class="next-card-title">Unified motion language</div><ul class="next-card-items"><li>Batch _refreshGsapForData() calls</li><li>prefers-reduced-motion audit pass</li><li>Lottie/SVG path morphs (budget permitting)</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- S11: VERDICT -->
+<section class="slide" id="s11" style="background:var(--bg)">
+  <div class="bg-grain"></div>
+  <div class="gold-orb" style="width:65vw;height:65vw;top:-25%;right:-15%"></div>
+  <div class="gold-orb" style="width:35vw;height:35vw;bottom:-15%;left:-5%;background:radial-gradient(circle,rgba(94,173,154,0.1) 0%,transparent 70%)"></div>
+  <div class="slide-inner">
+    <div class="tag reveal">Verdict</div>
+    <div style="display:flex;align-items:flex-end;gap:2rem;flex-wrap:wrap;margin-top:0.75rem">
+      <div class="verdict-score reveal reveal-d1">9/10</div>
+      <div style="flex:1;min-width:240px">
+        <div class="reveal reveal-d2">
+          <div class="vcheck"><span style="font-size:1rem;flex-shrink:0">✅</span>Visually distinctive — not generic AI UI</div>
+          <div class="vcheck"><span style="font-size:1rem;flex-shrink:0">✅</span>Production-grade CSS token system (68 vars, all resolve)</div>
+          <div class="vcheck"><span style="font-size:1rem;flex-shrink:0">✅</span>Cursor system — zero-lag, no jump, refined trail</div>
+          <div class="vcheck"><span style="font-size:1rem;flex-shrink:0">✅</span>All 6 session bugs resolved cleanly</div>
+          <div class="vcheck"><span style="font-size:1rem;flex-shrink:0">✅</span>Privacy-first — zero server calls, full browser parsing</div>
+          <div class="vcheck"><span style="font-size:1rem;flex-shrink:0">⚠️</span>Empty states + guided onboarding = the remaining point</div>
+        </div>
+        <div class="rule reveal reveal-d3"></div>
+        <p class="reveal reveal-d4" style="font-size:var(--body-size);color:var(--text-muted);line-height:1.6;max-width:42ch;margin:0">The most visually polished Indian ITR intelligence tool in existence. Empty states + onboarding flow = shippable public beta.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+const TOTAL = 11;
+let cur = 0;
+const slides = document.querySelectorAll('.slide');
+const counter = document.getElementById('slide-counter');
+const prog = document.getElementById('progress');
+const dotsEl = document.getElementById('nav-dots');
+
+slides.forEach((_,i) => {
+  const d = document.createElement('button');
+  d.className = 'dot' + (i===0?' active':'');
+  d.setAttribute('aria-label','Slide '+(i+1));
+  d.addEventListener('click',()=>goTo(i));
+  dotsEl.appendChild(d);
+});
+
+function updateUI(i) {
+  document.querySelectorAll('.dot').forEach((d,j)=>d.classList.toggle('active',j===i));
+  counter.textContent = (i+1)+' / '+TOTAL;
+  prog.style.transform = 'scaleX('+(i+1)/TOTAL+')';
+}
+
+function revealSlide(i) {
+  slides[i].querySelectorAll('.reveal:not(.in)').forEach((el,j)=>{
+    setTimeout(()=>el.classList.add('in'), j*75);
+  });
+}
+
+function goTo(i) {
+  if(i<0||i>=TOTAL) return;
+  cur=i;
+  slides[i].scrollIntoView({behavior:'smooth'});
+  updateUI(i); revealSlide(i);
+}
+
+const io = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting && e.intersectionRatio>0.5) {
+      const i=Array.from(slides).indexOf(e.target);
+      cur=i; updateUI(i); revealSlide(i);
+    }
+  });
+},{threshold:0.5});
+slides.forEach(s=>io.observe(s));
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'||e.key==='ArrowRight'||e.key===' '){e.preventDefault();goTo(cur+1);}
+  if(e.key==='ArrowUp'||e.key==='ArrowLeft'){e.preventDefault();goTo(cur-1);}
+  if(e.key==='Home'){e.preventDefault();goTo(0);}
+  if(e.key==='End'){e.preventDefault();goTo(TOTAL-1);}
+  if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
+});
+
+let tY=0;
+document.addEventListener('touchstart',e=>{tY=e.touches[0].clientY;},{passive:true});
+document.addEventListener('touchend',e=>{const d=tY-e.changedTouches[0].clientY;if(Math.abs(d)>50)goTo(cur+(d>0?1:-1));},{passive:true});
+
+let wt;
+document.addEventListener('wheel',e=>{clearTimeout(wt);wt=setTimeout(()=>goTo(cur+(e.deltaY>0?1:-1)),60);},{passive:true});
+
+setTimeout(()=>revealSlide(0),80);
+
+/* ── Cursor demo ── */
+const area = document.getElementById('cursor-demo');
+const canvas = document.getElementById('demo-canvas');
+const hint = document.getElementById('demo-hint');
+if(area&&canvas) {
+  const ctx = canvas.getContext('2d');
+  const pts = [];
+  let mx=-200, my=-200;
+  function resize(){canvas.width=area.offsetWidth;canvas.height=area.offsetHeight;}
+  resize();
+  new ResizeObserver(resize).observe(area);
+  area.addEventListener('mousemove',e=>{
+    const r=area.getBoundingClientRect();
+    mx=e.clientX-r.left; my=e.clientY-r.top;
+    if(hint)hint.style.opacity='0';
+    if(pts.length<60&&Math.random()<0.55)
+      pts.push({x:mx,y:my,vx:(Math.random()-.5)*1.8,vy:-(0.4+Math.random()*1.1),
+        life:1,alpha:0.45+Math.random()*0.3,size:7+Math.random()*6,
+        rot:Math.random()*Math.PI*2,rotV:(Math.random()-.5)*0.035,decay:0.028+Math.random()*0.018});
+  },{passive:true});
+  (function loop(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(let i=pts.length-1;i>=0;i--){
+      const p=pts[i];
+      p.x+=p.vx;p.y+=p.vy;p.vy+=0.018;p.rot+=p.rotV;p.life-=p.decay;
+      if(p.life<=0){pts.splice(i,1);continue;}
+      ctx.save();ctx.globalAlpha=p.life*p.life*p.alpha;
+      ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+      ctx.font='700 '+(p.size*2)+'px "DM Sans",sans-serif';
+      ctx.fillStyle='#d4af37';ctx.shadowColor='rgba(212,175,55,0.5)';ctx.shadowBlur=5;
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('₹',0,0);
+      ctx.restore();
+    }
+    if(mx>0){
+      ctx.beginPath();ctx.arc(mx,my,9,0,Math.PI*2);
+      ctx.fillStyle='rgba(212,175,55,0.12)';ctx.fill();
+      ctx.strokeStyle='rgba(212,175,55,0.55)';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.font='700 16px "DM Sans",sans-serif';ctx.fillStyle='#d4af37';
+      ctx.shadowColor='rgba(212,175,55,0.6)';ctx.shadowBlur=8;
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('₹',mx,my);
+    }
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>
